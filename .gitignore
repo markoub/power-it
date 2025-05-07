@@ -1,0 +1,98 @@
+# System files
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.sqlite
+*.egg-info/
+*.bak
+*.swp
+*.swo
+
+# Virtual environments
+venv/
+backend/venv/
+
+# Node.js
+node_modules/
+frontend/node_modules/
+testing/node_modules/
+
+# Next.js and build output
+.next/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Test and coverage output
+coverage/
+frontend/coverage/
+testing/test-results/
+testing/playwright-report/
+testing/blob-report/
+testing/playwright/.cache/
+test-results/
+
+# Output, cache, and temp files
+*.pptx
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+*.log
+*.tmp
+*.lock
+*.bak
+*.out
+*.zip
+*.tar.gz
+*.tar
+*.gz
+*.7z
+*.rar
+*.mp4
+*.mp3
+*.wav
+*.webm
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.csv
+*.xls
+*.xlsx
+*.ppt
+*.doc
+*.docx
+*.pptx
+*.json
+
+# Ignore generated and backup files
+backend/presentations.db
+backend/test_presentations.db
+backend/presentations_backup.txt
+
+# Ignore storage and temp output
+storage/presentations/
+temp_pptx/
+
+# Ignore environment and config files
+.env*
+frontend/.env*
+backend/.env*
+
+# Misc
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# Ignore all .DS_Store files recursively
+**/.DS_Store 

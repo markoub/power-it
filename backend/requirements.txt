@@ -1,0 +1,12 @@
+fastmcp
+python-dotenv
+google-generativeai
+pydantic
+requests
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+python-multipart
+openai
+python-pptx

@@ -66,8 +66,11 @@ class TestContentWithLogosSlide:
             ]
         )
         
+        # Create a temporary output path for the presentation
+        output_path = os.path.join(test_dir, "test_contentlogos.pptx")
+        
         # Generate PPTX with the ContentWithLogos slide
-        result = await generate_pptx_from_slides(presentation, presentation_id="test")
+        result = await generate_pptx_from_slides(presentation, output_path)
         
         # Verify the presentation was created
         assert result is not None

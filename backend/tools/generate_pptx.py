@@ -29,6 +29,10 @@ from .pptx_slides import (
     create_content_with_logos_slide
 )
 
+def format_section_number(number):
+    """Format a section number to ensure it's a two-digit string (e.g., 1 -> '01')."""
+    return f"{number:02d}"
+
 async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
     """
     Generate a PowerPoint presentation from slide content using a template.

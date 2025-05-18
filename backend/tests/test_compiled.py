@@ -42,13 +42,15 @@ async def test_generate_compiled_presentation():
             slide_index=0,
             slide_title="Welcome Slide",
             prompt="Create welcome image",
-            image_path="/path/to/image1.png"
+            image_field_name="image",
+            image_path="/path/to/welcome_slide_123.png"
         ),
         ImageGeneration(
             slide_index=1,
             slide_title="Content Slide",
             prompt="Create content image",
-            image_path="/path/to/image2.png"
+            image_field_name="image",
+            image_path="/path/to/content_slide_456.png"
         )
     ]
     
@@ -64,13 +66,15 @@ async def test_generate_compiled_presentation():
     assert compiled.slides[0].type == "welcome"
     assert compiled.slides[0].fields["title"] == "Welcome Slide"
     assert compiled.slides[0].fields["content"] == ["Welcome to the presentation", "Today we will discuss..."]
-    assert compiled.slides[0].image_url == "/presentations/1/images/image1.png"
+    assert compiled.slides[0].fields.get("image_url") == "/presentations/1/images/welcome_slide_123.png"
+    assert compiled.slides[0].image_url == "/presentations/1/images/welcome_slide_123.png"
     
     # Check second slide
     assert compiled.slides[1].type == "content"
     assert compiled.slides[1].fields["title"] == "Content Slide"
     assert compiled.slides[1].fields["content"] == "This is the main content"
-    assert compiled.slides[1].image_url == "/presentations/1/images/image2.png"
+    assert compiled.slides[1].fields.get("image_url") == "/presentations/1/images/content_slide_456.png"
+    assert compiled.slides[1].image_url == "/presentations/1/images/content_slide_456.png"
 
 @pytest.mark.asyncio
 async def test_generate_compiled_presentation_legacy():
@@ -115,7 +119,8 @@ async def test_generate_compiled_presentation_legacy():
             slide_index=0,
             slide_title="Legacy Welcome",
             prompt="Create welcome image",
-            image_path="/path/to/legacy_image1.png"
+            image_field_name="image",
+            image_path="/path/to/legacy_welcome_789.png"
         )
     ]
     
@@ -129,5 +134,5 @@ async def test_generate_compiled_presentation_legacy():
     
     # Check first slide
     assert compiled.slides[0].type == "welcome"
-    assert compiled.slides[0].fields == {}  # Should have empty fields
-    assert compiled.slides[0].image_url == "/presentations/2/images/legacy_image1.png" 
+    assert compiled.slides[0].fields.get("image_url") == "/presentations/2/images/legacy_welcome_789.png"
+    assert compiled.slides[0].image_url == "/presentations/2/images/legacy_welcome_789.png" 

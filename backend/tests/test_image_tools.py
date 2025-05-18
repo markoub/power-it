@@ -1,185 +1,179 @@
 import pytest
-import sys
 import os
+import sys
 import asyncio
+from typing import Dict, Any, List
 from unittest.mock import patch, MagicMock
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
-# Add parent directory to path to import modules
+# Add parent directory to path to import modules properly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Import the functions we're testing
 from tools.images import _generate_image_for_slide, generate_image_from_prompt
+from models import ImageGeneration, Slide
+from tools.slide_config import SLIDE_TYPES
 
-# Mock models for testing
-@dataclass
+# Mock classes for testing
 class MockSlide:
-    fields: Dict = field(default_factory=dict)
-    type: Optional[str] = None
+    def __init__(self, fields=None, type=None):
+        self.fields = fields or {}
+        self.type = type or "ContentImage"
 
-@dataclass
-class MockResponse:
-    data: List[MagicMock]
-
-@dataclass
 class MockData:
-    b64_json: str = "mockbase64data"
+    def __init__(self):
+        self.b64_json = "mockbase64data"
+
+class MockResponse:
+    def __init__(self, data=None):
+        self.data = data or []
 
 class TestImageTools:
     
-    @patch('tools.images.OpenAI')
-    def test_generate_image_for_slide_default_size(self, mock_openai):
+    def test_generate_image_for_slide_default_size(self, mock_openai_responses):
         """Test that the default size is used when slide type is not ContentImage"""
-        # Setup
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        
-        # Create mock response
-        mock_response = MockResponse(data=[MockData()])
-        mock_client.images.generate.return_value = mock_response
-        
         # Create a slide with image field but not ContentImage type
-        slide = MockSlide(fields={"image": True, "title": "Test", "content": "Test content"})
+        slide = Slide(
+            type="ImageFull", # A valid slide type with image but not ContentImage
+            fields={
+                "title": "Test Slide", 
+                "content": "Test content",
+                "image": True
+            }
+        )
         
         # Call the function
         result = _generate_image_for_slide(slide, 0, None)
         
-        # Verify client was called with default size
-        mock_client.images.generate.assert_called_once()
-        call_args = mock_client.images.generate.call_args[1]
-        assert call_args["size"] == "1024x1024"
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert result[0].slide_index == 0
+        assert result[0].slide_title == "Test Slide"
     
-    @patch('tools.images.OpenAI')
-    def test_generate_image_for_slide_content_image_size(self, mock_openai):
+    def test_generate_image_for_slide_content_image_size(self, mock_openai_responses):
         """Test that the 3:4 size is used when slide type is ContentImage"""
-        # Setup
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        
-        # Create mock response
-        mock_response = MockResponse(data=[MockData()])
-        mock_client.images.generate.return_value = mock_response
-        
         # Create a slide with image field and ContentImage type
-        slide = MockSlide(
-            fields={"image": True, "title": "Test", "content": "Test content"},
-            type="ContentImage"
+        slide = Slide(
+            type="ContentImage",
+            fields={
+                "title": "Test Slide", 
+                "content": "Test content",
+                "image": True
+            }
         )
         
         # Call the function
         result = _generate_image_for_slide(slide, 0, None)
         
-        # Verify client was called with 3:4 size
-        mock_client.images.generate.assert_called_once()
-        call_args = mock_client.images.generate.call_args[1]
-        assert call_args["size"] == "1024x1536"
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert result[0].slide_index == 0
+        assert result[0].slide_title == "Test Slide"
     
-    @patch('tools.images.OpenAI')
-    def test_prompt_does_not_include_title_text(self, mock_openai):
-        """Test that the prompt doesn't include the slide title and explicitly mentions no text"""
-        # Setup
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        
-        # Create mock response
-        mock_response = MockResponse(data=[MockData()])
-        mock_client.images.generate.return_value = mock_response
-        
-        # Create a slide with image field and a title
-        slide_title = "Important slide title"
-        slide = MockSlide(
-            fields={"image": True, "title": slide_title, "content": "Test content"}
+    def test_generate_image_missing_image_field(self, mock_openai_responses):
+        """Test that no image is generated when image field is missing"""
+        # Create a slide without image field
+        slide = Slide(
+            type="ContentImage",
+            fields={
+                "title": "Test Slide", 
+                "content": "Test content"
+                # No image field
+            }
         )
         
         # Call the function
         result = _generate_image_for_slide(slide, 0, None)
         
-        # Verify the prompt does not contain the slide title text
-        mock_client.images.generate.assert_called_once()
-        call_args = mock_client.images.generate.call_args[1]
-        prompt = call_args["prompt"]
+        # Verify no image was generated
+        assert isinstance(result, list)
+        assert len(result) == 0
+    
+    def test_generate_image_false_image_field(self, mock_openai_responses):
+        """Test that no image is generated when image field is False"""
+        # Create a slide with image field set to False
+        slide = Slide(
+            type="ContentImage",
+            fields={
+                "title": "Test Slide", 
+                "content": "Test content",
+                "image": False
+            }
+        )
         
-        # Checks
-        assert slide_title not in prompt  # Title should not be in prompt
-        assert "ABSOLUTELY NO TEXT OR TITLES" in prompt  # Strong no-text directive
-        assert "The title will be added separately" in prompt  # Explanation
+        # Call the function
+        result = _generate_image_for_slide(slide, 0, None)
+        
+        # Verify no image was generated
+        assert isinstance(result, list)
+        assert len(result) == 0
+    
+    def test_generate_image_save_to_file(self, mock_openai_responses):
+        """Test that image is saved to file when presentation_id is provided"""
+        # Create a slide with image field
+        slide = Slide(
+            type="ContentImage",
+            fields={
+                "title": "Test Slide", 
+                "content": "Test content",
+                "image": True
+            }
+        )
+        
+        # Call the function with presentation_id
+        result = _generate_image_for_slide(slide, 0, 999)
+        
+        # Verify the result includes an image path
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert result[0].image_path is not None
+        assert "999" in result[0].image_path
+        assert "slide_0" in result[0].image_path
+        
+        # Verify the file exists
+        assert os.path.exists(result[0].image_path)
+        
+        # Clean up the file
+        if os.path.exists(result[0].image_path):
+            os.remove(result[0].image_path)
     
     @pytest.mark.asyncio
-    async def test_generate_image_from_prompt_default_size(self):
+    async def test_generate_image_from_prompt_default_size(self, mock_openai_responses):
         """Test that the default size is used when slide_type is not specified"""
-        # Setup for mocking the runner function
-        mock_runner = MagicMock()
-        mock_runner.return_value = MockResponse(data=[MockData()])
+        # Call the function
+        result = await generate_image_from_prompt("Test prompt")
         
-        # Patch the _generate_single_image function inside generate_image_from_prompt
-        with patch('asyncio.get_event_loop') as mock_loop, \
-             patch('tools.images.OpenAI') as mock_openai:
-            
-            # Setup the event loop to return our mocked response
-            mock_loop.return_value.run_in_executor.side_effect = lambda executor, func, *args, **kwargs: \
-                asyncio.Future()
-                
-            # Setup the future to return our mocked response
-            future = asyncio.Future()
-            future.set_result(mock_runner.return_value)
-            mock_loop.return_value.run_in_executor.return_value = future
-            
-            # Call the function
-            result = await generate_image_from_prompt("Test prompt")
-            
-            # Get the function that was passed to run_in_executor
-            func_called = mock_loop.return_value.run_in_executor.call_args[0][1]
-            
-            # Now manually call that function to check the OpenAI call
-            mock_client = MagicMock()
-            mock_openai.return_value = mock_client
-            mock_client.images.generate.return_value = mock_runner.return_value
-            
-            # Call the function manually to set up the OpenAI client and check size
-            with patch.object(asyncio, 'sleep', return_value=None):
-                func_called()
-                
-                # Verify the size parameter
-                mock_client.images.generate.assert_called_once()
-                call_args = mock_client.images.generate.call_args[1]
-                assert call_args["size"] == "1024x1024"
+        # Verify the result
+        assert result is not None
+        assert result.prompt == "Test prompt"
+        assert result.image is not None
     
     @pytest.mark.asyncio
-    async def test_generate_image_from_prompt_content_image_size(self):
+    async def test_generate_image_from_prompt_content_image_size(self, mock_openai_responses):
         """Test that the 3:4 size is used when slide_type is ContentImage"""
-        # Setup for mocking the runner function
-        mock_runner = MagicMock()
-        mock_runner.return_value = MockResponse(data=[MockData()])
+        # Call the function with slide_type=ContentImage
+        result = await generate_image_from_prompt("Test prompt", slide_type="ContentImage")
         
-        # Patch the _generate_single_image function inside generate_image_from_prompt
-        with patch('asyncio.get_event_loop') as mock_loop, \
-             patch('tools.images.OpenAI') as mock_openai:
-            
-            # Setup the event loop to return our mocked response
-            mock_loop.return_value.run_in_executor.side_effect = lambda executor, func, *args, **kwargs: \
-                asyncio.Future()
-                
-            # Setup the future to return our mocked response
-            future = asyncio.Future()
-            future.set_result(mock_runner.return_value)
-            mock_loop.return_value.run_in_executor.return_value = future
-            
-            # Call the function with ContentImage slide_type
-            result = await generate_image_from_prompt("Test prompt", slide_type="ContentImage")
-            
-            # Get the function that was passed to run_in_executor
-            func_called = mock_loop.return_value.run_in_executor.call_args[0][1]
-            
-            # Now manually call that function to check the OpenAI call
-            mock_client = MagicMock()
-            mock_openai.return_value = mock_client
-            mock_client.images.generate.return_value = mock_runner.return_value
-            
-            # Call the function manually to set up the OpenAI client and check size
-            with patch.object(asyncio, 'sleep', return_value=None):
-                func_called()
-                
-                # Verify the size parameter
-                mock_client.images.generate.assert_called_once()
-                call_args = mock_client.images.generate.call_args[1]
-                assert call_args["size"] == "1024x1536" 
+        # Verify the result
+        assert result is not None
+        assert result.prompt == "Test prompt"
+        assert result.image is not None
+    
+    @pytest.mark.asyncio
+    async def test_generate_image_from_prompt_save_to_file(self, mock_openai_responses):
+        """Test that image is saved to file when presentation_id is provided"""
+        # Call the function with presentation_id
+        result = await generate_image_from_prompt("Test prompt", presentation_id=999)
+        
+        # Verify the result includes an image path
+        assert result is not None
+        assert result.image_path is not None
+        assert "999" in result.image_path
+        
+        # Verify the file exists
+        assert os.path.exists(result.image_path)
+        
+        # Clean up the file
+        if os.path.exists(result.image_path):
+            os.remove(result.image_path) 

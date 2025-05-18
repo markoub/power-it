@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-from pptx_analyzer import analyze_pptx_template
+from tools.pptx_analyzer import analyze_pptx_template
 
 def main():
     """

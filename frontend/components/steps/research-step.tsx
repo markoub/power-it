@@ -258,6 +258,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                     placeholder="Enter a topic for your presentation (e.g., 'The Future of Artificial Intelligence')"
                     rows={3}
                     className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                    data-testid="research-topic-input"
                   />
                 </div>
 
@@ -265,6 +266,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                   onClick={handleGenerateContent}
                   className="w-full bg-primary hover:bg-primary-600 text-white transition-all duration-300"
                   disabled={isGenerating || !topic.trim()}
+                  data-testid="run-research-button"
                 >
                   {isGenerating ? (
                     <span className="flex items-center gap-2">
@@ -311,6 +313,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                     placeholder="Enter your research notes, key points, and any other information you want to include in your presentation..."
                     rows={12}
                     className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                    data-testid="manual-research-textarea"
                   />
                 </div>
               </CardContent>

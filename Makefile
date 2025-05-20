@@ -13,7 +13,7 @@ NC := \033[0m # No Color
 INFO := @echo "$(GREEN)$(1)$(NC)"
 WARN := @echo "$(YELLOW)$(1)$(NC)"
 
-.PHONY: e2e e2e-headed e2e-debug e2e-list help
+.PHONY: e2e e2e-headed e2e-debug e2e-list e2e-install help
 
 # Default target when just running `make`
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  $(YELLOW)make e2e-debug$(NC)      - Run E2E tests with debugging enabled (headed + slow motion)"
 	@echo "  $(YELLOW)make e2e-test$(NC) test=file-name - Run specific E2E tests (e.g., make e2e-test test=presentations-list)"
 	@echo "  $(YELLOW)make e2e-list$(NC)       - List all available E2E tests"
+	@echo "  $(YELLOW)make e2e-install$(NC)    - Install Playwright browsers"
 	@echo ""
 	@echo "$(GREEN)Examples:$(NC)"
 	@echo "  $(YELLOW)make e2e-test test=presentations-list$(NC)"
@@ -59,4 +60,10 @@ e2e-test:
 # List all available E2E tests
 e2e-list:
 	$(call INFO,Available E2E tests:)
-	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort 
+	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort
+	
+# Install Playwright browsers
+e2e-install:
+	$(call INFO,Installing Playwright browsers...)
+	cd $(TESTING_DIR) && npx playwright install
+	$(call INFO,Browsers installed.)

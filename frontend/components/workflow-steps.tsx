@@ -104,6 +104,7 @@ export default function WorkflowSteps({
                       className="w-8 h-8 p-0 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg"
                       size="icon"
                       title="Continue to next step"
+                      data-testid="continue-button"
                     >
                       {isProcessing ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -120,6 +121,7 @@ export default function WorkflowSteps({
             <button
               onClick={() => handleStepClick(index)}
               disabled={!isStepEnabled(index)}
+              data-testid={`step-nav-${step.toLowerCase()}`}
               className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
                 isStepCompleted(index)
                   ? "bg-primary-500 text-white"

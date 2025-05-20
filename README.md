@@ -32,6 +32,21 @@ powerit/
 
 ## Setup
 
+### Initial environment preparation (online)
+
+Run the following commands while your machine still has internet access to download all dependencies:
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+cd ../frontend && npm install
+cd ../testing && npm install && npx playwright install
+cd ..
+```
+
 ### Backend
 
 1. Navigate to the backend directory:
@@ -39,9 +54,12 @@ powerit/
    cd backend
    ```
 
-2. Install dependencies in the virtual environment:
-   ```
-   ./venv/bin/pip install -r requirements.txt
+2. **Create the virtual environment and install dependencies** (run while the machine has internet access):
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   deactivate
    ```
 
 3. Create a `.env` file with your API key:

@@ -73,6 +73,7 @@ test-results/
 *.docx
 *.pptx
 *.json
+!backend/tests/fixtures/*.json
 
 # Ignore generated and backup files
 backend/presentations.db

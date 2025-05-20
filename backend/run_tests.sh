@@ -2,6 +2,9 @@
 
 # Script to run tests using the virtual environment
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Ensure virtual environment exists
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."

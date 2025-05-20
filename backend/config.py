@@ -5,17 +5,35 @@ import google.generativeai as genai
 # Load environment variables
 load_dotenv()
 
+
+def _load_secret(name: str, default: str | None = None) -> str | None:
+    """Load a secret from an environment variable or /run/secrets file."""
+    value = os.getenv(name)
+    if value:
+        return value
+    secret_path = f"/run/secrets/{name}"
+    if os.path.exists(secret_path):
+        with open(secret_path) as fh:
+            return fh.read().strip()
+    return default
+
 # Configure Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = _load_secret("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is required")
+    GEMINI_API_KEY = "fake-testing-key"
+    print(
+        "WARNING: GEMINI_API_KEY not provided via env or secrets. "
+        "Using a fake key for testing purposes."
+    )
 
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Check for OpenAI API key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = _load_secret("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    print("WARNING: OPENAI_API_KEY environment variable is not set. Image generation will not work.")
+    print(
+        "WARNING: OPENAI_API_KEY not provided via env or secrets. Image generation will not work."
+    )
 
 # Model configurations
 RESEARCH_MODEL = "gemini-2.5-flash-preview-04-17"

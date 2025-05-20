@@ -5,7 +5,7 @@ import tempfile
 import shutil
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Add parent directory to path if needed
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
@@ -66,7 +66,14 @@ def test_search_logo(mock_logo_fetcher, temp_logo_dir):
 def test_download_logo(temp_logo_dir):
     """Test downloading a logo to a file."""
     fetcher = LogoFetcher(temp_logo_dir)
-    success, result = fetcher.download_logo("google")
+    with patch.object(LogoFetcher, 'search_logo', return_value=GOOGLE_LOGO_INFO):
+        with patch('requests.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.content = b"<svg></svg>"
+            mock_resp.raise_for_status = lambda: None
+            mock_get.return_value = mock_resp
+            success, result = fetcher.download_logo("google")
     assert success, "Download should succeed"
     assert os.path.exists(result), "File should exist after download"
     assert os.path.getsize(result) > 0, "File should not be empty"
@@ -90,11 +97,19 @@ def test_in_memory_download():
     memory_fetcher = LogoFetcher(None)
     
     # Test downloading a known logo
-    success, image_data = memory_fetcher.download_logo("aws")
-    assert success, "Download should succeed"
-    assert isinstance(image_data, bytes), "Result should be bytes"
-    assert len(image_data) > 0, "Image data should not be empty"
-    assert b'<svg' in image_data[:100], "Data should be a valid SVG"
+    with patch.object(LogoFetcher, 'search_logo', return_value=MICROSOFT_LOGO_INFO):
+        with patch('requests.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.content = b"<svg></svg>"
+            mock_resp.raise_for_status = lambda: None
+            mock_get.return_value = mock_resp
+
+            success, image_data = memory_fetcher.download_logo("aws")
+            assert success, "Download should succeed"
+            assert isinstance(image_data, bytes), "Result should be bytes"
+            assert len(image_data) > 0, "Image data should not be empty"
+            assert b'<svg' in image_data[:100], "Data should be a valid SVG"
 
 @pytest.fixture
 def mock_gemini_load_fixture():

@@ -15,7 +15,7 @@ from tools.slides import generate_slides
 pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
-def presentation_vcr():
+def presentation_vcr(gemini_vcr):
     """Fixture for recording/replaying presentation generation responses"""
     # Create fixture directory
     fixture_dir = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -25,41 +25,45 @@ def presentation_vcr():
     record_mode = os.environ.get("PRESENTATION_VCR_MODE", "replay") == "record"
     print(f"Presentation VCR mode: {'record' if record_mode else 'replay'}")
     
+    # Function to generate a stable fixture name
+    def get_fixture_name(test_name):
+        fixture_name = f"presentation_{test_name}"
+        return fixture_name
+    
     def load_or_save_fixture(test_name, result_data=None):
         """Load or save fixture based on mode"""
-        fixture_name = f"presentation_{test_name}.json"
-        fixture_path = os.path.join(fixture_dir, fixture_name)
+        fixture_name = get_fixture_name(test_name)
         
         if record_mode and result_data:
             # Record mode - save the fixture
-            with open(fixture_path, "w") as f:
-                json.dump(result_data, f, indent=2)
-            print(f"Saved presentation result to {fixture_path}")
+            gemini_vcr.save_recording(fixture_name, result_data)
+            print(f"Saved presentation result for {fixture_name}")
             return result_data
         else:
             # Replay mode - load from fixture
-            try:
-                with open(fixture_path, "r") as f:
-                    fixture_data = json.load(f)
-                print(f"Loaded presentation result from {fixture_path}")
+            fixture_data = gemini_vcr.load_recording(fixture_name)
+            if fixture_data:
+                print(f"Loaded presentation result for {fixture_name}")
                 return fixture_data
-            except FileNotFoundError:
+            else:
                 if not record_mode:
-                    print(f"No fixture found at {fixture_path}. Test will be skipped.")
+                    print(f"No fixture found for {fixture_name}. Test will be skipped.")
                     # Return None to indicate fixture not found (test will be skipped)
                     return None
                 return None
     
     return load_or_save_fixture
 
+# Only run orchestrator test if explicitly enabled
+@pytest.mark.skipif(
+    os.environ.get("RUN_ORCHESTRATOR_TEST", "false").lower() != "true",
+    reason="Requires RUN_ORCHESTRATOR_TEST=true environment variable"
+)
 @pytest.mark.asyncio
 async def test_orchestrator(presentation_vcr, mock_gemini_responses):
     """
     Test that the create_presentation function works correctly.
     """
-    # Skip this test due to complex mock setup
-    pytest.skip("Test requires complex mocking setup")
-    
     # Test parameters
     topic = "Artificial Intelligence Benefits"
     target_slides = 6
@@ -109,7 +113,7 @@ async def test_orchestrator(presentation_vcr, mock_gemini_responses):
             else:
                 mock_slides.return_value = SlidePresentation(
                     title="Mocked Presentation",
-                    slides=[Slide(title="Mock Slide", type="content", content=["Mock content"])]
+                    slides=[Slide(type="Content", fields={"title": "Mock Slide", "content": ["Mock content"]})]
                 )
             
             # Call the orchestrator function with mocks
@@ -121,4 +125,4 @@ async def test_orchestrator(presentation_vcr, mock_gemini_responses):
             
             # Verify the mocks were called with expected parameters
             mock_research.assert_called_once_with(topic)
-            mock_slides.assert_called_once() 
+            mock_slides.assert_called_once()

@@ -349,7 +349,11 @@ class GeminiVCR:
 @pytest.fixture
 def gemini_vcr():
     """Pytest fixture that provides a GeminiVCR instance."""
-    return GeminiVCR()
+    vcr = GeminiVCR()
+    # Make sure methods are directly accessible on the returned object
+    vcr.mock_generate_content_async = vcr.mock_generate_content_async
+    vcr.mock_generate_content = vcr.mock_generate_content
+    return vcr
 
 
 @pytest.fixture

@@ -179,6 +179,7 @@ class OpenAIVCR:
 @pytest.fixture
 def openai_vcr():
     """Pytest fixture that provides an OpenAIVCR instance."""
+    # Create and return a class instance
     return OpenAIVCR()
 
 

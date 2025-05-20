@@ -63,10 +63,20 @@ def test_image_path():
         source_image = os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_image.png")
         if os.path.exists(source_image):
             shutil.copy(source_image, test_image)
+            print(f"Copied test image from {source_image} to {test_image}")
+        else:
+            # Create a new test image if it doesn't exist
+            try:
+                from PIL import Image
+                img = Image.new('RGB', (100, 100), color='white')
+                img.save(test_image)
+                print(f"Created new test image at {test_image}")
+            except Exception as e:
+                pytest.skip(f"Failed to create test image: {str(e)}")
     
-    # Skip test if image still doesn't exist
+    # Verify the image exists
     if not os.path.exists(test_image):
-        pytest.skip("Test image not found")
+        pytest.skip("Test image not found and could not be created")
     
     return test_image
 

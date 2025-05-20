@@ -12,6 +12,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from enum import Enum
 import time
 from functools import lru_cache
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
 
 # Import database models
 from database import get_db, init_db, Presentation, PresentationStepModel, PresentationStep, StepStatus, SessionLocal
@@ -41,7 +43,22 @@ from tools.logo_fetcher import LogoFetcher
 from config import PRESENTATIONS_STORAGE_DIR
 from tools.generate_pptx import generate_pptx_from_slides, convert_pptx_to_png
 
-app = FastAPI(title="Presentation Assistant API")
+# Import routers
+from routers.presentations import router as presentations_router 
+from routers.images import router as images_router
+from routers.logos import router as logos_router
+
+# Import server related functions
+from server import enhanced_openapi_schema
+
+app = FastAPI(
+    title="PowerIt Presentation API",
+    description="API for creating, managing, and generating AI-powered presentations",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url="/api/openapi.json"
+)
 
 # Configure CORS
 app.add_middleware(
@@ -118,11 +135,30 @@ _presentations_cache = {
     "ttl": 5  # Cache TTL in seconds
 }
 
-# API Routes
+# Include routers
+app.include_router(presentations_router)
+app.include_router(images_router)
+app.include_router(logos_router)
+
+# Custom OpenAPI schema and documentation
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} - Swagger UI",
+        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+    )
+
 @app.get("/")
 async def root():
-    return {"message": "Presentation Assistant API is running"}
+    return {"message": "PowerIt Presentation Assistant API is running"}
 
+# Replace custom_openapi with the enhanced version from server.py
+app.openapi = lambda: enhanced_openapi_schema(app)
+
+# API Routes
 @app.post("/presentations", response_model=PresentationResponse)
 async def create_presentation(
     presentation: PresentationCreate, 

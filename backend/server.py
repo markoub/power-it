@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.future import select
+from fastapi.openapi.utils import get_openapi
 
 # Import tools
 from tools.research import research_topic
@@ -151,6 +152,74 @@ async def generate_pptx_presentation(slides_data: Dict[str, Any], presentation_i
 async def generate_image_tool(prompt: str, size: str = "1024x1024") -> Dict[str, Any]:
     """Generate an image from a text prompt"""
     # ... existing code ...
+
+# Add enhanced OpenAPI schema generator for improved Swagger docs
+def enhanced_openapi_schema(app):
+    """
+    Create an enhanced OpenAPI schema with more detailed information.
+    This includes better descriptions, examples, and response schemas.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description="""
+# PowerIt Presentation API
+
+This API enables creation, management, and generation of AI-powered presentations.
+
+## Key Features
+- Research presentation topics automatically
+- Generate slide content
+- Create and modify images for slides
+- Compile presentations with images
+- Generate PowerPoint (PPTX) files
+- Export presentations to PDF
+- Search for company logos
+        """,
+        routes=app.routes,
+    )
+    
+    # Add additional info
+    openapi_schema["info"]["x-logo"] = {
+        "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
+    }
+    
+    # Additional server information
+    openapi_schema["servers"] = [
+        {"url": "/", "description": "Current server"}
+    ]
+    
+    # Add authentication information (if needed in the future)
+    openapi_schema["components"] = openapi_schema.get("components", {})
+    openapi_schema["components"]["securitySchemes"] = {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key",
+            "description": "API key authentication (currently not enforced)"
+        }
+    }
+    
+    # Add more detailed tags for better organization
+    openapi_schema["tags"] = [
+        {
+            "name": "presentations",
+            "description": "Endpoints for creating and managing presentations",
+        },
+        {
+            "name": "images",
+            "description": "Endpoints for generating and managing images",
+        },
+        {
+            "name": "logos",
+            "description": "Endpoints for searching and retrieving company logos",
+        }
+    ]
+    
+    return openapi_schema
 
 # This simplifies startup for manual testing
 if __name__ == "__main__":

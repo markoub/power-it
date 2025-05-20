@@ -32,13 +32,41 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [wizardContext, setWizardContext] = useState<"all" | "single">("all")
+  const [isProcessingStep, setIsProcessingStep] = useState(false)
 
   const steps = ["Research", "Slides", "Illustration", "Compiled", "PPTX"]
+  const stepApiNames = ["research", "slides", "images", "compiled", "pptx"]
 
   useEffect(() => {
     // Load presentation from API
     fetchPresentation();
   }, [unwrappedParams.id]);
+
+  // Get the highest step that is completed + 1 (if not the last step)
+  const determineCurrentStep = (presentationData: any) => {
+    if (!presentationData.steps || !Array.isArray(presentationData.steps)) {
+      return 0; // Default to first step if no steps data
+    }
+    
+    let highestCompletedStep = -1;
+    for (let i = 0; i < stepApiNames.length; i++) {
+      const stepName = stepApiNames[i];
+      const step = presentationData.steps.find((s: any) => s.step === stepName);
+      
+      if (step && step.status === 'completed') {
+        highestCompletedStep = i;
+      } else {
+        // Found first incomplete step
+        break;
+      }
+    }
+    
+    // If nothing is completed, start with step 0
+    if (highestCompletedStep === -1) return 0;
+    
+    // Otherwise, go to the next uncompleted step (or stay at the last step)
+    return Math.min(highestCompletedStep + 1, steps.length - 1);
+  };
 
   const fetchPresentation = async () => {
     setIsLoading(true);
@@ -46,6 +74,11 @@ export default function EditPage({ params }: { params: { id: string } }) {
       const fetchedPresentation = await api.getPresentation(unwrappedParams.id);
       if (fetchedPresentation) {
         setPresentation(fetchedPresentation);
+        
+        // Determine the current step based on completion status
+        const newCurrentStep = determineCurrentStep(fetchedPresentation);
+        setCurrentStep(newCurrentStep);
+        
         if (fetchedPresentation.slides && fetchedPresentation.slides.length > 0) {
           setCurrentSlide(fetchedPresentation.slides[0]);
         }
@@ -245,6 +278,112 @@ export default function EditPage({ params }: { params: { id: string } }) {
     })
   }
 
+  // Check if a step is completed based on backend data
+  const isStepCompleted = (stepIndex: number) => {
+    if (!presentation || !presentation.steps) return false;
+    
+    const stepName = stepApiNames[stepIndex];
+    const step = presentation.steps.find(s => s.step === stepName);
+    
+    return step?.status === 'completed';
+  };
+
+  // Continue to next step function
+  const handleContinueToNextStep = async () => {
+    if (!presentation) return;
+    
+    try {
+      setIsProcessingStep(true);
+      
+      // Get the API step name for the next uncompleted step
+      let nextStepIndex = -1;
+      for (let i = 0; i < stepApiNames.length; i++) {
+        if (!isStepCompleted(i)) {
+          nextStepIndex = i;
+          break;
+        }
+      }
+      
+      if (nextStepIndex === -1) {
+        console.log('All steps are already completed');
+        setIsProcessingStep(false);
+        return;
+      }
+      
+      const nextStepName = stepApiNames[nextStepIndex];
+      
+      // Call the API to run the next step
+      const result = await api.runPresentationStep(presentation.id, nextStepName);
+      
+      if (result) {
+        toast({
+          title: "Step initiated",
+          description: `Starting ${steps[nextStepIndex]} generation process...`,
+        });
+        
+        // Wait a bit for the step to be processed
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Refresh the presentation to get updated step status
+        await fetchPresentation();
+        
+        // Move to the next step
+        setCurrentStep(nextStepIndex);
+      } else {
+        throw new Error("Failed to start the next step");
+      }
+    } catch (error) {
+      console.error("Error continuing to next step:", error);
+      toast({
+        title: "Error",
+        description: "Failed to continue to the next step. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingStep(false);
+    }
+  };
+
+  // Determine if continue button should be shown
+  const shouldShowContinueButton = () => {
+    if (!presentation || !presentation.steps) return false;
+    
+    // Find if there are any incomplete steps
+    for (let i = 0; i < stepApiNames.length; i++) {
+      if (!isStepCompleted(i)) {
+        // If the step before this one is completed, we show the continue button
+        return i > 0 && isStepCompleted(i - 1);
+      }
+    }
+    
+    return false; // All steps completed or no steps found
+  };
+
+  // Handle direct step navigation
+  const handleStepChange = (stepIndex: number) => {
+    // We can always navigate to current step
+    if (stepIndex === currentStep) return;
+    
+    // Allow navigation to completed steps
+    if (isStepCompleted(stepIndex)) {
+      setCurrentStep(stepIndex);
+      return;
+    }
+    
+    // Allow navigation to the first uncompleted step (next step after completed ones)
+    if (stepIndex > 0 && isStepCompleted(stepIndex - 1)) {
+      setCurrentStep(stepIndex);
+      return;
+    }
+    
+    // Otherwise, show error message
+    toast({
+      title: "Step unavailable",
+      description: "You need to complete previous steps first.",
+      variant: "destructive",
+    });
+  };
+
   return (
     <ClientWrapper fallback={
       <div className="min-h-screen flex items-center justify-center">
@@ -332,7 +471,16 @@ export default function EditPage({ params }: { params: { id: string } }) {
               </div>
             </header>
 
-            <WorkflowSteps steps={steps} currentStep={currentStep} onChange={setCurrentStep} />
+            <WorkflowSteps 
+              steps={steps} 
+              currentStep={currentStep} 
+              onChange={handleStepChange} 
+              onContinue={shouldShowContinueButton() ? handleContinueToNextStep : undefined}
+              isProcessing={isProcessingStep}
+              completedSteps={presentation?.steps ? stepApiNames.map((name, index) => 
+                isStepCompleted(index)
+              ) : []}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
               {/* Wizard Sidebar */}

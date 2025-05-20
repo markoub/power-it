@@ -3,6 +3,17 @@ import type { Presentation } from './types';
 // Always use the direct backend URL to avoid redirect issues
 const API_URL = 'http://localhost:8000';
 
+// Helper function to ensure URL is properly formatted
+const formatImageUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // If it's already an absolute URL, return it
+  if (url.startsWith('http')) return url;
+  
+  // If it's a relative URL, prepend the API URL
+  return `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 export const api = {
   // Get all presentations
   async getPresentations(): Promise<Presentation[]> {
@@ -61,6 +72,69 @@ export const api = {
               imageUrl: ''
             };
           });
+          
+          // Log slides for debugging
+          console.log('Slides after initial mapping:', slides.map(s => ({ id: s.id, title: s.title })));
+        }
+        
+        // Find the images step and apply image URLs to slides
+        const imagesStep = responseData.steps.find(
+          (step: any) => step.step === 'images' && step.status === 'completed' && step.result && Array.isArray(step.result.images)
+        );
+        
+        if (imagesStep && imagesStep.result && Array.isArray(imagesStep.result.images)) {
+          console.log('Found images:', imagesStep.result.images);
+          
+          // For each image in the backend response, update the corresponding slide
+          imagesStep.result.images.forEach((image: any) => {
+            console.log('Processing image:', image);
+            
+            // Format the image URL properly
+            const formattedImageUrl = formatImageUrl(image.image_url);
+            console.log('Formatted image URL:', formattedImageUrl);
+            
+            // Find the slide by index first (most reliable)
+            if (typeof image.slide_index === 'number' && slides[image.slide_index]) {
+              console.log(`Mapped image to slide at index ${image.slide_index}:`, slides[image.slide_index].title);
+              slides[image.slide_index].imageUrl = formattedImageUrl;
+              if (image.prompt) {
+                slides[image.slide_index].imagePrompt = image.prompt;
+              }
+            } 
+            // If index doesn't work, try finding by title
+            else if (image.slide_title) {
+              // Normalize titles for comparison
+              const normalizedTitle = image.slide_title.trim();
+              
+              // Try exact match first
+              let matchedSlide = slides.find(s => s.title === normalizedTitle);
+              
+              // If no exact match, try partial match
+              if (!matchedSlide) {
+                matchedSlide = slides.find(s => 
+                  s.title.includes(normalizedTitle) || 
+                  normalizedTitle.includes(s.title)
+                );
+              }
+              
+              if (matchedSlide) {
+                console.log(`Mapped image to slide by title "${normalizedTitle}":`, matchedSlide.title);
+                matchedSlide.imageUrl = formattedImageUrl;
+                if (image.prompt) {
+                  matchedSlide.imagePrompt = image.prompt;
+                }
+              } else {
+                console.warn(`Could not find slide matching title: "${normalizedTitle}"`);
+              }
+            }
+          });
+          
+          // Debug log to see mappings
+          console.log('Slides with mapped images:', slides.map(s => ({ 
+            title: s.title, 
+            hasImage: !!s.imageUrl,
+            imageUrl: s.imageUrl
+          })));
         }
       }
       

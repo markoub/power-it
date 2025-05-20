@@ -1,16 +1,17 @@
 "use client"
 
 import { useState } from "react"
-
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
+import { api } from "@/lib/api"
+import { toast } from "@/components/ui/use-toast"
 
 interface SlidesStepProps {
   presentation: Presentation
@@ -32,6 +33,8 @@ export default function SlidesStep({
   onContextChange,
 }: SlidesStepProps) {
   const [activeTab, setActiveTab] = useState("edit")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [numSlides, setNumSlides] = useState(10) // Default number of slides to generate
 
   useEffect(() => {
     // Set context to "single" when a slide is selected
@@ -41,6 +44,72 @@ export default function SlidesStep({
       onContextChange("all")
     }
   }, [currentSlide, onContextChange])
+  
+  // Function to generate slides with AI
+  const handleGenerateSlides = async () => {
+    try {
+      setIsGenerating(true);
+      
+      // Call the API to run the slides step
+      const result = await api.runPresentationStep(presentation.id, "slides");
+      
+      if (result) {
+        toast({
+          title: "Slides generation started",
+          description: "Your slides are being generated. This may take a minute..."
+        });
+        
+        // Poll until the slides are ready
+        let slidesReady = false;
+        let attempts = 0;
+        const maxAttempts = 20; // Limit polling attempts
+        
+        while (!slidesReady && attempts < maxAttempts) {
+          attempts++;
+          
+          // Wait 3 seconds between polls
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Fetch the updated presentation
+          const updatedPresentation = await api.getPresentation(presentation.id);
+          
+          if (updatedPresentation) {
+            // Check if slides step is completed
+            const slidesStep = updatedPresentation.steps?.find(
+              step => step.step === "slides" && step.status === "completed"
+            );
+            
+            if (slidesStep) {
+              slidesReady = true;
+              
+              // Refresh the page to show the new slides
+              window.location.reload();
+            }
+          }
+        }
+        
+        if (!slidesReady) {
+          toast({
+            title: "Taking longer than expected",
+            description: "Slides generation is still in progress. Please refresh the page in a minute.",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error generating slides:", error);
+      toast({
+        title: "Error generating slides",
+        description: "Failed to generate slides. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Check if there are no slides yet
+  const noSlides = presentation.slides.length === 0;
 
   return (
     <div className="space-y-6">
@@ -49,175 +118,211 @@ export default function SlidesStep({
         <p className="text-gray-600 mb-6">
           Create and edit your presentation slides. Add titles and content for each slide.
         </p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Slide Thumbnails */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">Slides</h3>
-              <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-                <AnimatePresence>
-                  {presentation.slides.map((slide, index) => (
-                    <motion.div
-                      key={slide.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2, delay: index * 0.05 }}
-                    >
-                      <Card
-                        className={`cursor-pointer slide-card ${
-                          currentSlide?.id === slide.id ? "ring-2 ring-primary-500 bg-primary-50" : "hover:bg-gray-50"
-                        }`}
-                        onClick={() => setCurrentSlide(slide)}
+        
+        {noSlides ? (
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+            <h3 className="text-xl font-semibold mb-6">Generate Slides</h3>
+            <p className="text-gray-600 mb-8">
+              Your presentation needs slides. You can generate them automatically using AI based on your research.
+            </p>
+            
+            <Button
+              onClick={handleGenerateSlides}
+              className="bg-primary hover:bg-primary-600 text-white px-6 py-2"
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={18} className="animate-spin" />
+                  Generating Slides...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Sparkles size={18} />
+                  Generate Slides
+                </span>
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Slide Thumbnails */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">Slides</h3>
+                <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
+                  <AnimatePresence>
+                    {presentation.slides.map((slide, index) => (
+                      <motion.div
+                        key={slide.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
                       >
-                        <CardContent className="p-3">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium truncate text-sm">{slide.title || `Slide ${index + 1}`}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-500"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteSlide(slide.id)
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                          <div className="h-20 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center text-xs text-gray-500 overflow-hidden p-2">
-                            <p className="line-clamp-4 text-xs">{slide.content}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outline"
-                    className="w-full flex items-center justify-center gap-1 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors"
-                    onClick={addNewSlide}
-                  >
-                    <Plus size={16} />
-                    Add Slide
-                  </Button>
-                </motion.div>
+                        <Card
+                          className={`cursor-pointer slide-card ${
+                            currentSlide?.id === slide.id ? "ring-2 ring-primary-500 bg-primary-50" : "hover:bg-gray-50"
+                          }`}
+                          onClick={() => setCurrentSlide(slide)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium truncate text-sm">{slide.title || `Slide ${index + 1}`}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-500"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteSlide(slide.id)
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                            <div className="h-20 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center text-xs text-gray-500 overflow-hidden p-2">
+                              <p className="line-clamp-4 text-xs">
+                                {typeof slide.content === 'string' ? slide.content : '(No content)'}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      variant="outline"
+                      className="w-full flex items-center justify-center gap-1 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      onClick={addNewSlide}
+                    >
+                      <Plus size={16} />
+                      Add Slide
+                    </Button>
+                  </motion.div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Slide Editor */}
-          <div className="lg:col-span-3">
-            {currentSlide ? (
-              <div className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-gray-100">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="mb-6 bg-gray-100 p-1 rounded-lg">
-                    <TabsTrigger
-                      value="edit"
-                      className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all"
-                    >
-                      Edit
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="preview"
-                      className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all"
-                    >
-                      Preview
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="edit" className="space-y-4 animate-fade-in">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Slide Title</label>
-                      <Input
-                        value={currentSlide.title}
-                        onChange={(e) => updateSlide({ ...currentSlide, title: e.target.value })}
-                        placeholder="Enter slide title"
-                        className="text-xl font-semibold border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Slide Content</label>
-                      <Textarea
-                        value={currentSlide.content}
-                        onChange={(e) => updateSlide({ ...currentSlide, content: e.target.value })}
-                        placeholder="Enter slide content"
-                        rows={10}
-                        className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
-                      />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="preview" className="animate-fade-in">
-                    <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl shadow-lg p-8 aspect-[16/9] flex items-center justify-center">
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
-                        className="w-full h-full"
+            {/* Slide Editor */}
+            <div className="lg:col-span-3">
+              {currentSlide ? (
+                <div className="bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-gray-100">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="mb-6 bg-gray-100 p-1 rounded-lg">
+                      <TabsTrigger
+                        value="edit"
+                        className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all"
                       >
-                        <div className="w-full h-full flex flex-col">
-                          <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                            {currentSlide.title || "Slide Title"}
-                          </h3>
-                          <div className="text-lg">
-                            {currentSlide.content.split("\n").map((paragraph, index) => (
-                              <motion.p
-                                key={index}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.1 }}
-                                className="mb-3"
-                              >
-                                {paragraph}
-                              </motion.p>
-                            ))}
-                            {!currentSlide.content && (
-                              <p className="text-gray-400 italic">
-                                This slide is empty. Add some content in the editor.
-                              </p>
-                            )}
+                        Edit
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="preview"
+                        className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all"
+                      >
+                        Preview
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="edit" className="space-y-4 animate-fade-in">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Slide Title</label>
+                        <Input
+                          value={currentSlide.title}
+                          onChange={(e) => updateSlide({ ...currentSlide, title: e.target.value })}
+                          placeholder="Enter slide title"
+                          className="text-xl font-semibold border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Slide Content</label>
+                        <Textarea
+                          value={typeof currentSlide.content === 'string' ? currentSlide.content : ''}
+                          onChange={(e) => updateSlide({ ...currentSlide, content: e.target.value })}
+                          placeholder="Enter slide content"
+                          rows={10}
+                          className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                        />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="preview" className="animate-fade-in">
+                      <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-xl shadow-lg p-8 aspect-[16/9] flex items-center justify-center">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className="w-full h-full"
+                        >
+                          <div className="w-full h-full flex flex-col">
+                            <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                              {currentSlide.title || "Slide Title"}
+                            </h3>
+                            <div className="text-lg">
+                              {currentSlide.content && typeof currentSlide.content === 'string' 
+                                ? currentSlide.content.split("\n").map((paragraph, index) => (
+                                    <motion.p
+                                      key={index}
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                                      className="mb-3"
+                                    >
+                                      {paragraph}
+                                    </motion.p>
+                                  ))
+                                : (
+                                  <p className="text-gray-400 italic">
+                                    This slide content could not be displayed properly. Please edit the slide content.
+                                  </p>
+                                )
+                              }
+                              {(!currentSlide.content) && (
+                                <p className="text-gray-400 italic">
+                                  This slide is empty. Add some content in the editor.
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-8">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center"
-                >
-                  <svg
-                    className="h-12 w-12 text-gray-300 mx-auto mb-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                        </motion.div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <p className="text-gray-500 mb-4">No slides yet</p>
-                  <Button
-                    onClick={addNewSlide}
-                    className="bg-primary hover:bg-primary-600 text-white transition-all duration-300 shadow-md hover:shadow-primary-500/25"
-                  >
-                    Add Your First Slide
-                  </Button>
-                </motion.div>
-              </div>
-            )}
+                    <svg
+                      className="h-12 w-12 text-gray-300 mx-auto mb-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <p className="text-gray-500 mb-4">No slides yet</p>
+                    <Button
+                      onClick={addNewSlide}
+                      className="bg-primary hover:bg-primary-600 text-white transition-all duration-300 shadow-md hover:shadow-primary-500/25"
+                    >
+                      Add Your First Slide
+                    </Button>
+                  </motion.div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
     </div>
   )

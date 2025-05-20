@@ -13,3 +13,4 @@ python-pptx
 pytest
 pytest-asyncio
 bs4
+markdown

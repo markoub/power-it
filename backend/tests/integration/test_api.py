@@ -1,7 +1,12 @@
 import requests
 import json
 import os
+import pytest
 
+@pytest.mark.skipif(
+    os.environ.get("RUN_API_TEST", "false").lower() != "true",
+    reason="Requires RUN_API_TEST=true and running API server",
+)
 def test_run_pptx_step():
     """Test running the PPTX generation step for a presentation."""
     base_url = "http://localhost:8000"

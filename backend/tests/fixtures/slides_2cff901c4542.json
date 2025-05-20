@@ -1,0 +1,141 @@
+{
+  "title": "Artificial Intelligence in Healthcare",
+  "slides": [
+    {
+      "type": "Welcome",
+      "fields": {
+        "title": "Artificial Intelligence in Healthcare",
+        "subtitle": "Revolutionizing Patient Care",
+        "author": "Test Author"
+      }
+    },
+    {
+      "type": "TableOfContents",
+      "fields": {
+        "title": "Table of Contents",
+        "sections": [
+          "Introduction",
+          "Current Applications",
+          "Benefits",
+          "Challenges",
+          "Future Directions"
+        ]
+      }
+    },
+    {
+      "type": "Section",
+      "fields": {
+        "title": "Introduction"
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "AI's Transformative Impact",
+        "subtitle": "Revolutionizing Healthcare",
+        "image": "An abstract image showing AI concepts like neural networks or data flowing into medical symbols like a heart or brain.",
+        "content": [
+          "Artificial Intelligence (AI) is fundamentally changing the healthcare landscape.",
+          "It is improving key areas such as diagnosis accuracy, treatment planning, and overall patient outcomes."
+        ]
+      }
+    },
+    {
+      "type": "Section",
+      "fields": {
+        "title": "Current Applications"
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "AI in Medical Imaging & Diagnostics",
+        "subtitle": "Enhancing Accuracy and Speed",
+        "image": "An image showing a radiologist looking at a medical scan (like an X-ray or MRI) with AI overlays highlighting areas of interest.",
+        "content": [
+          "AI algorithms are excelling at analyzing medical images (X-rays, CT scans, MRIs).",
+          "They can detect subtle patterns often missed by the human eye, aiding in faster and more accurate diagnoses of conditions like cancer or diabetic retinopathy."
+        ]
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "Predictive Analytics & Patient Care",
+        "subtitle": "Forecasting Outcomes and Risks",
+        "image": "A visual representation of data points or graphs showing trends related to patient health, perhaps with risk scores or predicted outcomes highlighted.",
+        "content": [
+          "AI models analyze vast datasets to predict patient outcomes, identify high-risk patients, and forecast disease outbreaks.",
+          "This enables proactive interventions and personalized care strategies."
+        ]
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "Virtual Assistants & Drug Discovery",
+        "subtitle": "Improving Efficiency and Access",
+        "image": "A split image: one side showing a person interacting with a virtual assistant on a screen, the other side showing molecular structures or lab equipment.",
+        "content": [
+          "Virtual health assistants provide initial patient consultations, answer FAQs, and manage appointments, improving accessibility.",
+          "AI significantly accelerates drug discovery by analyzing molecular data and predicting compound efficacy, reducing R&D time and cost."
+        ]
+      }
+    },
+    {
+      "type": "Section",
+      "fields": {
+        "title": "Benefits"
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "Key Benefits of AI in Healthcare",
+        "subtitle": "Driving Positive Change",
+        "image": "An image illustrating positive outcomes: a doctor and patient interacting positively, a graph showing cost reduction, or symbols representing speed and accuracy.",
+        "content": [
+          "Faster and more accurate diagnoses lead to earlier treatment and better prognoses.",
+          "Reduced healthcare costs through increased efficiency and optimized resource allocation.",
+          "Personalized treatment plans tailored to individual patient data and genetic profiles.",
+          "Overall improvement in patient outcomes and quality of care."
+        ]
+      }
+    },
+    {
+      "type": "Section",
+      "fields": {
+        "title": "Challenges"
+      }
+    },
+    {
+      "type": "ContentImage",
+      "fields": {
+        "title": "Navigating the Hurdles",
+        "subtitle": "Challenges in AI Adoption",
+        "image": "An image depicting obstacles or complex systems: tangled wires, a maze, or symbols representing data locks and regulations.",
+        "content": [
+          "Addressing data privacy concerns and ensuring robust security measures for sensitive patient information.",
+          "Overcoming regulatory hurdles and establishing clear guidelines for AI technologies in healthcare.",
+          "Integrating new AI systems seamlessly with existing legacy healthcare IT infrastructure.",
+          "Ensuring physician adoption and training healthcare professionals to effectively use AI tools."
+        ]
+      }
+    },
+    {
+      "type": "Section",
+      "fields": {
+        "title": "Future Directions"
+      }
+    },
+    {
+      "type": "ImageFull",
+      "fields": {
+        "title": "The Future of AI in Healthcare",
+        "image": "A futuristic image showing advanced medical robotics, real-time patient monitoring interfaces, and visualizations of personalized medicine.",
+        "explanation": "The future holds promise for advanced AI applications, including sophisticated medical robotics for surgery and care, continuous real-time patient monitoring, and the realization of fully personalized medicine driven by AI insights."
+      }
+    }
+  ],
+  "author": "Test Author"
+}

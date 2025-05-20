@@ -448,6 +448,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                   onClick={savePresentation}
                   className="flex items-center gap-1 hover:bg-primary-50 hover:text-primary-600 transition-colors"
                   disabled={isSaving}
+                  data-testid="save-button"
                 >
                   {isSaving ? (
                     <span className="flex items-center gap-1">
@@ -464,6 +465,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                 <Button
                   onClick={handleExport}
                   className="bg-primary hover:bg-primary-600 text-white flex items-center gap-1 transition-all duration-300 shadow-md hover:shadow-primary-500/25"
+                  data-testid="export-pptx-button"
                 >
                   <Download size={18} />
                   Export PPTX

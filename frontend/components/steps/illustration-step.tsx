@@ -207,6 +207,7 @@ export default function IllustrationStep({
               onClick={generateAllImages}
               className="bg-primary hover:bg-primary-600 text-white"
               disabled={isGenerating}
+              data-testid="run-images-button"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -239,6 +240,7 @@ export default function IllustrationStep({
               onClick={generateAllImages}
               className="bg-primary hover:bg-primary-600 text-white px-6"
               size="lg"
+              data-testid="run-images-button"
             >
               <Wand2 size={16} className="mr-2" />
               Generate Images
@@ -332,6 +334,7 @@ export default function IllustrationStep({
                             }}
                             disabled={isGenerating}
                             className="flex-shrink-0"
+                            data-testid="generate-image-button"
                           >
                             <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
                           </Button>

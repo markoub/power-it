@@ -130,6 +130,7 @@ export default function SlidesStep({
               onClick={handleGenerateSlides}
               className="bg-primary hover:bg-primary-600 text-white px-6 py-2"
               disabled={isGenerating}
+              data-testid="run-slides-button"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -196,6 +197,7 @@ export default function SlidesStep({
                       variant="outline"
                       className="w-full flex items-center justify-center gap-1 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors"
                       onClick={addNewSlide}
+                      data-testid="add-slide-button"
                     >
                       <Plus size={16} />
                       Add Slide
@@ -314,6 +316,7 @@ export default function SlidesStep({
                     <Button
                       onClick={addNewSlide}
                       className="bg-primary hover:bg-primary-600 text-white transition-all duration-300 shadow-md hover:shadow-primary-500/25"
+                      data-testid="add-first-slide-button"
                     >
                       Add Your First Slide
                     </Button>

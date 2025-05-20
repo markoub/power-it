@@ -39,7 +39,6 @@ testing/playwright/.cache/
 test-results/
 
 # Output, cache, and temp files
-*.pptx
 *.png
 *.jpg
 *.jpeg
@@ -71,7 +70,6 @@ test-results/
 *.ppt
 *.doc
 *.docx
-*.pptx
 *.json
 !backend/tests/fixtures/*.json
 

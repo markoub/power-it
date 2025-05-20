@@ -13,11 +13,12 @@ NC := \033[0m # No Color
 INFO := @echo "$(GREEN)$(1)$(NC)"
 WARN := @echo "$(YELLOW)$(1)$(NC)"
 
-.PHONY: e2e e2e-headed e2e-debug e2e-list e2e-install help
+.PHONY: setup e2e e2e-headed e2e-debug e2e-list e2e-install help
 
 # Default target when just running `make`
 help:
 	@echo "$(GREEN)Available commands:$(NC)"
+	@echo "  $(YELLOW)make setup$(NC)         - Install backend and E2E dependencies"
 	@echo "  $(YELLOW)make e2e$(NC)            - Run all E2E tests"
 	@echo "  $(YELLOW)make e2e-headed$(NC)     - Run all E2E tests with browser visible"
 	@echo "  $(YELLOW)make e2e-debug$(NC)      - Run E2E tests with debugging enabled (headed + slow motion)"
@@ -64,6 +65,16 @@ e2e-list:
 	
 # Install Playwright browsers
 e2e-install:
-	$(call INFO,Installing Playwright browsers...)
-	cd $(TESTING_DIR) && npx playwright install
-	$(call INFO,Browsers installed.)
+        $(call INFO,Installing Playwright browsers...)
+        cd $(TESTING_DIR) && npx playwright install
+        $(call INFO,Browsers installed.)
+
+# Install all dependencies for offline usage
+setup:
+	$(call INFO,Setting up project dependencies...)
+	sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip
+	cd backend && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
+	chmod +x backend/run_tests.sh backend/record_tests.sh backend/record_all_tests.sh
+	if [ -f frontend/package.json ]; then cd frontend && npm install && cd ..; else echo "Skipping frontend install - package.json missing"; fi
+	cd testing && npm install && npm run install-browsers && cd ..
+	$(call INFO,Setup complete.)

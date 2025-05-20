@@ -56,6 +56,7 @@ The following environment variables are required:
 
 - `GEMINI_API_KEY` - Google Gemini API key
 - `OPENAI_API_KEY` - OpenAI API key (for image generation)
+- `POWERIT_OFFLINE` - Set to `1` to run without internet using recorded fixtures
 
 ### Running the API
 
@@ -64,6 +65,8 @@ python run_api.py
 ```
 
 The server will be available at http://localhost:8000.
+
+To run completely offline, set `POWERIT_OFFLINE=1` before starting the server.
 
 ## Testing
 

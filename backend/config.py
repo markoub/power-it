@@ -2,6 +2,14 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 
+# Check for offline mode
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+
+if OFFLINE_MODE:
+    # Ensure VCR fixtures are used
+    os.environ.setdefault("GEMINI_VCR_MODE", "replay")
+    os.environ.setdefault("OPENAI_VCR_MODE", "replay")
+
 # Load environment variables
 load_dotenv()
 
@@ -19,21 +27,24 @@ def _load_secret(name: str, default: str | None = None) -> str | None:
 
 # Configure Gemini API
 GEMINI_API_KEY = _load_secret("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
+if not GEMINI_API_KEY or OFFLINE_MODE:
     GEMINI_API_KEY = "fake-testing-key"
-    print(
-        "WARNING: GEMINI_API_KEY not provided via env or secrets. "
-        "Using a fake key for testing purposes."
-    )
+    if not OFFLINE_MODE:
+        print(
+            "WARNING: GEMINI_API_KEY not provided via env or secrets. "
+            "Using a fake key for testing purposes."
+        )
 
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Check for OpenAI API key
 OPENAI_API_KEY = _load_secret("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    print(
-        "WARNING: OPENAI_API_KEY not provided via env or secrets. Image generation will not work."
-    )
+if not OPENAI_API_KEY or OFFLINE_MODE:
+    OPENAI_API_KEY = "fake-openai-key"
+    if not OFFLINE_MODE:
+        print(
+            "WARNING: OPENAI_API_KEY not provided via env or secrets. Image generation will not work."
+        )
 
 # Model configurations
 RESEARCH_MODEL = "gemini-2.5-flash-preview-04-17"

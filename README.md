@@ -95,6 +95,16 @@ You can run both the backend and frontend together using:
 
 Or run them separately:
 
+### Offline Mode
+
+To run the backend without internet access, set `POWERIT_OFFLINE=1`. All calls to
+Gemini, OpenAI and logo fetching will be served from the recorded VCR fixtures.
+
+```bash
+export POWERIT_OFFLINE=1
+./run.sh
+```
+
 ### Backend
 
 ```

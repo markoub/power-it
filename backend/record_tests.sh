@@ -8,6 +8,10 @@ if [ -z "$GEMINI_API_KEY" ] || [ -z "$OPENAI_API_KEY" ]; then
     echo "Make sure they are set in your .env file or directly in the environment."
 fi
 
+# Determine script directory and use its virtual environment
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Activate the virtual environment
 source venv/bin/activate
 

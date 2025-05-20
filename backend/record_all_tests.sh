@@ -14,6 +14,10 @@ then
     exit 0
 fi
 
+# Determine script directory and use its virtual environment
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Activate the virtual environment
 source venv/bin/activate
 
@@ -75,4 +79,4 @@ deactivate
 echo ""
 echo "✅ All tests completed in recording mode."
 echo "New fixtures have been created in the tests/fixtures directory."
-echo "Future test runs will use these fixtures by default unless recording mode is enabled." 
+echo "Future test runs will use these fixtures by default unless recording mode is enabled."

@@ -65,9 +65,9 @@ e2e-list:
 	
 # Install Playwright browsers
 e2e-install:
-        $(call INFO,Installing Playwright browsers...)
-        cd $(TESTING_DIR) && npx playwright install
-        $(call INFO,Browsers installed.)
+	$(call INFO,Installing Playwright browsers...)
+	cd $(TESTING_DIR) && npx playwright install
+	$(call INFO,Browsers installed.)
 
 # Install all dependencies for offline usage
 setup:

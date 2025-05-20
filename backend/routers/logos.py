@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from tools.logo_fetcher import LogoFetcher
 
 router = APIRouter(
@@ -17,12 +17,13 @@ class LogoRequest(BaseModel):
     """Request model for logo search"""
     term: str
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "term": "Google"
             }
         }
+    )
 
 class LogoResponse(BaseModel):
     """Response model for logo search"""
@@ -30,14 +31,15 @@ class LogoResponse(BaseModel):
     url: str
     image_url: str
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Google",
                 "url": "https://worldvectorlogo.com/logo/google-1",
                 "image_url": "https://cdn.worldvectorlogo.com/logos/google-1.svg"
             }
         }
+    )
 
 @router.post("/search", response_model=LogoResponse,
            summary="Search for a logo",

@@ -11,15 +11,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Configure pytest-asyncio
 pytest_plugins = ["pytest_asyncio"]
 
-# Import and register fixtures from test_gemini_vcr.py and test_openai_vcr.py
-from tests.test_gemini_vcr import gemini_vcr, mock_gemini_api, mock_gemini_responses
-from tests.test_openai_vcr import openai_vcr, mock_openai_api, mock_openai_responses
-
-# Make them available to pytest
-__all__ = [
-    'gemini_vcr', 'mock_gemini_api', 'mock_gemini_responses',
-    'openai_vcr', 'mock_openai_api', 'mock_openai_responses'
-]
+# Import VCR classes rather than fixtures
+from tests.test_gemini_vcr import GeminiVCR
+from tests.test_openai_vcr import OpenAIVCR
 
 # Configure pytest.ini options programmatically
 def pytest_addoption(parser):
@@ -30,117 +24,119 @@ def pytest_addoption(parser):
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 FIXTURES_DIR.mkdir(exist_ok=True)
 
-def load_fixture(fixture_path):
-    """Load a fixture from the fixtures directory."""
-    if not fixture_path.exists():
-        return None
-    with open(fixture_path, "r") as f:
-        return json.load(f)
-
-def save_fixture(fixture_path, data):
-    """Save a fixture to the fixtures directory."""
-    with open(fixture_path, "w") as f:
-        json.dump(data, f, indent=2)
-
 @pytest.fixture
 def gemini_vcr():
     """
-    Record and replay Gemini API calls.
+    Return an instance of GeminiVCR that can record and replay Gemini API calls.
     - If GEMINI_VCR_MODE=record, make actual API calls and save responses.
     - If GEMINI_VCR_MODE=replay, use saved responses.
     """
+    # Create and return the GeminiVCR instance directly
+    return GeminiVCR()
+
+@pytest.fixture
+def mock_gemini_api():
+    """
+    Patch the Gemini API key for testing.
+    """
+    # Create environment patch for API key if not in recording mode
     record_mode = os.environ.get("GEMINI_VCR_MODE", "replay") == "record"
+    print(f"mock_gemini_api: record_mode = {record_mode}")
     
-    def load_or_save_fixture(prompt, response=None):
-        """Load a fixture or save a new one."""
-        # Create a filename from the prompt
-        hash_value = hash(prompt) % 10000000
-        filename = f"gemini_{hash_value:x}.json"
-        fixture_path = FIXTURES_DIR / filename
-        
-        print(f"Debug: Using fixture file {fixture_path} for prompt '{prompt}' (hash: {hash_value:x})")
-        
-        # If we're saving a response
-        if response is not None:
-            print(f"Debug: Saving response to {fixture_path}")
-            save_fixture(fixture_path, response)
-            return response
-        
-        # If we're loading a response
-        fixture_data = load_fixture(fixture_path)
-        
-        if fixture_data is None:
-            print(f"Debug: No fixture found at {fixture_path}")
-            if not record_mode:
-                pytest.skip(f"No fixture found for prompt: {prompt}")
-        else:
-            print(f"Debug: Loaded fixture from {fixture_path}")
-        
-        return fixture_data
-    
-    # Return the load_or_save_fixture function
-    yield load_or_save_fixture
+    if record_mode:
+        # In record mode, we need the real API key
+        # If GEMINI_API_KEY isn't explicitly set, try to load from .env file
+        from dotenv import load_dotenv
+        if not os.environ.get("GEMINI_API_KEY"):
+            print("Loading API key from .env file for recording mode")
+            load_dotenv()
+            
+        if not os.environ.get("GEMINI_API_KEY"):
+            raise ValueError("GEMINI_API_KEY environment variable is required for recording mode")
+            
+        # Use the real API key in the environment
+        yield
+    else:
+        # In replay mode, use fake key
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-gemini-key-for-testing"}):
+            yield
 
 @pytest.fixture
 def openai_vcr():
     """
-    Record and replay OpenAI API calls.
+    Return an instance of OpenAIVCR that can record and replay OpenAI API calls.
     - If OPENAI_VCR_MODE=record, make actual API calls and save responses.
     - If OPENAI_VCR_MODE=replay, use saved responses.
     """
+    # Create and return the OpenAIVCR instance directly
+    return OpenAIVCR()
+
+@pytest.fixture
+def mock_openai_api():
+    """
+    Patch the OpenAI API key for testing.
+    """
+    # Create environment patch for API key if not in recording mode
     record_mode = os.environ.get("OPENAI_VCR_MODE", "replay") == "record"
+    print(f"mock_openai_api: record_mode = {record_mode}")
     
-    def load_or_save_fixture(prompt, response=None):
-        """Load a fixture or save a new one."""
-        # Create a filename from the prompt
-        hash_value = hash(prompt) % 10000000
-        filename = f"openai_{hash_value:x}.json"
-        fixture_path = FIXTURES_DIR / filename
-        
-        # If we're saving a response
-        if response is not None:
-            save_fixture(fixture_path, response)
-            return response
-        
-        # If we're loading a response
-        fixture_data = load_fixture(fixture_path)
-        if fixture_data is None and not record_mode:
-            pytest.skip(f"No fixture found for prompt: {prompt}")
-        
-        return fixture_data
-    
-    # If we're in record mode, return the fixture loader
     if record_mode:
-        yield load_or_save_fixture
+        # In record mode, we need the real API key
+        # If OPENAI_API_KEY isn't explicitly set, try to load from .env file
+        from dotenv import load_dotenv
+        if not os.environ.get("OPENAI_API_KEY"):
+            print("Loading API key from .env file for recording mode")
+            load_dotenv()
+            
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise ValueError("OPENAI_API_KEY environment variable is required for recording mode")
+            
+        # Use the real API key in the environment
+        yield
     else:
-        # Patch OpenAI client
-        openai_patcher = patch("openai.OpenAI")
-        mock_openai = openai_patcher.start()
+        # In replay mode, use fake key
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "fake-openai-key-for-testing"}):
+            yield
+
+@pytest.fixture
+def mock_openai_responses(openai_vcr, mock_openai_api):
+    """
+    Pytest fixture that replaces the OpenAI client with a mocked version.
+    """
+    # Create a completely mocked OpenAI client
+    mock_client = MagicMock()
+    mock_images = MagicMock()
+    
+    # Mock the generate method
+    def mock_generate(**kwargs):
+        return openai_vcr.mock_openai_images_generate(**kwargs)
+    
+    # Attach the generate method
+    mock_images.generate = mock_generate
+    mock_client.images = mock_images
+    
+    # Now patch the OpenAI constructor in tools.images
+    with patch('tools.images.OpenAI', return_value=mock_client):
+        # Indicate the patching was successful for debug
+        print("Successfully patched OpenAI client in tools.images module")
+        yield openai_vcr  # Return the actual VCR instance
+
+@pytest.fixture
+def mock_gemini_responses(gemini_vcr, mock_gemini_api):
+    """
+    Pytest fixture that patches Google's generative AI with mocked responses.
+    """
+    import google.generativeai as genai
+    
+    # Patch the generate_content method
+    with patch('google.generativeai.GenerativeModel.generate_content', 
+               side_effect=gemini_vcr.mock_generate_content(genai.GenerativeModel.generate_content)), \
+         patch('google.generativeai.GenerativeModel.generate_content_async',
+               side_effect=gemini_vcr.mock_generate_content_async(genai.GenerativeModel.generate_content_async)):
         
-        # Create mock client and completion
-        mock_client = MagicMock()
-        mock_completion = MagicMock()
-        
-        def mock_completion_create(*args, **kwargs):
-            """Mock the completion.create method."""
-            prompt = kwargs.get("prompt", "")
-            fixture_data = load_or_save_fixture(prompt)
-            
-            # Create a mock response
-            mock_response = MagicMock()
-            mock_response.choices = [MagicMock()]
-            mock_response.choices[0].text = fixture_data.get("text", "")
-            
-            return mock_response
-        
-        mock_completion.create.side_effect = mock_completion_create
-        mock_client.completions = mock_completion
-        mock_openai.return_value = mock_client
-        
-        yield load_or_save_fixture
-        
-        # Clean up
-        openai_patcher.stop()
+        # Indicate the patching was successful for debug
+        print("Successfully patched Gemini API methods")
+        yield gemini_vcr  # Return the actual VCR instance
 
 @pytest.fixture
 def image_api_vcr():

@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class PresentationResponse(BaseModel):
     """Base presentation response model"""
@@ -10,8 +10,8 @@ class PresentationResponse(BaseModel):
     created_at: str = Field(description="ISO-formatted creation timestamp")
     updated_at: str = Field(description="ISO-formatted last update timestamp")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Introduction to AI",
@@ -21,6 +21,7 @@ class PresentationResponse(BaseModel):
                 "updated_at": "2023-01-01T12:30:00"
             }
         }
+    )
 
 class PresentationStepResponse(BaseModel):
     """Presentation step response model"""
@@ -32,8 +33,8 @@ class PresentationStepResponse(BaseModel):
     created_at: str = Field(description="ISO-formatted creation timestamp")
     updated_at: str = Field(description="ISO-formatted last update timestamp")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "step": "research",
@@ -50,6 +51,7 @@ class PresentationStepResponse(BaseModel):
                 "updated_at": "2023-01-01T12:30:00"
             }
         }
+    )
 
 class PresentationDetailResponse(BaseModel):
     """Detailed presentation response with steps"""
@@ -61,8 +63,8 @@ class PresentationDetailResponse(BaseModel):
     updated_at: str = Field(description="ISO-formatted last update timestamp")
     steps: List[PresentationStepResponse] = Field(description="List of all steps for this presentation with their statuses and results")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "name": "Introduction to AI",
@@ -115,13 +117,14 @@ class PresentationDetailResponse(BaseModel):
                 ]
             }
         }
+    )
 
 class StepUpdateRequest(BaseModel):
     """Model for updating a step's result"""
     result: Dict[str, Any] = Field(description="Updated result data for the step. Structure depends on step type")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "result": {
                     "content": "Updated research content on Artificial Intelligence (AI). AI refers to the simulation of human intelligence in machines that are programmed to think and learn like humans...",
@@ -132,6 +135,7 @@ class StepUpdateRequest(BaseModel):
                 }
             }
         }
+    )
 
 class PresentationCreate(BaseModel):
     """Model for creating a new presentation"""
@@ -141,8 +145,8 @@ class PresentationCreate(BaseModel):
     research_type: str = Field("research", description="Type of research to perform: 'research' for AI-generated or 'manual_research' for user-provided content")
     author: Optional[str] = Field(None, description="Author name for the presentation")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Introduction to AI",
                 "topic": "Artificial Intelligence",
@@ -150,6 +154,7 @@ class PresentationCreate(BaseModel):
                 "author": "John Doe"
             }
         }
+    )
 
 class SlideModificationRequest(BaseModel):
     """Model for slide modification request"""
@@ -157,11 +162,12 @@ class SlideModificationRequest(BaseModel):
     slide_index: Optional[int] = Field(None, description="Index of the specific slide to modify. If not provided, the entire presentation may be modified")
     current_step: Optional[str] = Field(None, description="Current step in the presentation process (e.g., 'slides', 'compiled')")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "prompt": "Make this slide more engaging and add a section about machine learning",
                 "slide_index": 2,
                 "current_step": "slides"
             }
-        } 
+        }
+    ) 

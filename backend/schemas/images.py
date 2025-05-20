@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class ImageRequest(BaseModel):
     """Image generation request model"""
@@ -11,13 +11,14 @@ class ImageRequest(BaseModel):
         description="The size of the generated image. Available options: 256x256, 512x512, 1024x1024, 1792x1024, 1024x1792"
     )
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "prompt": "A futuristic city skyline with flying vehicles, neon lights, and tall glass buildings under a sunset sky",
                 "size": "1024x1024"
             }
         }
+    )
 
 class ImageResponse(BaseModel):
     """Image generation response model"""
@@ -34,8 +35,8 @@ class ImageResponse(BaseModel):
         description="The URL to retrieve the generated image. Format: /presentations/{presentation_id}/images/{filename}"
     )
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "slide_index": 2,
                 "slide_title": "Future Technologies",
@@ -43,6 +44,7 @@ class ImageResponse(BaseModel):
                 "image_url": "/presentations/1/images/slide_2_image.png"
             }
         }
+    )
 
 class LogoRequest(BaseModel):
     """Logo search request model"""
@@ -50,12 +52,13 @@ class LogoRequest(BaseModel):
         description="Company or brand name to search for a logo"
     )
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "term": "Microsoft"
             }
         }
+    )
 
 class LogoResponse(BaseModel):
     """Logo search response model"""
@@ -69,14 +72,15 @@ class LogoResponse(BaseModel):
         description="URL to the logo image that can be used directly in presentations"
     )
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Microsoft",
                 "url": "https://www.microsoft.com",
                 "image_url": "/logos/microsoft"
             }
         }
+    )
 
 class SlideDetails(BaseModel):
     """Model for slide type details and available fields"""
@@ -88,8 +92,8 @@ class SlideTypesResponse(BaseModel):
     """Response model for available slide types"""
     slide_types: List[SlideDetails] = Field(description="List of available slide types and their fields")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "slide_types": [
                     {
@@ -119,4 +123,5 @@ class SlideTypesResponse(BaseModel):
                     }
                 ]
             }
-        } 
+        }
+    ) 

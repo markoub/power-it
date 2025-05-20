@@ -10,3 +10,5 @@ aiosqlite
 python-multipart
 openai
 python-pptx
+pytest
+pytest-asyncio

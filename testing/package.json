@@ -1,12 +1,26 @@
 {
+  "name": "testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "install-browsers": "playwright install chromium",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:presentations-list": "playwright test e2e/presentations-list.spec.ts",
+    "test:create-presentation": "playwright test e2e/create-presentation.spec.ts",
+    "test:steps": "playwright test e2e/presentation-steps.spec.ts",
+    "report": "playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "playwright-chromium": "^1.52.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0"
-  },
-  "scripts": {
-    "test": "playwright test",
-    "install-browsers": "playwright install chromium"
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^20.11.24"
   }
 }

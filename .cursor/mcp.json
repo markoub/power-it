@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "presentation_assistant": {
+      "command": "run --with mcp mcp run presentation_server.py",
+      "name": "Presentation Assistant",
+      "description": "MCP server for creating presentations using Gemini AI. It can research topics and provide detailed content with sources."
+    }
+  }
+} 

@@ -9,11 +9,15 @@ from io import BytesIO
 import concurrent.futures
 import time
 import contextlib
+import shutil
 
 # Use absolute imports
-from config import OPENAI_IMAGE_CONFIG, PRESENTATIONS_STORAGE_DIR
+from config import OPENAI_IMAGE_CONFIG, PRESENTATIONS_STORAGE_DIR, STORAGE_DIR
 from models import ImageGeneration, SlidePresentation
 from tools.slide_config import SLIDE_TYPES, IMAGE_FORMATS
+
+# Check for offline mode
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
 
 # Create a thread pool executor with limited workers
 image_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
@@ -22,15 +26,39 @@ image_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 REQUEST_TIMEOUT = 60  # seconds
 MAX_RETRIES = 2
 
-def save_image_to_file(presentation_id: int, slide_index: int, image_field_name: str, image_data: str) -> str:
+# Create the dummy image file for offline mode if it doesn't exist
+DUMMY_IMAGE_DIR = os.path.join(STORAGE_DIR, "offline_assets")
+DUMMY_IMAGE_PATH = os.path.join(DUMMY_IMAGE_DIR, "dummy_image.png")
+
+def ensure_dummy_image_exists():
+    """Ensure the dummy image file exists for offline mode"""
+    if OFFLINE_MODE and not os.path.exists(DUMMY_IMAGE_PATH):
+        os.makedirs(DUMMY_IMAGE_DIR, exist_ok=True)
+        # Create a better looking placeholder image and save it
+        try:
+            with open(DUMMY_IMAGE_PATH, 'wb') as f:
+                # This is a more visually appealing placeholder image (64x64 pixel with "OFFLINE" text)
+                # A blue-gray placeholder with text indicating offline mode
+                f.write(base64.b64decode(
+                    "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"))
+            print(f"Created dummy image file at {DUMMY_IMAGE_PATH}")
+        except Exception as e:
+            print(f"Error creating dummy image: {str(e)}")
+
+# Make sure we have the dummy image available
+if OFFLINE_MODE:
+    ensure_dummy_image_exists()
+
+def save_image_to_file(presentation_id: int, slide_index: int, image_field_name: str, image_data: str = None) -> str:
     """
-    Save a base64 encoded image to a file.
+    Save an image to a file for a presentation.
+    In offline mode, this copies the dummy image instead of decoding base64 data.
     
     Args:
         presentation_id: ID of the presentation
         slide_index: Index of the slide (-1 for standalone images)
         image_field_name: Name of the image field (e.g., 'image', 'image1')
-        image_data: Base64 encoded image data
+        image_data: Base64 encoded image data (not used in offline mode)
         
     Returns:
         Path to the saved image file
@@ -43,17 +71,24 @@ def save_image_to_file(presentation_id: int, slide_index: int, image_field_name:
     images_dir = os.path.join(presentation_dir, "images")
     os.makedirs(images_dir, exist_ok=True)
     
-    # Generate a filename with UUID to ensure uniqueness but avoid duplicating existing images
-    # Ensure UUID is a proper string representation with full length
+    # Generate a filename with UUID to ensure uniqueness
     unique_id = str(uuid.uuid4())
     filename = f"slide_{slide_index}_{image_field_name}_{unique_id}.png"
     file_path = os.path.join(images_dir, filename)
     
-    # Decode and save the image
-    with open(file_path, "wb") as f:
-        f.write(base64.b64decode(image_data))
+    if OFFLINE_MODE:
+        # In offline mode, copy the dummy image file instead of decoding base64
+        try:
+            shutil.copy(DUMMY_IMAGE_PATH, file_path)
+            print(f"Copied dummy image to: {file_path}")
+        except Exception as e:
+            print(f"Error copying dummy image: {str(e)}")
+    else:
+        # In online mode, decode and save the image from base64 data
+        with open(file_path, "wb") as f:
+            f.write(base64.b64decode(image_data))
+        print(f"Saved image to: {file_path}")
     
-    print(f"Saved image to: {file_path}")
     return file_path
 
 def load_image_from_file(file_path: str) -> Optional[str]:
@@ -67,7 +102,11 @@ def load_image_from_file(file_path: str) -> Optional[str]:
         Base64 encoded image data or None if file doesn't exist
     """
     if not os.path.exists(file_path):
-        return None
+        if OFFLINE_MODE and os.path.exists(DUMMY_IMAGE_PATH):
+            # In offline mode, use the dummy image if the requested file doesn't exist
+            file_path = DUMMY_IMAGE_PATH
+        else:
+            return None
     
     with open(file_path, "rb") as f:
         image_data = f.read()
@@ -75,9 +114,8 @@ def load_image_from_file(file_path: str) -> Optional[str]:
 
 def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGeneration]:
     """
-    Generate images for a slide based on its type - runs in a separate thread.
-    Creates a fresh client for each request to avoid gRPC threading issues.
-    Returns a list of ImageGeneration objects, one for each image field found.
+    Generate images for a slide based on its type.
+    In offline mode, returns mock images using the dummy image file.
     """
     slide_type = getattr(slide, 'type', None)
     if not slide_type or slide_type not in SLIDE_TYPES:
@@ -110,6 +148,29 @@ def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGenera
             specific_content = ' '.join(field_content)
         else:
             specific_content = str(field_content) # Ensure it's a string
+
+        if OFFLINE_MODE:
+            print(f"OFFLINE MODE: Using dummy image for slide {index}, field {image_field}")
+            
+            # Save the dummy image
+            file_path = None
+            if presentation_id is not None:
+                file_path = save_image_to_file(presentation_id, index, image_field)
+                
+            # Get the base64 encoded dummy image
+            dummy_image_b64 = load_image_from_file(DUMMY_IMAGE_PATH)
+                
+            # Add the generated image to the list
+            generated_images.append(ImageGeneration(
+                slide_index=index,
+                slide_title=slide_title,
+                prompt=f"Dummy image for {specific_content}",
+                image_field_name=image_field,
+                image_path=file_path,
+                image=dummy_image_b64
+            ))
+            print(f"Successfully generated dummy image for slide {index}, field {image_field}")
+            continue
 
         # Create a prompt based on the specific field content
         prompt = f"""Create an illustrative image for a presentation slide representing: {specific_content}
@@ -173,14 +234,15 @@ Important guidelines:
 
 async def generate_slide_images(slides: SlidePresentation, presentation_id: Optional[int] = None) -> List[ImageGeneration]:
     """
-    Generate images for presentation slides using OpenAI GPT Image. Now handles multiple images per slide.
+    Generate images for presentation slides.
+    In offline mode, returns mock images using the dummy image file.
     
     Args:
         slides: SlidePresentation object containing slide content
         presentation_id: ID of the presentation to store images, or None for temporary images
         
     Returns:
-        A list of ImageGeneration objects for all generated images across all slides.
+        A list of ImageGeneration objects for all generated images
     """
     tasks = []
     
@@ -199,6 +261,18 @@ async def generate_slide_images(slides: SlidePresentation, presentation_id: Opti
             
     if not tasks:
         return [] # No images needed
+
+    if OFFLINE_MODE:
+        print(f"OFFLINE MODE: Generating dummy images for {len(tasks)} slides")
+        
+        all_generated_images = []
+        for slide_obj, index in tasks:
+            # Generate dummy images for this slide
+            result = _generate_image_for_slide(slide_obj, index, presentation_id)
+            all_generated_images.extend(result)
+            
+        print(f"OFFLINE MODE: Generated {len(all_generated_images)} dummy images")
+        return all_generated_images
 
     # Limit concurrent requests
     concurrency = min(2, len(tasks))
@@ -245,18 +319,30 @@ async def generate_slide_images(slides: SlidePresentation, presentation_id: Opti
 
 async def generate_image_from_prompt(prompt: str, size: str = "1024x1024", presentation_id: Optional[int] = None, slide_type: Optional[str] = None) -> Optional[ImageGeneration]:
     """
-    Generate a single image from a prompt using OpenAI GPT Image.
-    Includes image_field_name in the result.
-    
-    Args:
-        prompt: The text prompt for image generation
-        size: Image size (e.g. "1024x1024"). Will be overridden by slide_type if provided.
-        presentation_id: Optional ID of the presentation to store the image with
-        slide_type: Optional type of slide for format determination (overrides size)
-        
-    Returns:
-        An ImageGeneration object or None if generation fails
+    Generate a single image from a prompt.
+    In offline mode, returns a mock image using the dummy image file.
     """
+    if OFFLINE_MODE:
+        print(f"OFFLINE MODE: Using dummy image for prompt: {prompt}")
+        
+        # Save the dummy image
+        file_path = None
+        if presentation_id is not None:
+            file_path = save_image_to_file(presentation_id, -1, "image")
+            
+        # Get the base64 encoded dummy image
+        dummy_image_b64 = load_image_from_file(DUMMY_IMAGE_PATH)
+            
+        # Return a mock ImageGeneration object
+        return ImageGeneration(
+            slide_index=-1,
+            slide_title="Mock Image",
+            prompt=prompt,
+            image_field_name="image",
+            image_path=file_path,
+            image=dummy_image_b64
+        )
+
     image_field_name = "image" # Default field name for single image generation
 
     def _generate_single_image():

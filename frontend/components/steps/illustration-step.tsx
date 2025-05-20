@@ -10,6 +10,9 @@ import type { Presentation, Slide } from "@/lib/types"
 import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
+// Define API_URL to match the one used in the api.ts file
+const API_URL = 'http://localhost:8000';
+
 interface IllustrationStepProps {
   presentation: Presentation
   currentSlide: Slide | null
@@ -56,24 +59,64 @@ export default function IllustrationStep({
         imagePrompt,
       })
 
-      // In a real app, this would call the API to generate the image
+      // Notify the user that image generation is starting
       toast({
         title: "Image generation requested",
         description: "The image for this slide is being generated..."
       });
 
-      // Simulated delay for UI feedback
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // In a production app, we would invoke the actual API and update with the real image URL
-      const imageUrl = `/placeholder.svg?height=400&width=600&query=${encodeURIComponent(imagePrompt)}`;
-
-      // Update the slide with the image URL
-      updateSlide({
-        ...slide,
-        imagePrompt,
-        imageUrl,
-      })
+      // Make API call to the backend to generate the image
+      // This will work in both online and offline mode since the backend handles offline mode properly
+      try {
+        const response = await fetch(`${API_URL}/images`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: imagePrompt,
+            size: "1024x1024"
+          }),
+          mode: 'cors',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to generate image: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Format the image URL using the same helper function pattern from api.ts
+        let imageUrl = data.image_url || '';
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          imageUrl = `${API_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+        }
+        
+        // Update the slide with the real image URL from the API
+        updateSlide({
+          ...slide,
+          imagePrompt,
+          imageUrl,
+        });
+      } catch (error) {
+        console.error("API error generating image:", error);
+        
+        // If API call fails, still provide a fallback placeholder
+        // This ensures the UI doesn't break if the backend is unreachable
+        const fallbackImageUrl = `/placeholder.svg?height=400&width=600&query=${encodeURIComponent(imagePrompt)}`;
+        
+        updateSlide({
+          ...slide,
+          imagePrompt,
+          imageUrl: fallbackImageUrl,
+        });
+        
+        toast({
+          title: "Using placeholder image",
+          description: "Could not connect to image generation API. Using a placeholder instead.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Error generating image:", error)
       toast({

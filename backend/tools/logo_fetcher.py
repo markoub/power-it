@@ -3,8 +3,30 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 from urllib.parse import quote
+import shutil
 
 logger = logging.getLogger(__name__)
+
+# Check for offline mode
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+
+# Dummy logo file for offline mode
+downloaded_logos_dir = os.path.join(os.path.dirname(__file__), "downloaded_logos")
+DUMMY_LOGO_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "offline_assets")
+DUMMY_LOGO_PATH = os.path.join(DUMMY_LOGO_DIR, "dummy_logo.svg")
+
+# Ensure the directories exist
+os.makedirs(downloaded_logos_dir, exist_ok=True)
+os.makedirs(DUMMY_LOGO_DIR, exist_ok=True)
+
+# Create a dummy logo file if it doesn't exist
+if OFFLINE_MODE and not os.path.exists(DUMMY_LOGO_PATH):
+    try:
+        with open(DUMMY_LOGO_PATH, 'w') as f:
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="#cccccc"/><text x="10" y="50" font-family="Arial" font-size="14">Dummy Logo</text></svg>')
+        print(f"Created dummy logo file at {DUMMY_LOGO_PATH}")
+    except Exception as e:
+        print(f"Error creating dummy logo: {str(e)}")
 
 class LogoFetcher:
     """
@@ -37,6 +59,14 @@ class LogoFetcher:
             dict: Information about the first logo found, or None if not found.
                  Format: {'name': str, 'url': str, 'image_url': str}
         """
+        if OFFLINE_MODE:
+            print(f"OFFLINE MODE: Using dummy logo info for term: {term}")
+            return {
+                'name': term,
+                'url': f"https://worldvectorlogo.com/logos/{term.lower().replace(' ', '-')}",
+                'image_url': f"https://worldvectorlogo.com/logos/{term.lower().replace(' ', '-')}.svg"
+            }
+            
         try:
             # URL encode the search term
             encoded_term = quote(term)
@@ -139,6 +169,27 @@ class LogoFetcher:
                   - result is either the local path to the saved file, the image data (bytes),
                     or an error message
         """
+        if OFFLINE_MODE:
+            print(f"OFFLINE MODE: Using dummy logo for term: {term}")
+            
+            # If no storage_dir, just return the dummy logo path
+            if not self.storage_dir:
+                return True, DUMMY_LOGO_PATH
+                
+            # Otherwise, copy the dummy logo to the appropriate location
+            if not filename:
+                filename = f"{term.lower().replace(' ', '_')}.svg"
+                
+            local_path = os.path.join(self.storage_dir, filename)
+            try:
+                shutil.copy(DUMMY_LOGO_PATH, local_path)
+                logger.info(f"Copied dummy logo to: {local_path}")
+                return True, local_path
+            except Exception as e:
+                error_msg = f"Error copying dummy logo for '{term}': {str(e)}"
+                logger.error(error_msg)
+                return False, error_msg
+        
         # Search for the logo
         logo_info = self.search_logo(term)
         if not logo_info:
@@ -175,7 +226,6 @@ class LogoFetcher:
             return False, error_msg
 
 # Create a default instance with storage in 'downloaded_logos' directory
-downloaded_logos_dir = os.path.join(os.path.dirname(__file__), "downloaded_logos")
 # Ensure the directory exists
 if not os.path.exists(downloaded_logos_dir):
     os.makedirs(downloaded_logos_dir, exist_ok=True)
@@ -203,56 +253,15 @@ def download_logo(term, filename=None):
     
     Args:
         term (str): Search term for the logo.
-        filename (str, optional): Filename to save the logo.
+        filename (str, optional): Filename to save the logo. If None,
+                                 the filename will be derived from the term.
                                  
     Returns:
         tuple: (success, result) where:
               - success is a boolean indicating if download was successful
               - result is either the local path to the saved file or an error message
     """
-    print(f"LOGO DEBUG: Starting logo download for term: '{term}'")
-    
-    # Check if we already have this logo cached
-    if filename is None:
-        sanitized_term = term.lower().replace(' ', '_')
-        expected_filename = f"{sanitized_term}.svg"
-        expected_path = os.path.join(downloaded_logos_dir, expected_filename)
-        
-        if os.path.exists(expected_path):
-            file_size = os.path.getsize(expected_path)
-            print(f"LOGO DEBUG: Found cached logo for '{term}' at {expected_path} (size: {file_size} bytes)")
-            return True, expected_path
-    
-    # Not cached, need to download
-    result = _default_fetcher.download_logo(term, filename)
-    
-    # Check the result
-    if result[0]:
-        print(f"LOGO DEBUG: Successfully downloaded logo for '{term}' to {result[1]}")
-        # Verify file exists and has content
-        if os.path.exists(result[1]):
-            file_size = os.path.getsize(result[1])
-            print(f"LOGO DEBUG: Downloaded file size: {file_size} bytes")
-            if file_size == 0:
-                print(f"LOGO DEBUG: WARNING - Downloaded file is empty!")
-                # Try to fix by creating a placeholder file
-                if result[1].endswith('.svg'):
-                    try:
-                        print(f"LOGO DEBUG: Creating placeholder SVG for '{term}'")
-                        # Create a simple placeholder SVG
-                        placeholder_svg = f"""<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="200" height="100" fill="#f0f0f0"/>
-                            <text x="100" y="50" font-family="Arial" font-size="16" fill="black" text-anchor="middle">{term}</text>
-                        </svg>"""
-                        with open(result[1], 'w') as f:
-                            f.write(placeholder_svg)
-                        print(f"LOGO DEBUG: Created placeholder SVG for '{term}'")
-                    except Exception as e:
-                        print(f"LOGO DEBUG: Failed to create placeholder: {str(e)}")
-    else:
-        print(f"LOGO DEBUG: Failed to download logo for '{term}': {result[1]}")
-    
-    return result
+    return _default_fetcher.download_logo(term, filename)
 
 # Example usage
 if __name__ == "__main__":

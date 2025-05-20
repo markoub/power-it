@@ -9,13 +9,14 @@ if OFFLINE_MODE:
     # Ensure VCR fixtures are used
     os.environ.setdefault("GEMINI_VCR_MODE", "replay")
     os.environ.setdefault("OPENAI_VCR_MODE", "replay")
+    print(f"Config: OFFLINE_MODE is enabled - all external API calls will use fixtures")
 
 # Load environment variables
 load_dotenv()
 
 
 def _load_secret(name: str, default: str | None = None) -> str | None:
-    """Load a secret from an environment variable or /run/secrets file."""
+    """Load a secret from environment or /run/secrets."""
     value = os.getenv(name)
     if value:
         return value
@@ -35,7 +36,13 @@ if not GEMINI_API_KEY or OFFLINE_MODE:
             "Using a fake key for testing purposes."
         )
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Only configure genai if not in offline mode to avoid unintended API calls
+if not OFFLINE_MODE:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    # In offline mode, still set up the configuration but with the fake key
+    genai.configure(api_key="fake-testing-key")
+    print("Config: Configured genai with fake API key for offline mode")
 
 # Check for OpenAI API key
 OPENAI_API_KEY = _load_secret("OPENAI_API_KEY")
@@ -45,6 +52,10 @@ if not OPENAI_API_KEY or OFFLINE_MODE:
         print(
             "WARNING: OPENAI_API_KEY not provided via env or secrets. Image generation will not work."
         )
+# Make sure the environment variable is set for other modules
+if OFFLINE_MODE:
+    os.environ["OPENAI_API_KEY"] = "fake-openai-key"
+    print("Config: Set OPENAI_API_KEY environment variable to fake key for offline mode")
 
 # Model configurations
 RESEARCH_MODEL = "gemini-2.5-flash-preview-04-17"
@@ -76,14 +87,12 @@ MODIFY_CONFIG = {
 # OpenAI Image generation configuration
 OPENAI_IMAGE_CONFIG = {
     "model": "gpt-image-1",
-    "quality": "low",
-    "size": "1024x1536",
+    "quality": "standard",
+    "size": "1024x1024",
     "output_format": "png",
 }
 
-# Image storage configuration
-STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
+# Storage configuration
+STORAGE_DIR = os.environ.get("STORAGE_DIR", "storage")
 PRESENTATIONS_STORAGE_DIR = os.path.join(STORAGE_DIR, "presentations")
-# Create storage directories if they don't exist
-os.makedirs(STORAGE_DIR, exist_ok=True)
 os.makedirs(PRESENTATIONS_STORAGE_DIR, exist_ok=True) 

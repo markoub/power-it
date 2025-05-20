@@ -3,6 +3,7 @@ import json
 import re
 import sys
 import traceback
+import os
 from typing import Dict, Any, List, Optional
 
 # Use absolute imports
@@ -11,6 +12,132 @@ from utils import extract_json_from_text
 from models import ResearchData, SlidePresentation, Slide
 from tools.slide_config import SLIDE_TYPES, PRESENTATION_STRUCTURE
 from tools.logo_fetcher import search_logo, download_logo
+
+# Check for offline mode
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+
+# Fixed offline slides response
+OFFLINE_SLIDES_RESPONSE = {
+    "title": "Artificial Intelligence in Modern Business",
+    "slides": [
+        {
+            "type": "Welcome",
+            "fields": {
+                "title": "Artificial Intelligence in Modern Business",
+                "subtitle": "Transforming Industries Through Innovation",
+                "author": "AI Presenter"
+            }
+        },
+        {
+            "type": "Section",
+            "fields": {
+                "title": "Introduction"
+            }
+        },
+        {
+            "type": "Content",
+            "fields": {
+                "title": "Introduction to AI in Business",
+                "content": [
+                    "AI is revolutionizing how businesses operate",
+                    "Companies are using AI to automate tasks, gain insights, and create new products",
+                    "85% of executives believe AI will significantly change their business model"
+                ]
+            }
+        },
+        {
+            "type": "Section",
+            "fields": {
+                "title": "Key Technologies"
+            }
+        },
+        {
+            "type": "Content",
+            "fields": {
+                "title": "Key AI Technologies",
+                "content": [
+                    "Machine Learning algorithms for prediction and pattern recognition",
+                    "Natural Language Processing for communication and text analysis",
+                    "Computer Vision for image and video understanding",
+                    "Robotics and automation for physical tasks"
+                ]
+            }
+        },
+        {
+            "type": "ImageFull",
+            "fields": {
+                "title": "AI Transformation",
+                "image": "AI-powered business transformation",
+                "explanation": "Visual representation of how AI transforms traditional business processes into intelligent, automated systems"
+            }
+        },
+        {
+            "type": "Section",
+            "fields": {
+                "title": "Applications"
+            }
+        },
+        {
+            "type": "ContentImage",
+            "fields": {
+                "title": "Business Applications",
+                "subtitle": "AI Applications Across Business Functions",
+                "content": [
+                    "Customer service automation and personalized marketing",
+                    "Supply chain optimization and predictive maintenance",
+                    "Fraud detection and risk analysis",
+                    "Automated recruiting and talent management"
+                ],
+                "image": "Business applications of AI across different departments"
+            }
+        },
+        {
+            "type": "ContentWithLogos",
+            "fields": {
+                "title": "Companies Leading AI Innovation",
+                "content": [
+                    "Google: Advanced machine learning and search",
+                    "Microsoft: Enterprise AI and cloud services",
+                    "Amazon: E-commerce and logistics AI",
+                    "IBM: Enterprise AI solutions"
+                ],
+                "logo1": "Google",
+                "logo2": "Microsoft",
+                "logo3": "Amazon"
+            }
+        },
+        {
+            "type": "Section",
+            "fields": {
+                "title": "Implementation"
+            }
+        },
+        {
+            "type": "Content",
+            "fields": {
+                "title": "Getting Started with AI",
+                "content": [
+                    "Identify high-value use cases",
+                    "Start with small, measurable pilot projects",
+                    "Build cross-functional teams with business and technical expertise",
+                    "Focus on data strategy and governance",
+                    "Measure ROI and scale successful initiatives"
+                ]
+            }
+        },
+        {
+            "type": "Content",
+            "fields": {
+                "title": "Thank You",
+                "content": [
+                    "Questions & Discussion",
+                    "Contact information",
+                    "Additional resources"
+                ]
+            }
+        }
+    ]
+}
 
 async def generate_slides(research: ResearchData, target_slides: int = 10, author: str = None) -> SlidePresentation:
     """
@@ -24,6 +151,10 @@ async def generate_slides(research: ResearchData, target_slides: int = 10, autho
     Returns:
         A SlidePresentation object with slide content
     """
+    if OFFLINE_MODE:
+        print(f"OFFLINE MODE: Returning fixed slides response")
+        return SlidePresentation(**OFFLINE_SLIDES_RESPONSE)
+
     print(f"\n===== DEBUG: Starting slide generation =====")
     print(f"Target slides: {target_slides}")
     print(f"Author: {author}")

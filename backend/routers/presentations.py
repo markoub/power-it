@@ -217,6 +217,7 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
         Presentation.id,
         Presentation.name,
         Presentation.topic,
+        Presentation.author,
         Presentation.created_at,
         Presentation.updated_at
     ).order_by(Presentation.created_at.desc())
@@ -230,6 +231,7 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
             "id": p.id,
             "name": p.name,
             "topic": p.topic,
+            "author": p.author,
             "created_at": p.created_at.isoformat(),
             "updated_at": p.updated_at.isoformat()
         }

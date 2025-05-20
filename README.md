@@ -15,10 +15,9 @@ powerit/
 │   ├── server.py       # FastMCP server
 │   └── ...
 └── frontend/           # Next.js frontend application
-    ├── src/            # Frontend source code
-    │   ├── app/        # Next.js app router
-    │   ├── components/ # React components
-    │   └── lib/        # Utilities and API client
+    ├── app/            # Next.js app router
+    ├── components/     # React components
+    ├── lib/            # Utilities and API client
     └── ...
 ```
 
@@ -29,6 +28,8 @@ powerit/
 - **Web Interface**: Modern UI for managing presentations and running tools
 - **Background Processing**: Tasks run asynchronously with status tracking
 - **Database Storage**: Persistent storage of presentations and results
+- **Integrated API**: Frontend connects to backend via API for seamless operation
+- **Static Export**: Frontend can be built as static HTML/JS/CSS for easy deployment
 
 ## Setup
 
@@ -79,6 +80,11 @@ cd ..
    npm install
    ```
 
+3. For production builds, create a `.env.production` file with your backend URL:
+   ```
+   NEXT_PUBLIC_API_URL=http://your-backend-url:8000
+   ```
+
 ## Running the Application
 
 You can run both the backend and frontend together using:
@@ -96,12 +102,49 @@ cd backend
 ./venv/bin/python run_api.py
 ```
 
+The backend will be available at http://localhost:8000 with API documentation at http://localhost:8000/docs
+
 ### Frontend
 
 ```
 cd frontend
 npm run dev
 ```
+
+The frontend will be available at http://localhost:3000
+
+## Static Build and Deployment
+
+The frontend can be built as a static site for deployment to any static hosting service:
+
+```
+cd frontend
+npm run build
+```
+
+This will generate a static build in the `build` directory. You can then deploy this build to any static hosting service like:
+
+- Netlify
+- Vercel
+- GitHub Pages
+- Amazon S3
+- Cloudflare Pages
+
+Example deployment with a simple static server:
+```
+cd frontend/build
+npx serve
+```
+
+This will serve the static build at http://localhost:3000.
+
+## Integration
+
+The frontend communicates with the backend through the API. The integration works as follows:
+
+1. Frontend makes API calls to the backend using the API client in `frontend/lib/api.ts`
+2. Backend processes requests and returns responses in JSON format
+3. CORS is enabled on the backend to allow requests from the frontend
 
 ## Usage
 

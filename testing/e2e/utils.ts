@@ -19,11 +19,18 @@ export async function waitForNetworkIdle(page: Page, timeout = 10000) {
  * Navigate to the presentations page
  */
 export async function goToPresentationsPage(page: Page) {
-  await page.goto('http://localhost:3000/presentations');
+  await page.goto('http://localhost:3000');
   await waitForNetworkIdle(page);
   
-  // Verify we're on the presentations page
-  await expect(page.getByTestId('presentations-page')).toBeVisible();
+  // Verify we're on the home page, which includes the presentations list
+  try {
+    await expect(page.getByTestId('presentations-container')).toBeVisible({ timeout: 5000 });
+  } catch (error) {
+    console.log('Presentations container not found, trying to reload page');
+    await page.reload();
+    await waitForNetworkIdle(page);
+    await expect(page.getByTestId('presentations-container')).toBeVisible({ timeout: 5000 });
+  }
 }
 
 /**

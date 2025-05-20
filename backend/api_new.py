@@ -1,8 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+import traceback
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger("powerit-backend")
 
 # Import database module
 from database import init_db
@@ -33,6 +48,24 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     lifespan=lifespan
 )
+
+# Add exception handler for detailed error responses
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_msg = str(exc)
+    error_details = traceback.format_exc()
+    
+    logger.error(f"Request to {request.url} failed with error: {error_msg}")
+    logger.error(f"Traceback: {error_details}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": error_msg,
+            "traceback": error_details.split("\n"),
+            "request_path": str(request.url)
+        },
+    )
 
 # Configure CORS
 app.add_middleware(

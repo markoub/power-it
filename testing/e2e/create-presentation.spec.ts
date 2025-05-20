@@ -1,173 +1,104 @@
 import { test, expect } from '@playwright/test';
-import { goToPresentationsPage, createPresentation, waitForNetworkIdle } from './utils';
+import { waitForNetworkIdle, goToPresentationsPage } from './utils';
 
-test.describe('Create Presentation', () => {
-  test('should create a new presentation', async ({ page }) => {
-    // Set longer timeout for this test
-    test.setTimeout(300000); // 5 minutes
+test.describe('Presentation Creation', () => {
+
+  test('should create a new presentation with AI research method', async ({ page }) => {
+    // Navigate to the home page
+    await page.goto('http://localhost:3000');
+    await waitForNetworkIdle(page);
+
+    // Click on create new presentation button
+    await page.getByRole('link', { name: /create new/i }).click();
     
-    // Go to presentations page
-    await goToPresentationsPage(page);
+    // Verify we're on the create page
+    await expect(page).toHaveURL(/\/create/);
+    await expect(page.getByTestId('page-title')).toContainText('Create New Presentation');
     
-    // Generate a unique name and topic
-    const timestamp = new Date().getTime();
-    const testName = `Test Presentation ${timestamp}`;
-    const testTopic = `Test Topic ${timestamp}`;
+    // Fill out the form with AI research method
+    const testTitle = `Test AI Presentation ${Date.now()}`;
+    await page.getByTestId('presentation-title-input').fill(testTitle);
+    await page.getByTestId('author-input').fill('Test Author');
     
-    // Check if backend is available by testing the presentations list
-    await expect(page.getByTestId('presentations-page')).toBeVisible();
+    // Ensure AI research option is selected (should be default)
+    await page.getByTestId('ai-research-option').click();
     
-    try {
-      // Try to create a new presentation
-      const presentationId = await createPresentation(page, testName, testTopic);
-      console.log(`Created presentation with ID: ${presentationId}`);
-      
-      // Check if we've navigated to a different page
-      const currentUrl = page.url();
-      console.log(`Current URL after creation: ${currentUrl}`);
-      
-      // Check if we're on the detail page
-      const isOnDetailPage = currentUrl.includes(`/presentations/${presentationId}`);
-      
-      if (isOnDetailPage) {
-        // We're on the detail page, verify its contents
-        // Use a longer timeout since some elements might take time to load
-        try {
-          await expect(page.getByTestId('presentation-title')).toHaveText(testName, { timeout: 10000 });
-          await expect(page.getByTestId('presentation-topic')).toHaveText(testTopic, { timeout: 10000 });
-        } catch (error) {
-          console.log(`Warning: Could not verify presentation details: ${error.message}`);
-          // Continue test despite element not found, as we're still on the detail page
-        }
-        
-        // Navigate back to presentations list
-        const backLink = page.getByTestId('back-link');
-        if (await backLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await backLink.click();
-          await waitForNetworkIdle(page);
-        } else {
-          // If back link is not found, navigate to presentations page directly
-          await goToPresentationsPage(page);
-        }
-      } else {
-        // We might still be on the presentations list or somewhere else
-        // Navigate back to presentations list to be sure
-        await goToPresentationsPage(page);
-      }
-      
-      // Verify our new presentation appears in the list
-      await expect(page.getByTestId('presentations-page')).toBeVisible();
-      
-      // Wait for either the grid or no-presentations message to be visible
-      await Promise.race([
-        page.getByTestId('presentations-grid').waitFor({ timeout: 5000 }),
-        page.getByTestId('no-presentations-message').waitFor({ timeout: 5000 }),
-      ]).catch(() => {
-        console.log('Neither presentations grid nor no-presentations message found');
-      });
-      
-      const presentationsGrid = page.getByTestId('presentations-grid');
-      
-      if (await presentationsGrid.isVisible({ timeout: 2000 }).catch(() => false)) {
-        // Look for our presentation by name since the ID might not be reliable
-        const presentations = await page.locator('[data-testid^="presentation-card-"]').count();
-        console.log(`Found ${presentations} presentations in the grid`);
-        
-        // If we don't find it right away, try refreshing the page
-        if (presentations === 0) {
-          const refreshButton = page.getByTestId('refresh-button');
-          if (await refreshButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await refreshButton.click();
-            await waitForNetworkIdle(page);
-          }
-        }
-        
-        let found = false;
-        const retries = 3;
-        
-        for (let attempt = 0; attempt < retries; attempt++) {
-          const count = await page.locator('[data-testid^="presentation-card-"]').count();
-          
-          for (let i = 0; i < count; i++) {
-            const card = page.locator('[data-testid^="presentation-card-"]').nth(i);
-            const name = await card.getByTestId('presentation-name').textContent();
-            if (name === testName) {
-              found = true;
-              break;
-            }
-          }
-          
-          if (found) break;
-          
-          if (attempt < retries - 1) {
-            console.log('Presentation not found, waiting and trying again...');
-            await page.waitForTimeout(2000);
-          }
-        }
-        
-        // Mark the test as passed if either:
-        // 1. We found the presentation in the grid
-        // 2. We successfully created and got a presentation ID
-        expect(found || presentationId > 0).toBeTruthy();
-      }
-    } catch (error) {
-      console.error(`Test failed: ${error.message}`);
-      // Take a screenshot for debugging
-      await page.screenshot({ path: `test-failure-${timestamp}.png` });
-      throw error;
-    }
+    // Fill out the AI topic
+    await page.getByTestId('ai-topic-input').fill('Artificial Intelligence in Healthcare');
+    
+    // Submit the form
+    await page.getByTestId('submit-presentation-button').click();
+    
+    // Check for success message
+    await expect(page.getByText('Presentation created successfully')).toBeVisible();
+    
+    // Verify we are redirected to the edit page
+    await expect(page).toHaveURL(/\/edit\/\d+/);
   });
-  
-  test('should validate required fields', async ({ page }) => {
-    // Set longer timeout for this test
-    test.setTimeout(300000); // 5 minutes
+
+  test('should create a new presentation with manual research method', async ({ page }) => {
+    // Navigate to the home page
+    await page.goto('http://localhost:3000');
+    await waitForNetworkIdle(page);
+
+    // Click on create new presentation button
+    await page.getByRole('link', { name: /create new/i }).click();
     
-    // Go to presentations page
-    await goToPresentationsPage(page);
+    // Verify we're on the create page
+    await expect(page).toHaveURL(/\/create/);
     
-    // Click the AI Research button to open the dialog
-    await page.getByTestId('ai-research-button').click();
+    // Fill out the form with manual research method
+    const testTitle = `Test Manual Presentation ${Date.now()}`;
+    await page.getByTestId('presentation-title-input').fill(testTitle);
+    await page.getByTestId('author-input').fill('Test Author');
     
-    // Wait for the dialog to appear with a longer timeout
-    await page.waitForTimeout(2000);
+    // Select manual research option
+    await page.getByTestId('manual-research-option').click();
     
-    // We'll use this selector which might be more reliable
-    const dialogSelector = 'div[role="dialog"],div.modal,dialog,.dialog-content';
+    // Fill out the manual research content
+    await page.getByTestId('manual-research-input').fill('This is my manual research content for the presentation. It contains detailed information about the topic.');
     
-    // Wait for any dialog element to be visible with a longer timeout
-    await expect(page.locator(dialogSelector)).toBeVisible({ timeout: 20000 });
+    // Submit the form
+    await page.getByTestId('submit-presentation-button').click();
     
-    // Try to find the Create Presentation button in the dialog
-    const createButton = page.getByRole('button', { name: /create presentation/i });
-    await expect(createButton).toBeVisible({ timeout: 10000 });
+    // Check for success message
+    await expect(page.getByText('Presentation created successfully')).toBeVisible();
     
-    // Check the button text to verify we have the right one
-    const buttonText = await createButton.textContent();
-    console.log(`Found button with text: ${buttonText}`);
+    // Verify we are redirected to the edit page
+    await expect(page).toHaveURL(/\/edit\/\d+/);
+  });
+
+  test('should show validation errors for missing fields', async ({ page }) => {
+    // Navigate to the home page
+    await page.goto('http://localhost:3000');
+    await waitForNetworkIdle(page);
+
+    // Click on create new presentation button
+    await page.getByRole('link', { name: /create new/i }).click();
     
-    // Try to submit the form without filling anything
-    await createButton.click();
+    // Try to submit the form without filling required fields
+    await page.getByTestId('submit-presentation-button').click();
     
-    // Dialog should still be open because validation prevented submission
-    // Wait a moment for any validation to appear
-    await page.waitForTimeout(2000);
-    await expect(page.locator(dialogSelector)).toBeVisible();
+    // Check for validation error (browser's built-in validation)
+    // The form should not be submitted
+    await expect(page).toHaveURL(/\/create/);
     
-    // Fill the name field and try to submit
-    await page.locator('#name').fill('Test Name Only');
-    await createButton.click();
+    // Verify that we are still on the create page
+    await expect(page.getByTestId('page-title')).toContainText('Create New Presentation');
     
-    // Wait a moment for validation
-    await page.waitForTimeout(2000);
-    await expect(page.locator(dialogSelector)).toBeVisible();
+    // Fill only the title
+    await page.getByTestId('presentation-title-input').fill('Test Presentation');
+    await page.getByTestId('submit-presentation-button').click();
     
-    // Fill only the topic field and clear the name
-    await page.locator('#name').clear();
-    await page.locator('#ai-topic').fill('Test Topic Only');
-    await createButton.click();
+    // Should still be on create page as topic is required for AI research
+    await expect(page).toHaveURL(/\/create/);
     
-    // Wait a moment for validation
-    await page.waitForTimeout(2000);
-    await expect(page.locator(dialogSelector)).toBeVisible();
+    // Fill the topic and try again
+    await page.getByTestId('ai-topic-input').fill('Test Topic');
+    await page.getByTestId('submit-presentation-button').click();
+    
+    // Now it should succeed and redirect
+    await expect(page.getByText('Presentation created successfully')).toBeVisible();
+    await expect(page).toHaveURL(/\/edit\/\d+/);
   });
 }); 

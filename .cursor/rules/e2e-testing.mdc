@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Tests are in /testing/e2e folder.
+run them with playwright
+first use playwright MCP to find out how to write test, or to find out why test is failing
+always use 'data-testid' fields in the frontend, so you can use GetByTestId from playwright

@@ -55,94 +55,150 @@ async def create_presentation(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
-    # Create new presentation
-    db_presentation = Presentation(
-        name=presentation.name, 
-        topic=presentation.topic,
-        author=presentation.author
-    )
-    db.add(db_presentation)
-    await db.commit()
-    await db.refresh(db_presentation)
-    
-    # Determine which research step to use based on research_type
-    research_step_type = PresentationStep.MANUAL_RESEARCH.value if presentation.research_type == "manual_research" else PresentationStep.RESEARCH.value
-    
-    # Initialize research step as pending
-    research_step = PresentationStepModel(
-        presentation_id=db_presentation.id,
-        step=research_step_type,
-        status=StepStatus.PENDING.value
-    )
-    db.add(research_step)
-    
-    # Initialize slides step as pending
-    slides_step = PresentationStepModel(
-        presentation_id=db_presentation.id,
-        step=PresentationStep.SLIDES.value,
-        status=StepStatus.PENDING.value
-    )
-    db.add(slides_step)
-    
-    # Initialize images step as pending
-    images_step = PresentationStepModel(
-        presentation_id=db_presentation.id,
-        step=PresentationStep.IMAGES.value,
-        status=StepStatus.PENDING.value
-    )
-    db.add(images_step)
-    
-    # Initialize compiled step as pending
-    compiled_step = PresentationStepModel(
-        presentation_id=db_presentation.id,
-        step=PresentationStep.COMPILED.value,
-        status=StepStatus.PENDING.value
-    )
-    db.add(compiled_step)
-    
-    # Initialize PPTX step as pending
-    pptx_step = PresentationStepModel(
-        presentation_id=db_presentation.id,
-        step=PresentationStep.PPTX.value,
-        status=StepStatus.PENDING.value
-    )
-    db.add(pptx_step)
-    
-    await db.commit()
-    
-    # Start appropriate research task in background
-    if presentation.research_type == "manual_research":
-        if not presentation.research_content:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Research content is required for manual research"},
-            )
-        background_tasks.add_task(
-            execute_manual_research_task, 
-            db_presentation.id, 
-            presentation.research_content
+    try:
+        # Create new presentation
+        db_presentation = Presentation(
+            name=presentation.name, 
+            topic=presentation.topic,
+            author=presentation.author
         )
-    else:
-        if not presentation.topic:
+        db.add(db_presentation)
+        
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            error_message = str(e)
+            
+            # Check for unique constraint violation and provide a clearer message
+            if "UNIQUE constraint failed: presentations.name" in error_message:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "detail": f"A presentation with the name '{presentation.name}' already exists. Please use a different name.",
+                        "error_type": "unique_constraint_violation",
+                        "field": "name",
+                        "original_error": error_message
+                    }
+                )
+            
+            # Return detailed error information for other errors
             return JSONResponse(
-                status_code=400,
-                content={"detail": "Topic is required for AI research"},
+                status_code=500,
+                content={
+                    "detail": "Failed to create presentation",
+                    "error_type": type(e).__name__,
+                    "error_message": error_message
+                }
             )
-        background_tasks.add_task(
-            execute_research_task, 
-            db_presentation.id, 
-            presentation.topic,
-            presentation.author
+        
+        await db.refresh(db_presentation)
+        
+        # Determine which research step to use based on research_type
+        research_step_type = PresentationStep.MANUAL_RESEARCH.value if presentation.research_type == "manual_research" else PresentationStep.RESEARCH.value
+        
+        # Initialize research step as pending
+        research_step = PresentationStepModel(
+            presentation_id=db_presentation.id,
+            step=research_step_type,
+            status=StepStatus.PENDING.value
         )
-    
-    return {
-        "id": db_presentation.id,
-        "name": db_presentation.name,
-        "topic": presentation.topic if presentation.topic else "Manual Research",
-        "author": presentation.author,
-        "created_at": db_presentation.created_at.isoformat(),
-        "updated_at": db_presentation.updated_at.isoformat()
-    }
+        db.add(research_step)
+        
+        # Initialize slides step as pending
+        slides_step = PresentationStepModel(
+            presentation_id=db_presentation.id,
+            step=PresentationStep.SLIDES.value,
+            status=StepStatus.PENDING.value
+        )
+        db.add(slides_step)
+        
+        # Initialize images step as pending
+        images_step = PresentationStepModel(
+            presentation_id=db_presentation.id,
+            step=PresentationStep.IMAGES.value,
+            status=StepStatus.PENDING.value
+        )
+        db.add(images_step)
+        
+        # Initialize compiled step as pending
+        compiled_step = PresentationStepModel(
+            presentation_id=db_presentation.id,
+            step=PresentationStep.COMPILED.value,
+            status=StepStatus.PENDING.value
+        )
+        db.add(compiled_step)
+        
+        # Initialize PPTX step as pending
+        pptx_step = PresentationStepModel(
+            presentation_id=db_presentation.id,
+            step=PresentationStep.PPTX.value,
+            status=StepStatus.PENDING.value
+        )
+        db.add(pptx_step)
+        
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "detail": "Failed to create presentation steps",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e)
+                }
+            )
+        
+        # Start appropriate research task in background
+        if presentation.research_type == "manual_research":
+            if not presentation.research_content:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "Research content is required for manual research"},
+                )
+            background_tasks.add_task(
+                execute_manual_research_task, 
+                db_presentation.id, 
+                presentation.research_content
+            )
+        else:
+            if not presentation.topic:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "Topic is required for AI research"},
+                )
+            background_tasks.add_task(
+                execute_research_task, 
+                db_presentation.id, 
+                presentation.topic,
+                presentation.author
+            )
+        
+        return {
+            "id": db_presentation.id,
+            "name": db_presentation.name,
+            "topic": presentation.topic if presentation.topic else "Manual Research",
+            "author": presentation.author,
+            "created_at": db_presentation.created_at.isoformat(),
+            "updated_at": db_presentation.updated_at.isoformat()
+        }
+    except Exception as e:
+        # Catch any other unexpected errors
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Unexpected error in create_presentation: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "An unexpected error occurred while creating the presentation",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": error_traceback.split("\n")
+            }
+        )
 
 @router.get("", response_model=List[PresentationResponse],
           summary="List all presentations",
@@ -191,80 +247,72 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
           description="Returns detailed information about a presentation including all its steps")
 async def get_presentation(presentation_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        print(f"Retrieving presentation with ID: {presentation_id}")
+        print(f"Retrieving presentation with ID: {presentation_id} from routers/presentations.py")
         stmt = select(Presentation).filter(Presentation.id == presentation_id)
         result = await db.execute(stmt)
         presentation = result.scalar_one_or_none()
         
         if not presentation:
-            return JSONResponse(
+            # Log before raising HTTPException for better server-side visibility
+            print(f"Presentation {presentation_id} not found in database.")
+            raise HTTPException(
                 status_code=404,
-                content={"detail": f"Presentation {presentation_id} not found"},
+                detail=f"Presentation {presentation_id} not found",
             )
         
         # Get steps for this presentation
-        stmt = select(PresentationStepModel).filter(PresentationStepModel.presentation_id == presentation_id)
-        steps_result = await db.execute(stmt)
+        steps_stmt = select(PresentationStepModel).filter(PresentationStepModel.presentation_id == presentation_id)
+        steps_result = await db.execute(steps_stmt)
         steps = steps_result.scalars().all()
         
         print(f"Found {len(steps)} steps for presentation {presentation_id}")
         
-        # Process steps safely
         processed_steps = []
         for step in steps:
+            step_data = {
+                "id": step.id,
+                "step": step.step,
+                "status": step.status,
+                "created_at": step.created_at.isoformat() if step.created_at else None,
+                "updated_at": step.updated_at.isoformat() if step.updated_at else None,
+                "error_message": step.error_message,
+                "result": None # Default to None
+            }
             try:
-                step_data = {
-                    "id": step.id,
-                    "step": step.step,
-                    "status": step.status,
-                    "created_at": step.created_at.isoformat() if step.created_at else None,
-                    "updated_at": step.updated_at.isoformat() if step.updated_at else None,
-                    "error_message": step.error_message
-                }
+                raw_result_data = step.get_result()
                 
-                # Get the step result safely
-                result_data = step.get_result()
-                if result_data:
-                    # Check if this is fallback content for slides
-                    if step.step == "slides" and step.status == "completed" and isinstance(result_data, dict):
-                        if result_data.get("title") == "Presentation on the Requested Topic" and len(result_data.get("slides", [])) == 1:
-                            # This is likely fallback content - add a flag to indicate this
-                            first_slide = result_data.get("slides", [{}])[0]
-                            if first_slide.get("title") == "Overview" and "error" in " ".join(first_slide.get("content", [])).lower():
-                                step_data["using_fallback"] = True
-                                # Also update status to reflect issue
-                                step_data["status"] = "completed_with_fallback"
-                                print(f"Step {step.id} for presentation {presentation_id} using fallback content")
-                
-                    step_data["result"] = result_data
-                
-                # Special handling for images step
-                if step.step == "images" and result_data and isinstance(result_data, list):
+                if isinstance(raw_result_data, (dict, list)):
                     try:
-                        # Transform image_path to image_url for each image in the list
-                        for image in result_data:
-                            if isinstance(image, dict) and "image_path" in image:
-                                # Extract filename from the absolute path
-                                filename = os.path.basename(image["image_path"])
-                                # Create a proper URL for the image
-                                image["image_url"] = f"/presentations/{presentation_id}/images/{filename}"
+                        json.dumps(raw_result_data) # Pre-flight check for serializability
                         
-                        step_data["result"] = result_data
-                    except Exception as img_err:
-                        print(f"Error processing images: {str(img_err)}")
-                        step_data["images_error"] = str(img_err)
+                        # For images step, ensure result is a dictionary because PresentationStepResponse expects a dict
+                        if step.step == "images" and isinstance(raw_result_data, list):
+                            # Convert the list to a dictionary to match expected schema
+                            step_data["result"] = {"images": raw_result_data} 
+                        else:
+                            step_data["result"] = raw_result_data
+                            
+                    except TypeError as te:
+                        print(f"TypeError: Step {step.id} result for P:{presentation_id} not JSON serializable: {str(te)}")
+                        step_data["result"] = {"error": "Step result contains non-serializable data", "details": str(te)}
+                elif raw_result_data is not None:
+                    print(f"Warning: Step {step.id} result for P:{presentation_id} is not dict/list: {type(raw_result_data)}")
+                    step_data["result"] = {"error": "Unexpected data type in step result", "type": str(type(raw_result_data)), "rawValue": str(raw_result_data)[:200] } # Include snippet
                 
-                processed_steps.append(step_data)
-            except Exception as step_err:
-                print(f"Error processing step {step.id}: {str(step_err)}")
-                processed_steps.append({
-                    "id": step.id,
-                    "step": step.step,
-                    "status": step.status,
-                    "error": f"Error processing step data: {str(step_err)}"
-                })
+                # Special handling for images step URLs (should be safe if result is a list of dicts)
+                if step.step == "images" and isinstance(step_data["result"], list):
+                    for image_item in step_data["result"]:
+                        if isinstance(image_item, dict) and "image_path" in image_item:
+                            filename = os.path.basename(image_item["image_path"])
+                            image_item["image_url"] = f"/presentations/{presentation_id}/images/{filename}"
+
+            except Exception as step_processing_error:
+                print(f"Error processing result for step {step.id} (P:{presentation_id}): {str(step_processing_error)}")
+                step_data["result"] = {"error": "Failed to process step result", "details": str(step_processing_error)}
+            
+            processed_steps.append(step_data)
         
-        # Build the presentation data
+        # Build the final presentation data
         presentation_data = {
             "id": presentation.id,
             "name": presentation.name,
@@ -275,20 +323,20 @@ async def get_presentation(presentation_id: int, db: AsyncSession = Depends(get_
             "steps": processed_steps
         }
         
-        return presentation_data
+        return presentation_data # FastAPI will serialize this using PresentationDetailResponse
+
+    except HTTPException as http_exc: # Re-raise HTTPException to let FastAPI handle it
+        raise http_exc
     except Exception as e:
+        # Catch-all for any other unexpected errors within this endpoint
         import traceback
         error_details = traceback.format_exc()
-        print(f"Error retrieving presentation {presentation_id}: {str(e)}")
-        print(f"Traceback: {error_details}")
-        
-        return JSONResponse(
-            status_code=500,
-            content={
-                "detail": f"Error retrieving presentation: {str(e)}",
-                "traceback": error_details[:1000]  # Limit traceback length
-            },
-        )
+        print(f"FATAL ERROR in get_presentation (P:{presentation_id}): {str(e)}\nTraceback: {error_details}")
+        # This will now be caught by the universal middleware if not a Pydantic validation error during response build
+        raise HTTPException(
+            status_code=500, 
+            detail=f"An unexpected error occurred while retrieving presentation {presentation_id}: {str(e)}"
+        ) # It's better to raise HTTPException so universal middleware isn't the only defense.
 
 @router.post("/{presentation_id}/steps/{step_name}/run",
            summary="Run a specific presentation step",

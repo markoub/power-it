@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+from typing import List, Dict, Any
 from sqlalchemy.future import select
 from sqlalchemy import update
 import traceback
@@ -17,6 +18,7 @@ from tools import (
     generate_pptx_from_slides, 
     convert_pptx_to_png
 )
+from tools.images import _generate_image_for_slide
 from config import PRESENTATIONS_STORAGE_DIR
 
 # Background task functions
@@ -243,75 +245,66 @@ async def execute_images_task(presentation_id: int):
             return
         
         try:
-            # Update status to processing
+            # Mark images step as processing and close current DB session
             images_step.status = StepStatus.PROCESSING.value
             await db.commit()
-            await db.close()  # Close DB connection while processing images
-            
-            # Open a new connection for updating the results later
+            await db.close()
+
             slides_obj = SlidePresentation(**slides_data)
-            
-            # Use a timeout for the image generation to prevent hanging
-            try:
-                images = await asyncio.wait_for(
-                    generate_slide_images(slides_obj, presentation_id),
-                    timeout=300  # 5 minute timeout for all images
-                )
-            except asyncio.TimeoutError:
-                async with SessionLocal() as error_db:
-                    error_step_result = await error_db.execute(
-                        select(PresentationStepModel).filter(
-                            PresentationStepModel.presentation_id == presentation_id,
-                            PresentationStepModel.step == PresentationStep.IMAGES.value
-                        )
+            accumulated_images: List[Dict[str, Any]] = []
+
+            # Generate images sequentially so we can store each one as it is created
+            for index, slide in enumerate(slides_obj.slides):
+                try:
+                    result_list = await asyncio.get_event_loop().run_in_executor(
+                        image_executor,
+                        _generate_image_for_slide,
+                        slide,
+                        index,
+                        presentation_id,
                     )
-                    error_step = error_step_result.scalars().first()
-                    if error_step:
-                        error_step.status = StepStatus.ERROR.value
-                        error_step.error_message = "Image generation timed out after 5 minutes"
-                        await error_db.commit()
-                print(f"Image generation timed out for presentation {presentation_id}")
-                return
-            
-            # Create a new DB session for updating the results
-            async with SessionLocal() as update_db:
-                # Get the images step again
-                update_step_result = await update_db.execute(
+                except Exception as gen_err:
+                    print(f"Error generating image for slide {index}: {gen_err}")
+                    result_list = []
+
+                for img in result_list:
+                    img_dict = img.model_dump()
+                    if 'image' in img_dict:
+                        del img_dict['image']
+                    if 'image_path' in img_dict and img_dict['image_path']:
+                        filename = os.path.basename(img_dict['image_path'])
+                        img_dict['image_url'] = f"/presentations/{presentation_id}/images/{filename}"
+                    accumulated_images.append(img_dict)
+
+                    # Store partial result after each image
+                    async with SessionLocal() as update_db:
+                        update_step_result = await update_db.execute(
+                            select(PresentationStepModel).filter(
+                                PresentationStepModel.presentation_id == presentation_id,
+                                PresentationStepModel.step == PresentationStep.IMAGES.value
+                            )
+                        )
+                        update_step = update_step_result.scalars().first()
+                        if update_step:
+                            update_step.status = StepStatus.PROCESSING.value
+                            update_step.set_result(accumulated_images)
+                            await update_db.commit()
+
+            # Mark step completed with all images
+            async with SessionLocal() as final_db:
+                final_step_result = await final_db.execute(
                     select(PresentationStepModel).filter(
                         PresentationStepModel.presentation_id == presentation_id,
                         PresentationStepModel.step == PresentationStep.IMAGES.value
                     )
                 )
-                update_step = update_step_result.scalars().first()
-                
-                if not update_step:
-                    print(f"Images step not found after processing for presentation {presentation_id}")
-                    return
-                
-                # Store only the image paths and metadata in the database
-                image_data = []
-                for img in images:
-                    # Don't store the base64 data in the database
-                    img_dict = img.model_dump()
-                    # Remove the base64 data before storing in DB to save space
-                    if 'image' in img_dict:
-                        del img_dict['image'] 
-                    
-                    # Make sure the image_url uses the correct structure
-                    if 'image_path' in img_dict and img_dict['image_path']:
-                        # Extract filename from the absolute path
-                        filename = os.path.basename(img_dict['image_path'])
-                        # Ensure URL uses the images/ structure
-                        img_dict['image_url'] = f"/presentations/{presentation_id}/images/{filename}"
-                    
-                    image_data.append(img_dict)
-                
-                # Update the images step with the result
-                update_step.status = StepStatus.COMPLETED.value
-                update_step.set_result(image_data)
-                await update_db.commit()
-                
-                print(f"Images generated for presentation {presentation_id}: {len(image_data)} images")
+                final_step = final_step_result.scalars().first()
+                if final_step:
+                    final_step.status = StepStatus.COMPLETED.value
+                    final_step.set_result(accumulated_images)
+                    await final_db.commit()
+
+            print(f"Images generated for presentation {presentation_id}: {len(accumulated_images)} images")
         except Exception as e:
             # Update the step status to error
             async with SessionLocal() as error_db:

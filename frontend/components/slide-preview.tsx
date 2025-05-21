@@ -2,6 +2,7 @@
 
 import type { Slide } from "@/lib/types";
 import { motion } from "framer-motion";
+import SlideRenderer from "@/components/slides/SlideRenderer";
 
 interface SlidePreviewProps {
   slide: Slide;

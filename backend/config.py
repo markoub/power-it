@@ -93,6 +93,8 @@ OPENAI_IMAGE_CONFIG = {
 }
 
 # Storage configuration
-STORAGE_DIR = os.environ.get("STORAGE_DIR", "storage")
+# Get the project root directory (parent of the backend directory)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.join(PROJECT_ROOT, "storage"))
 PRESENTATIONS_STORAGE_DIR = os.path.join(STORAGE_DIR, "presentations")
 os.makedirs(PRESENTATIONS_STORAGE_DIR, exist_ok=True) 

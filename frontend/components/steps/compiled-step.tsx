@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
+import SlideRenderer from "@/components/slides/SlideRenderer"
 
 interface CompiledStepProps {
   presentation: Presentation
@@ -69,37 +70,7 @@ export default function CompiledStep({
                   transition={{ duration: 0.3 }}
                   className="w-full h-full flex"
                 >
-                  <div className="w-1/2 pr-4 flex flex-col">
-                    <h3 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                      {presentation.slides[currentIndex].title || `Slide ${currentIndex + 1}`}
-                    </h3>
-                    <div className="text-lg flex-1 overflow-auto">
-                      {presentation.slides[currentIndex].content.split("\n").map((paragraph, index) => (
-                        <motion.p
-                          key={index}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                          className="mb-3"
-                        >
-                          {paragraph}
-                        </motion.p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="w-1/2 pl-4 flex items-center justify-center">
-                    {presentation.slides[currentIndex].imageUrl ? (
-                      <img
-                        src={presentation.slides[currentIndex].imageUrl || "/placeholder.svg"}
-                        alt={presentation.slides[currentIndex].title}
-                        className="max-w-full max-h-full object-contain rounded-lg shadow-md"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                        No image available
-                      </div>
-                    )}
-                  </div>
+                  <SlideRenderer slide={presentation.slides[currentIndex]} />
                 </motion.div>
               </AnimatePresence>
 
@@ -143,18 +114,8 @@ export default function CompiledStep({
                     }}
                   >
                     <CardContent className="p-2">
-                      <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden">
-                        {slide.imageUrl ? (
-                          <img
-                            src={slide.imageUrl || "/placeholder.svg"}
-                            alt={slide.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                            No image
-                          </div>
-                        )}
+                      <div className="aspect-video bg-white rounded mb-2 overflow-hidden border border-gray-100 shadow-sm">
+                        <SlideRenderer slide={slide} mini={true} />
                       </div>
                       <p className="text-xs font-medium truncate">{slide.title || `Slide ${index + 1}`}</p>
                     </CardContent>

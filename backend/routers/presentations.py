@@ -725,7 +725,15 @@ async def get_presentation_image(presentation_id: int, filename: str):
         
         if os.path.exists(legacy_path):
             print(f"Serving image from legacy location: {legacy_path}")
-            return FileResponse(legacy_path, media_type="image/png")
+            return FileResponse(
+                legacy_path, 
+                media_type="image/png",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type"
+                }
+            )
         
         # List files in the directory to help with debugging
         images_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, str(presentation_id), "images")
@@ -738,8 +746,33 @@ async def get_presentation_image(presentation_id: int, filename: str):
         raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
     
     print(f"Serving image: {image_path}")
-    # Return the file directly
-    return FileResponse(image_path, media_type="image/png")
+    # Return the file directly with CORS headers
+    return FileResponse(
+        image_path, 
+        media_type="image/png",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
+        }
+    )
+
+@router.options("/{presentation_id}/images/{filename}",
+          summary="Handle preflight requests for image endpoint",
+          description="Handles CORS preflight requests for the image endpoint")
+async def options_presentation_image(presentation_id: int, filename: str):
+    """
+    Handle CORS preflight requests for the image endpoint
+    """
+    return Response(
+        content="",
+        status_code=204,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Accept"
+        }
+    )
 
 @router.get("/{presentation_id}/pptx-slides",
           summary="Get PPTX slides",

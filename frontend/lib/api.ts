@@ -11,7 +11,11 @@ const formatImageUrl = (url: string): string => {
   if (url.startsWith('http')) return url;
   
   // If it's a relative URL, prepend the API URL
-  return `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (url.startsWith('/')) {
+    return `${API_URL}${url}`;
+  } else {
+    return `${API_URL}/${url}`;
+  }
 };
 
 export const api = {

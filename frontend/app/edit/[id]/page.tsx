@@ -246,7 +246,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     setWizardContext(context)
   }
 
-  const applyWizardChanges = (changes: any) => {
+  const applyWizardChanges = async (changes: any) => {
     if (!presentation) return
 
     if (wizardContext === "single" && currentSlide) {
@@ -269,7 +269,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
       }
     }
 
-    savePresentation()
+    await savePresentation()
 
     toast({
       title: "Changes applied",

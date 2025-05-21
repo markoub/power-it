@@ -255,6 +255,38 @@ export const api = {
     }
   },
 
+  // Request AI modifications for a slide or presentation
+  async modifyPresentation(id: string | number, prompt: string, slideIndex?: number, currentStep?: string): Promise<any> {
+    const payload: any = { prompt }
+    if (typeof slideIndex === 'number') payload.slide_index = slideIndex
+    if (currentStep) payload.current_step = currentStep
+
+    const response = await fetch(`${API_URL}/presentations/${id}/modify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to modify presentation: ${response.status}`)
+    }
+
+    return await response.json()
+  },
+
+  // Save modified presentation data back to the server
+  async saveModifiedPresentation(id: string | number, data: any): Promise<boolean> {
+    const response = await fetch(`${API_URL}/presentations/${id}/save_modified`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      mode: 'cors'
+    })
+
+    return response.ok
+  },
+
   // Run a specific step for a presentation
   async runPresentationStep(id: string, step: string): Promise<any> {
     try {

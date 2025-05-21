@@ -5,12 +5,16 @@ Tools for modifying existing presentations based on user instructions.
 from typing import Dict, Any, Optional, List, Union
 import json
 import re
+import os
 
 # Use absolute imports
 from config import MODIFY_MODEL, MODIFY_CONFIG
 from utils import extract_json_from_text
 import google.generativeai as genai
 from models import CompiledPresentation, CompiledSlide
+
+# Offline mode check
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
 
 async def modify_single_slide(
     compiled_data: Dict[str, Any],
@@ -20,16 +24,40 @@ async def modify_single_slide(
 ) -> Dict[str, Any]:
     """
     Modify only a single slide in a presentation and return just that slide.
-    
+
     Args:
         compiled_data: The compiled presentation data (slides and images)
         research_data: Research data for context
         prompt: User instructions for how to modify the slide
         slide_index: The index of the slide to modify
-        
+
     Returns:
         A dictionary containing just the modified slide
     """
+
+    if OFFLINE_MODE:
+        # When offline, return a simple modified slide without calling Gemini
+        if slide_index < 0 or slide_index >= len(compiled_data.get("slides", [])):
+            raise ValueError(f"Invalid slide index: {slide_index}")
+
+        target_slide = compiled_data["slides"][slide_index]
+        modified_slide = json.loads(json.dumps(target_slide))
+
+        fields = modified_slide.get("fields", {})
+        title = fields.get("title", "Slide")
+        fields["title"] = f"Modified: {title}"
+
+        content = fields.get("content")
+        if isinstance(content, list):
+            content.append("Additional offline content")
+        elif isinstance(content, str):
+            fields["content"] = content + "\nAdditional offline content"
+        else:
+            fields["content"] = "Additional offline content"
+
+        modified_slide["fields"] = fields
+
+        return {"modified_slide": modified_slide, "slide_index": slide_index}
     # Create the model with configuration from config.py
     model = genai.GenerativeModel(
         model_name=MODIFY_MODEL,
@@ -159,6 +187,16 @@ async def modify_presentation(
     Returns:
         A CompiledPresentation with the modifications applied
     """
+    # Offline mode returns the same presentation with minor changes
+    if OFFLINE_MODE:
+        modified = json.loads(json.dumps(compiled_data))
+        if modified.get("slides"):
+            for slide in modified["slides"]:
+                fields = slide.get("fields", {})
+                if "title" in fields:
+                    fields["title"] = f"Modified: {fields['title']}"
+        return CompiledPresentation(**modified)
+
     # Create the model with configuration from config.py
     model = genai.GenerativeModel(
         model_name=MODIFY_MODEL,

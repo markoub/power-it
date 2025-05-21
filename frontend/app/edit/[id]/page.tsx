@@ -1,41 +1,41 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, Save, Loader2 } from "lucide-react"
-import type { Presentation, Slide } from "@/lib/types"
-import Link from "next/link"
-import { PatternBackground } from "@/components/ui-elements"
-import { toast } from "@/components/ui/use-toast"
-import { ToastAction } from "@/components/ui/toast"
-import WorkflowSteps from "@/components/workflow-steps"
-import ResearchStep from "@/components/steps/research-step"
-import SlidesStep from "@/components/steps/slides-step"
-import IllustrationStep from "@/components/steps/illustration-step"
-import CompiledStep from "@/components/steps/compiled-step"
-import PptxStep from "@/components/steps/pptx-step"
-import Wizard from "@/components/wizard/wizard"
-import { api } from "@/lib/api"
-import { v4 as uuidv4 } from "uuid"
-import ClientWrapper from "@/components/client-wrapper"
-import { use } from "react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Download, Save, Loader2 } from "lucide-react";
+import type { Presentation, Slide } from "@/lib/types";
+import Link from "next/link";
+import { PatternBackground } from "@/components/ui-elements";
+import { toast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import WorkflowSteps from "@/components/workflow-steps";
+import ResearchStep from "@/components/steps/research-step";
+import SlidesStep from "@/components/steps/slides-step";
+import IllustrationStep from "@/components/steps/illustration-step";
+import CompiledStep from "@/components/steps/compiled-step";
+import PptxStep from "@/components/steps/pptx-step";
+import Wizard from "@/components/wizard/wizard";
+import { api } from "@/lib/api";
+import { v4 as uuidv4 } from "uuid";
+import ClientWrapper from "@/components/client-wrapper";
+import { use } from "react";
 
 export default function EditPage({ params }: { params: { id: string } }) {
   // Properly unwrap params to get the id
   const unwrappedParams = use(params);
-  const router = useRouter()
-  const [presentation, setPresentation] = useState<Presentation | null>(null)
-  const [currentSlide, setCurrentSlide] = useState<Slide | null>(null)
-  const [currentStep, setCurrentStep] = useState(0)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [wizardContext, setWizardContext] = useState<"all" | "single">("all")
-  const [isProcessingStep, setIsProcessingStep] = useState(false)
+  const router = useRouter();
+  const [presentation, setPresentation] = useState<Presentation | null>(null);
+  const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [wizardContext, setWizardContext] = useState<"all" | "single">("all");
+  const [isProcessingStep, setIsProcessingStep] = useState(false);
 
-  const steps = ["Research", "Slides", "Illustration", "Compiled", "PPTX"]
-  const stepApiNames = ["research", "slides", "images", "compiled", "pptx"]
+  const steps = ["Research", "Slides", "Illustration", "Compiled", "PPTX"];
+  const stepApiNames = ["research", "slides", "images", "compiled", "pptx"];
 
   useEffect(() => {
     // Load presentation from API
@@ -47,23 +47,23 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (!presentationData.steps || !Array.isArray(presentationData.steps)) {
       return 0; // Default to first step if no steps data
     }
-    
+
     let highestCompletedStep = -1;
     for (let i = 0; i < stepApiNames.length; i++) {
       const stepName = stepApiNames[i];
       const step = presentationData.steps.find((s: any) => s.step === stepName);
-      
-      if (step && step.status === 'completed') {
+
+      if (step && step.status === "completed") {
         highestCompletedStep = i;
       } else {
         // Found first incomplete step
         break;
       }
     }
-    
+
     // If nothing is completed, start with step 0
     if (highestCompletedStep === -1) return 0;
-    
+
     // Otherwise, go to the next uncompleted step (or stay at the last step)
     return Math.min(highestCompletedStep + 1, steps.length - 1);
   };
@@ -74,12 +74,15 @@ export default function EditPage({ params }: { params: { id: string } }) {
       const fetchedPresentation = await api.getPresentation(unwrappedParams.id);
       if (fetchedPresentation) {
         setPresentation(fetchedPresentation);
-        
+
         // Determine the current step based on completion status
         const newCurrentStep = determineCurrentStep(fetchedPresentation);
         setCurrentStep(newCurrentStep);
-        
-        if (fetchedPresentation.slides && fetchedPresentation.slides.length > 0) {
+
+        if (
+          fetchedPresentation.slides &&
+          fetchedPresentation.slides.length > 0
+        ) {
           setCurrentSlide(fetchedPresentation.slides[0]);
         }
         setError(null);
@@ -100,11 +103,14 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
     setIsSaving(true);
     try {
-      const updatedPresentation = await api.updatePresentation(presentation.id, presentation);
-      
+      const updatedPresentation = await api.updatePresentation(
+        presentation.id,
+        presentation,
+      );
+
       if (updatedPresentation) {
         setPresentation(updatedPresentation);
-        
+
         toast({
           title: "Changes saved",
           description: "Your presentation has been updated successfully.",
@@ -127,59 +133,63 @@ export default function EditPage({ params }: { params: { id: string } }) {
   };
 
   const addNewSlide = () => {
-    if (!presentation) return
+    if (!presentation) return;
 
     const newSlide: Slide = {
       id: uuidv4(),
+      type: "Content",
+      fields: { title: "New Slide", content: "" },
       title: "New Slide",
       content: "",
       order: presentation.slides.length,
       imagePrompt: "",
       imageUrl: "",
-    }
+    };
 
     const updatedPresentation = {
       ...presentation,
       slides: [...presentation.slides, newSlide],
-    }
+    };
 
-    setPresentation(updatedPresentation)
-    setCurrentSlide(newSlide)
-    savePresentation()
-  }
+    setPresentation(updatedPresentation);
+    setCurrentSlide(newSlide);
+    savePresentation();
+  };
 
   const updateSlide = (updatedSlide: Slide) => {
-    if (!presentation) return
+    if (!presentation) return;
 
-    const updatedSlides = presentation.slides.map((slide) => (slide.id === updatedSlide.id ? updatedSlide : slide))
+    const updatedSlides = presentation.slides.map((slide) =>
+      slide.id === updatedSlide.id ? updatedSlide : slide,
+    );
 
     setPresentation({
       ...presentation,
       slides: updatedSlides,
-    })
-    setCurrentSlide(updatedSlide)
-  }
+    });
+    setCurrentSlide(updatedSlide);
+  };
 
   const deleteSlide = (slideId: string) => {
-    if (!presentation) return
+    if (!presentation) return;
 
     const updatedSlides = presentation.slides
       .filter((slide) => slide.id !== slideId)
-      .map((slide, index) => ({ ...slide, order: index }))
+      .map((slide, index) => ({ ...slide, order: index }));
 
     const updatedPresentation = {
       ...presentation,
       slides: updatedSlides,
-    }
+    };
 
-    setPresentation(updatedPresentation)
+    setPresentation(updatedPresentation);
 
     if (currentSlide?.id === slideId) {
-      setCurrentSlide(updatedSlides.length > 0 ? updatedSlides[0] : null)
+      setCurrentSlide(updatedSlides.length > 0 ? updatedSlides[0] : null);
     }
 
-    savePresentation()
-  }
+    savePresentation();
+  };
 
   const handleExport = async () => {
     if (!presentation) return;
@@ -193,13 +203,17 @@ export default function EditPage({ params }: { params: { id: string } }) {
       // Assuming your backend endpoint for PPTX generation is '/api/generate-pptx-backend'
       // This needs to be an endpoint on your Python backend, not a Next.js API route.
       // Adjust the URL as per your actual backend API structure.
-      const response = await fetch("http://localhost:8000/api/v1/presentations/generate-pptx", { // Example backend URL
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "http://localhost:8000/api/v1/presentations/generate-pptx",
+        {
+          // Example backend URL
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(presentation),
         },
-        body: JSON.stringify(presentation),
-      });
+      );
 
       if (!response.ok) {
         let errorData;
@@ -207,10 +221,10 @@ export default function EditPage({ params }: { params: { id: string } }) {
           errorData = await response.json();
         } catch (e) {
           // If parsing JSON fails, use text
-          errorData = { message: await response.text() || "Unknown error" };
+          errorData = { message: (await response.text()) || "Unknown error" };
         }
         throw new Error(
-          `Failed to generate PPTX: ${response.status} ${response.statusText} - ${errorData?.detail || errorData?.message || 'Server error'}`
+          `Failed to generate PPTX: ${response.status} ${response.statusText} - ${errorData?.detail || errorData?.message || "Server error"}`,
         );
       }
 
@@ -219,7 +233,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
       const a = document.createElement("a");
       a.href = url;
       // Use presentation name for filename, default to 'presentation.pptx'
-      const fileName = presentation.name ? `${presentation.name.replace(/[^a-z0-9_-\s\.]/gi, '_')}.pptx` : "presentation.pptx";
+      const fileName = presentation.name
+        ? `${presentation.name.replace(/[^a-z0-9_-\s\.]/gi, "_")}.pptx`
+        : "presentation.pptx";
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
@@ -235,7 +251,10 @@ export default function EditPage({ params }: { params: { id: string } }) {
       console.error("Error during PPTX export:", error);
       toast({
         title: "Export Error",
-        description: error instanceof Error ? error.message : "Failed to export PPTX. See console for details.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to export PPTX. See console for details.",
         variant: "destructive",
         action: <ToastAction altText="OK">OK</ToastAction>,
       });
@@ -243,58 +262,59 @@ export default function EditPage({ params }: { params: { id: string } }) {
   };
 
   const handleWizardContextChange = (context: "all" | "single") => {
-    setWizardContext(context)
-  }
+    setWizardContext(context);
+  };
 
-  const applyWizardChanges = (changes: any) => {
-    if (!presentation) return
+  const applyWizardChanges = async (changes: any) => {
+    if (!presentation) return;
 
     if (wizardContext === "single" && currentSlide) {
       // Apply changes to current slide
-      const updatedSlide = { ...currentSlide, ...changes.slide }
-      updateSlide(updatedSlide)
+      const updatedSlide = { ...currentSlide, ...changes.slide };
+      updateSlide(updatedSlide);
     } else if (wizardContext === "all") {
       // Apply changes to all slides or presentation
       if (changes.slides) {
         setPresentation({
           ...presentation,
           slides: changes.slides,
-        })
+        });
       }
       if (changes.presentation) {
         setPresentation({
           ...presentation,
           ...changes.presentation,
-        })
+        });
       }
     }
 
-    savePresentation()
+    await savePresentation();
 
     toast({
       title: "Changes applied",
-      description: "The suggested changes have been applied to your presentation.",
+      description:
+        "The suggested changes have been applied to your presentation.",
       action: <ToastAction altText="OK">OK</ToastAction>,
-    })
-  }
+    });
+  };
 
   // Check if a step is completed based on backend data
   const isStepCompleted = (stepIndex: number) => {
     if (!presentation || !presentation.steps) return false;
-    
+
     const stepName = stepApiNames[stepIndex];
-    const step = presentation.steps.find(s => s.step === stepName);
-    
-    return step?.status === 'completed';
+    const step = presentation.steps.find((s) => s.step === stepName);
+
+    return step?.status === "completed";
   };
 
   // Continue to next step function
   const handleContinueToNextStep = async () => {
     if (!presentation) return;
-    
+
     try {
       setIsProcessingStep(true);
-      
+
       // Get the API step name for the next uncompleted step
       let nextStepIndex = -1;
       for (let i = 0; i < stepApiNames.length; i++) {
@@ -303,30 +323,33 @@ export default function EditPage({ params }: { params: { id: string } }) {
           break;
         }
       }
-      
+
       if (nextStepIndex === -1) {
-        console.log('All steps are already completed');
+        console.log("All steps are already completed");
         setIsProcessingStep(false);
         return;
       }
-      
+
       const nextStepName = stepApiNames[nextStepIndex];
-      
+
       // Call the API to run the next step
-      const result = await api.runPresentationStep(presentation.id, nextStepName);
-      
+      const result = await api.runPresentationStep(
+        presentation.id,
+        nextStepName,
+      );
+
       if (result) {
         toast({
           title: "Step initiated",
           description: `Starting ${steps[nextStepIndex]} generation process...`,
         });
-        
+
         // Wait a bit for the step to be processed
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
         // Refresh the presentation to get updated step status
         await fetchPresentation();
-        
+
         // Move to the next step
         setCurrentStep(nextStepIndex);
       } else {
@@ -347,7 +370,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
   // Determine if continue button should be shown
   const shouldShowContinueButton = () => {
     if (!presentation || !presentation.steps) return false;
-    
+
     // Find if there are any incomplete steps
     for (let i = 0; i < stepApiNames.length; i++) {
       if (!isStepCompleted(i)) {
@@ -355,7 +378,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         return i > 0 && isStepCompleted(i - 1);
       }
     }
-    
+
     return false; // All steps completed or no steps found
   };
 
@@ -363,19 +386,19 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const handleStepChange = (stepIndex: number) => {
     // We can always navigate to current step
     if (stepIndex === currentStep) return;
-    
+
     // Allow navigation to completed steps
     if (isStepCompleted(stepIndex)) {
       setCurrentStep(stepIndex);
       return;
     }
-    
+
     // Allow navigation to the first uncompleted step (next step after completed ones)
     if (stepIndex > 0 && isStepCompleted(stepIndex - 1)) {
       setCurrentStep(stepIndex);
       return;
     }
-    
+
     // Otherwise, show error message
     toast({
       title: "Step unavailable",
@@ -385,14 +408,16 @@ export default function EditPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <ClientWrapper fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
-          <p className="text-gray-600">Loading presentation...</p>
+    <ClientWrapper
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-10 w-10 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+            <p className="text-gray-600">Loading presentation...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
@@ -415,8 +440,12 @@ export default function EditPage({ params }: { params: { id: string } }) {
       ) : !presentation ? (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center p-8 bg-red-50 rounded-xl border border-red-200 max-w-md">
-            <h2 className="text-xl font-semibold text-red-600 mb-4">Presentation not found</h2>
-            <p className="text-gray-600 mb-6">Unable to load the requested presentation.</p>
+            <h2 className="text-xl font-semibold text-red-600 mb-4">
+              Presentation not found
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Unable to load the requested presentation.
+            </p>
             <Link href="/">
               <Button className="bg-primary hover:bg-primary-600 text-white">
                 Go to Home
@@ -440,7 +469,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
                     <ArrowLeft size={18} />
                   </Button>
                 </Link>
-                <h1 className="text-2xl font-bold gradient-text">{presentation.name}</h1>
+                <h1 className="text-2xl font-bold gradient-text">
+                  {presentation.name}
+                </h1>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -473,15 +504,21 @@ export default function EditPage({ params }: { params: { id: string } }) {
               </div>
             </header>
 
-            <WorkflowSteps 
-              steps={steps} 
-              currentStep={currentStep} 
-              onChange={handleStepChange} 
-              onContinue={shouldShowContinueButton() ? handleContinueToNextStep : undefined}
+            <WorkflowSteps
+              steps={steps}
+              currentStep={currentStep}
+              onChange={handleStepChange}
+              onContinue={
+                shouldShowContinueButton()
+                  ? handleContinueToNextStep
+                  : undefined
+              }
               isProcessing={isProcessingStep}
-              completedSteps={presentation?.steps ? stepApiNames.map((name, index) => 
-                isStepCompleted(index)
-              ) : []}
+              completedSteps={
+                presentation?.steps
+                  ? stepApiNames.map((name, index) => isStepCompleted(index))
+                  : []
+              }
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
@@ -535,7 +572,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       onContextChange={handleWizardContextChange}
                     />
                   )}
-                  {currentStep === 4 && <PptxStep presentation={presentation} />}
+                  {currentStep === 4 && (
+                    <PptxStep presentation={presentation} />
+                  )}
                 </div>
               </div>
             </div>
@@ -543,5 +582,5 @@ export default function EditPage({ params }: { params: { id: string } }) {
         </div>
       )}
     </ClientWrapper>
-  )
+  );
 }

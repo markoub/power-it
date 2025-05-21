@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Sparkles, Send } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import WizardMessage from "@/components/wizard/wizard-message"
 import WizardSuggestion from "@/components/wizard/wizard-suggestion"
+import { api } from "@/lib/api"
 
 interface WizardProps {
   presentation: Presentation
@@ -33,69 +34,52 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   const [isLoading, setIsLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<any | null>(null)
 
+  // Update welcome message when step, context, or currentSlide changes
+  useEffect(() => {
+    const welcomeMessage = {
+      role: "assistant" as const,
+      content: `Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation. You're currently on the ${step} step. ${
+        context === "single" && currentSlide
+          ? `I see you're working on a slide titled "${currentSlide.title}". How can I help with this slide?`
+          : "How can I help with your presentation?"
+      }`,
+    }
+    
+    setMessages([welcomeMessage])
+  }, [step, context, currentSlide])
+
   const sendMessage = async () => {
     if (!input.trim()) return
 
-    // Add user message
     const userMessage = { role: "user" as const, content: input }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
 
     try {
-      // In a real app, this would be an API call to a backend
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Generate a response based on the context and step
       let response = ""
-      let suggestedChanges = null
+      let suggestedChanges = null as any
 
-      if (context === "single" && currentSlide) {
-        // Single slide context
-        if (step === "Slides") {
-          response = generateSlideResponse(currentSlide, input)
+      if (context === "single" && currentSlide && step === "Slides") {
+        const slideIndex = presentation.slides.findIndex(s => s.id === currentSlide.id)
+        const apiResp = await api.modifyPresentation(presentation.id, input, slideIndex, "slides")
+        const mod = apiResp.modified_slide
+        response = "Here are some improvements for the slide.";
+        if (mod && mod.fields) {
           suggestedChanges = {
             slide: {
-              title: currentSlide.title.includes("Introduction")
-                ? currentSlide.title
-                : `Enhanced: ${currentSlide.title}`,
-              content: enhanceSlideContent(currentSlide.content),
-            },
+              ...currentSlide,
+              title: mod.fields.title || currentSlide.title,
+              content: Array.isArray(mod.fields.content) ? mod.fields.content.join("\n") : (mod.fields.content || currentSlide.content)
+            }
           }
-        } else if (step === "Illustration") {
-          response = generateIllustrationResponse(currentSlide, input)
-          suggestedChanges = {
-            slide: {
-              imagePrompt: generateBetterImagePrompt(currentSlide),
-            },
-          }
-        } else {
-          response = `I can help you improve this slide. Based on the content, I suggest making the title more engaging and adding more details to the content.`
         }
       } else {
-        // All slides context
-        if (step === "Research") {
-          response = `Based on your research topic "${
-            presentation.topic || "your presentation"
-          }", I recommend structuring your presentation with an engaging introduction, 3-4 key points, and a strong conclusion. Would you like me to suggest a complete outline?`
-        } else if (step === "Slides") {
-          response = `I've analyzed your slides and have some suggestions to improve the flow and content. Would you like me to enhance the titles and content for better engagement?`
-          suggestedChanges = {
-            slides: presentation.slides.map((slide) => ({
-              ...slide,
-              title: slide.title.includes("Enhanced") ? slide.title : `Enhanced: ${slide.title}`,
-              content: enhanceSlideContent(slide.content),
-            })),
-          }
-        } else {
-          response = `I'm here to help with your ${step.toLowerCase()} step. What specific assistance do you need with your presentation?`
-        }
+        response = "Wizard support for this step is coming soon.";
       }
 
-      // Add assistant response
       setMessages((prev) => [...prev, { role: "assistant", content: response }])
 
-      // Set suggestion if available
       if (suggestedChanges) {
         setSuggestion(suggestedChanges)
       }
@@ -175,6 +159,9 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
           <Sparkles className="h-5 w-5" />
           AI Presentation Wizard
         </CardTitle>
+        <CardDescription className="text-white/90 text-sm">
+          Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence>

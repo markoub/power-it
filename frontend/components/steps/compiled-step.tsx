@@ -1,20 +1,18 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-
-import { useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import type { Presentation, Slide } from "@/lib/types"
-import SlideRenderer from "@/components/slides/SlideRenderer"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Presentation, Slide } from "@/lib/types";
+import SlidePreview from "@/components/slide-preview"; // Unified on SlidePreview as the rendering component
 
 interface CompiledStepProps {
-  presentation: Presentation
-  currentSlide: Slide | null
-  setCurrentSlide: (slide: Slide | null) => void
-  onContextChange: (context: "all" | "single") => void
+  presentation: Presentation;
+  currentSlide: Slide | null;
+  setCurrentSlide: (slide: Slide | null) => void;
+  onContextChange: (context: "all" | "single") => void;
 }
 
 export default function CompiledStep({
@@ -23,40 +21,48 @@ export default function CompiledStep({
   setCurrentSlide,
   onContextChange,
 }: CompiledStepProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Set context to "all" by default for the compiled view
-    onContextChange("all")
-
-    // If there's a current slide, find its index
+    onContextChange("all");
     if (currentSlide) {
-      const index = presentation.slides.findIndex((slide) => slide.id === currentSlide.id)
-      if (index !== -1) {
-        setCurrentIndex(index)
-      }
+      const index = presentation.slides.findIndex(
+        (slide) => slide.id === currentSlide.id
+      );
+      if (index !== -1) setCurrentIndex(index);
     }
-  }, [currentSlide, onContextChange, presentation.slides])
+  }, [currentSlide, onContextChange, presentation.slides]);
 
   const goToNextSlide = () => {
     if (currentIndex < presentation.slides.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-      setCurrentSlide(presentation.slides[currentIndex + 1])
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setCurrentSlide(presentation.slides[nextIndex]);
     }
-  }
+  };
 
   const goToPreviousSlide = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-      setCurrentSlide(presentation.slides[currentIndex - 1])
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
+      setCurrentSlide(presentation.slides[prevIndex]);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h2 className="text-2xl font-bold mb-4 gradient-text">Compiled Presentation</h2>
-        <p className="text-gray-600 mb-6">Preview your complete presentation with slides and illustrations combined.</p>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2 className="text-2xl font-bold mb-4 gradient-text">
+          Compiled Presentation
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Preview your complete presentation with slides and illustrations
+          combined.
+        </p>
 
         {presentation.slides.length > 0 ? (
           <div className="space-y-6">
@@ -68,13 +74,12 @@ export default function CompiledStep({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
-                  className="w-full h-full flex"
+                  className="w-full h-full"
                 >
-                  <SlideRenderer slide={presentation.slides[currentIndex]} />
+                  <SlidePreview slide={presentation.slides[currentIndex]} />
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation buttons */}
               <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
                 <Button
                   variant="outline"
@@ -105,19 +110,24 @@ export default function CompiledStep({
                 {presentation.slides.map((slide, index) => (
                   <Card
                     key={slide.id}
+                    data-testid={`compiled-thumbnail-${index}`}
                     className={`flex-shrink-0 w-40 cursor-pointer transition-all ${
-                      index === currentIndex ? "ring-2 ring-primary-500 scale-105" : "opacity-70 hover:opacity-100"
+                      index === currentIndex
+                        ? "ring-2 ring-primary-500 scale-105"
+                        : "opacity-70 hover:opacity-100"
                     }`}
                     onClick={() => {
-                      setCurrentIndex(index)
-                      setCurrentSlide(slide)
+                      setCurrentIndex(index);
+                      setCurrentSlide(slide);
                     }}
                   >
                     <CardContent className="p-2">
                       <div className="aspect-video bg-white rounded mb-2 overflow-hidden border border-gray-100 shadow-sm">
-                        <SlideRenderer slide={slide} mini={true} />
+                        <SlidePreview slide={slide} mini />
                       </div>
-                      <p className="text-xs font-medium truncate">{slide.title || `Slide ${index + 1}`}</p>
+                      <p className="text-xs font-medium truncate">
+                        {slide.title || `Slide ${index + 1}`}
+                      </p>
                     </CardContent>
                   </Card>
                 ))}
@@ -126,10 +136,12 @@ export default function CompiledStep({
           </div>
         ) : (
           <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
-            <p className="text-gray-500">No slides to preview. Please create slides first.</p>
+            <p className="text-gray-500">
+              No slides to preview. Please create slides first.
+            </p>
           </div>
         )}
       </motion.div>
     </div>
-  )
+  );
 }

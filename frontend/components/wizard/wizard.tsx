@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Sparkles, Send } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
@@ -33,6 +33,20 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<any | null>(null)
+
+  // Update welcome message when step, context, or currentSlide changes
+  useEffect(() => {
+    const welcomeMessage = {
+      role: "assistant" as const,
+      content: `Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation. You're currently on the ${step} step. ${
+        context === "single" && currentSlide
+          ? `I see you're working on a slide titled "${currentSlide.title}". How can I help with this slide?`
+          : "How can I help with your presentation?"
+      }`,
+    }
+    
+    setMessages([welcomeMessage])
+  }, [step, context, currentSlide])
 
   const sendMessage = async () => {
     if (!input.trim()) return
@@ -145,6 +159,9 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
           <Sparkles className="h-5 w-5" />
           AI Presentation Wizard
         </CardTitle>
+        <CardDescription className="text-white/90 text-sm">
+          Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence>

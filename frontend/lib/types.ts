@@ -1,15 +1,27 @@
 export interface Slide {
-  id: string
-  title: string
-  content: string
-  order: number
-  imagePrompt?: string
-  imageUrl?: string
+  id: string;
+  /** Raw slide type from the backend (e.g. Welcome, ContentImage) */
+  type: string;
+  /** Original fields object returned by the API */
+  fields: Record<string, any>;
+  /** Convenience title extracted from fields */
+  title: string;
+  /** Convenience content (joined if array) */
+  content: string;
+  order: number;
+  imagePrompt?: string;
+  imageUrl?: string;
 }
 
 export interface PresentationStep {
   id: number;
-  step: "research" | "manual_research" | "slides" | "images" | "compiled" | "pptx";
+  step:
+    | "research"
+    | "manual_research"
+    | "slides"
+    | "images"
+    | "compiled"
+    | "pptx";
   status: "pending" | "running" | "completed" | "error";
   result?: Record<string, any> | null;
   error_message?: string | null;
@@ -22,10 +34,10 @@ export interface Presentation {
   name: string; // Changed from title to name to match backend
   author?: string; // Made optional to match backend
   researchMethod?: "ai" | "manual"; // Keep for frontend logic, though backend uses step type
-  topic?: string
-  manualResearch?: string // This can be deprecated if research content is always in steps
-  slides: Slide[]
+  topic?: string;
+  manualResearch?: string; // This can be deprecated if research content is always in steps
+  slides: Slide[];
   steps?: PresentationStep[]; // Add steps array
-  createdAt: string
-  updatedAt: string
+  createdAt: string;
+  updatedAt: string;
 }

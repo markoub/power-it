@@ -1,24 +1,32 @@
-"use client"
+"use client";
 
-import type { Slide } from "@/lib/types"
-import { motion } from "framer-motion"
+import type { Slide } from "@/lib/types";
+import { motion } from "framer-motion";
 
 interface SlidePreviewProps {
-  slide: Slide
-  mini?: boolean
+  slide: Slide;
+  mini?: boolean;
 }
 
-export default function SlidePreview({ slide, mini = false }: SlidePreviewProps) {
+export default function SlidePreview({
+  slide,
+  mini = false,
+}: SlidePreviewProps) {
   const titleClass = mini
     ? "text-xs font-semibold mb-1"
-    : "text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent"
+    : "text-3xl font-bold mb-6 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent";
 
-  const contentClass = mini ? "text-[8px] line-clamp-3" : "text-lg"
+  const contentClass = mini ? "text-[8px] line-clamp-3" : "text-lg";
 
-  const paragraphs = slide.content.split("\n").filter((p) => p.trim() !== "")
+  const paragraphs = (slide.content || "")
+    .split("\n")
+    .filter((p) => p.trim() !== "");
 
-  return (
-    <div className={`w-full h-full flex flex-col ${mini ? "" : "p-6"}`}>
+  const renderDefault = () => (
+    <div
+      className={`w-full h-full flex flex-col ${mini ? "" : "p-6"}`}
+      data-testid={mini ? undefined : "slide-preview"}
+    >
       <h3 className={titleClass}>{slide.title}</h3>
       <div className={contentClass}>
         {paragraphs.map((paragraph, index) => (
@@ -34,10 +42,82 @@ export default function SlidePreview({ slide, mini = false }: SlidePreviewProps)
         ))}
         {paragraphs.length === 0 && (
           <p className="text-gray-400 italic">
-            {mini ? "Empty slide" : "This slide is empty. Add some content in the editor."}
+            {mini
+              ? "Empty slide"
+              : "This slide is empty. Add some content in the editor."}
           </p>
         )}
       </div>
     </div>
-  )
+  );
+
+  switch (slide.type) {
+    case "Welcome":
+      return (
+        <div
+          className={`w-full h-full flex flex-col items-center justify-center ${mini ? "" : "p-6"}`}
+          data-testid={mini ? undefined : "slide-preview"}
+        >
+          <h1 className={titleClass}>{slide.fields.subtitle || slide.title}</h1>
+          {!mini && slide.fields.author && (
+            <p className="mt-2 text-sm text-gray-500">{slide.fields.author}</p>
+          )}
+        </div>
+      );
+    case "Section":
+      return (
+        <div
+          className={`w-full h-full flex items-center justify-center ${mini ? "" : "p-6"}`}
+          data-testid={mini ? undefined : "slide-preview"}
+        >
+          <h2 className={titleClass}>{slide.title}</h2>
+        </div>
+      );
+    case "TableOfContents":
+      const sections =
+        typeof slide.fields.sections === "string"
+          ? slide.fields.sections
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : Array.isArray(slide.fields.sections)
+            ? slide.fields.sections
+            : [];
+      return (
+        <div
+          className={`w-full h-full flex flex-col ${mini ? "" : "p-6"}`}
+          data-testid={mini ? undefined : "slide-preview"}
+        >
+          <h3 className={titleClass}>Table of Contents</h3>
+          <ul className={contentClass + " list-disc ml-4"}>
+            {sections.map((sec: string, idx: number) => (
+              <li key={idx}>{sec}</li>
+            ))}
+          </ul>
+        </div>
+      );
+    case "ImageFull":
+      return (
+        <div
+          className={`w-full h-full flex flex-col items-center justify-center ${mini ? "" : "p-6"}`}
+          data-testid={mini ? undefined : "slide-preview"}
+        >
+          {slide.imageUrl && (
+            <img
+              src={slide.imageUrl}
+              className="max-h-full mb-2 object-contain"
+              alt={slide.title}
+            />
+          )}
+          <h3 className={titleClass}>{slide.title}</h3>
+          {slide.fields.explanation && !mini && (
+            <p className="mt-2 text-sm text-gray-500 text-center">
+              {slide.fields.explanation}
+            </p>
+          )}
+        </div>
+      );
+    default:
+      return renderDefault();
+  }
 }

@@ -79,7 +79,7 @@ export const api = {
         
         // Find the images step and apply image URLs to slides
         const imagesStep = responseData.steps.find(
-          (step: any) => step.step === 'images' && step.status === 'completed' && step.result && Array.isArray(step.result.images)
+          (step: any) => step.step === 'images' && step.result && Array.isArray(step.result.images)
         );
         
         if (imagesStep && imagesStep.result && Array.isArray(imagesStep.result.images)) {

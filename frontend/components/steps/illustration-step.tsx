@@ -136,42 +136,49 @@ export default function IllustrationStep({
     try {
       // Call the API to run the images step
       const result = await api.runPresentationStep(String(presentation.id), "images");
-      
+
       if (result) {
         toast({
           title: "Image generation started",
           description: "Images for all slides are being generated. This may take a minute..."
         });
-        
-        // Poll until the images are ready
+        // Poll until images step is completed, updating slides as results appear
         let imagesReady = false;
         let attempts = 0;
-        const maxAttempts = 20; // Limit polling attempts
-        
+        const maxAttempts = 20;
+
+        const applyImageResults = (images: any[]) => {
+          images.forEach((image: any) => {
+            let url = image.image_url || '';
+            if (url && !url.startsWith('http')) {
+              url = `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+            }
+
+            if (typeof image.slide_index === 'number' && presentation.slides[image.slide_index]) {
+              const slide = presentation.slides[image.slide_index];
+              if (!slide.imageUrl) {
+                updateSlide({ ...slide, imageUrl: url, imagePrompt: image.prompt || slide.imagePrompt });
+              }
+            }
+          });
+        };
+
         while (!imagesReady && attempts < maxAttempts) {
           attempts++;
-          
-          // Wait 3 seconds between polls
           await new Promise(resolve => setTimeout(resolve, 3000));
-          
-          // Fetch the updated presentation
+
           const updatedPresentation = await api.getPresentation(String(presentation.id));
-          
           if (updatedPresentation) {
-            // Check if images step is completed
-            const imagesStep = updatedPresentation.steps?.find(
-              step => step.step === "images" && step.status === "completed"
-            );
-            
-            if (imagesStep) {
-              imagesReady = true;
-              
-              // Refresh the page to show the new images
-              window.location.reload();
+            const imagesStep = updatedPresentation.steps?.find(step => step.step === "images");
+            if (imagesStep && imagesStep.result && Array.isArray(imagesStep.result.images)) {
+              applyImageResults(imagesStep.result.images);
+              if (imagesStep.status === "completed") {
+                imagesReady = true;
+              }
             }
           }
         }
-        
+
         if (!imagesReady) {
           toast({
             title: "Taking longer than expected",

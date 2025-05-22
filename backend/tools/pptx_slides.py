@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from pptx.util import Pt, Inches
 
 from .pptx_shapes import find_shape_by_name
-from .pptx_text import adjust_text_size, format_content_text
+from .pptx_text import adjust_text_size
 from .pptx_utils import format_section_number
 from .pptx_markdown import parse_markdown_to_runs, format_markdown_content
 
@@ -220,69 +220,136 @@ def create_content_slide(prs, content_layout, slide_title, content, add_image=Fa
     # Find title shape
     title_shape = None
     for shape in slide_obj.shapes:
-        if hasattr(shape, "placeholder_format") and shape.placeholder_format.type == 1:  # 1 is TITLE
+        if shape.name.lower().startswith('title'):
             title_shape = shape
             break
-        if hasattr(shape, "name") and shape.name and "title" in shape.name.lower():
-            title_shape = shape
-            break
+            
+    if not title_shape:
+        for shape in slide_obj.placeholders:
+            if shape.placeholder_format.type == 1:  # TITLE
+                title_shape = shape
+                break
     
-    if title_shape and hasattr(title_shape, "text_frame"):
-        # First clear existing text/runs
-        title_shape.text_frame.clear()
-        p = title_shape.text_frame.paragraphs[0]
-        p.font.size = Pt(28)
-        
-        # Apply markdown formatting to title
-        parse_markdown_to_runs(p, slide_title)
-        print(f"  Set slide title to: {slide_title}")
-        
-        # Adjust slide title size based on length
-        adjust_text_size(title_shape.text_frame, default_size=28, min_size=20, max_length=40, long_text_size=24, is_title=True)
+    # Set title if found
+    if title_shape:
+        title_shape.text = slide_title
+    else:
+        print("  Warning: No title shape found in slide layout")
     
-    # Find content shape
+    # Find body/content shape for bullet points
     content_shape = None
     for shape in slide_obj.shapes:
-        if hasattr(shape, "placeholder_format") and shape.placeholder_format.type == 2:  # 2 is BODY
-            content_shape = shape
-            break
-        if hasattr(shape, "name") and shape.name and "content" in shape.name.lower():
+        if shape.name.lower().startswith('content') or shape.name.lower().startswith('body'):
             content_shape = shape
             break
     
-    if content_shape and hasattr(content_shape, "text_frame"):
-        # Format content with markdown processing
-        format_markdown_content(content_shape, content)
-        print(f"  Added {len(content)} content items with markdown formatting")
+    if not content_shape:
+        for shape in slide_obj.placeholders:
+            if shape.placeholder_format.type == 2:  # BODY
+                content_shape = shape
+                break
     
-    # Handle image if needed
-    if add_image and image_path and os.path.exists(image_path):
-        # Check for image placeholder
-        image_shape = None
-        for shape in slide_obj.shapes:
-            if hasattr(shape, "placeholder_format") and shape.placeholder_format.type == 18:  # 18 is PICTURE
-                image_shape = shape
-                break
-            if hasattr(shape, "name") and shape.name and "image" in shape.name.lower():
-                image_shape = shape
-                break
+    # Set content bullet points
+    if content_shape and content:
+        text_frame = content_shape.text_frame
+        text_frame.clear()  # Clear existing text
         
-        if image_shape:
-            try:
-                # Try to insert the image
-                left = image_shape.left
-                top = image_shape.top
-                width = image_shape.width
-                height = image_shape.height
+        # Instead of using format_content_text, manually add the content
+        for i, item in enumerate(content):
+            if i == 0:
+                # Use the first paragraph
+                p = text_frame.paragraphs[0]
+            else:
+                # Add a new paragraph for each subsequent item
+                p = text_frame.add_paragraph()
+            
+            # Set the paragraph text
+            p.text = item
+            # Set bullet level to 0 (top level)
+            p.level = 0
+            # Ensure font size is appropriate
+            if p.runs:
+                p.runs[0].font.size = Pt(18)  # Default size
                 
-                # Remove the placeholder
-                image_shape._element.getparent().remove(image_shape._element)
+        print(f"  Added {len(content)} content items to slide")
+    else:
+        print("  Warning: No content shape found in slide layout or no content provided")
+    
+    # Add image if requested
+    if add_image and image_path:
+        print(f"  Adding image to slide: {image_path}")
+        
+        # Validate image path
+        if not os.path.exists(image_path):
+            print(f"  ERROR: Image file does not exist: {image_path}")
+            return slide_obj
+            
+        # Check if file is empty
+        if os.path.getsize(image_path) == 0:
+            print(f"  ERROR: Image file is empty: {image_path}")
+            return slide_obj
+            
+        try:
+            # Try to find a picture placeholder
+            picture_placeholder = None
+            for shape in slide_obj.placeholders:
+                if hasattr(shape, "placeholder_format") and shape.placeholder_format.type == 18:  # PICTURE
+                    picture_placeholder = shape
+                    print(f"  Found picture placeholder: {shape.name}")
+                    break
+            
+            if picture_placeholder:
+                # Use the placeholder's coordinates
+                left, top, width, height = picture_placeholder.left, picture_placeholder.top, picture_placeholder.width, picture_placeholder.height
                 
-                # Add the actual image
-                slide_obj.shapes.add_picture(image_path, left, top, width, height)
-                print(f"  Added image to slide: {image_path}")
-            except Exception as e:
-                print(f"  Error adding image: {str(e)}")
+                # Insert picture into placeholder
+                try:
+                    picture = slide_obj.shapes.add_picture(image_path, left, top, width, height)
+                    print(f"  Image added successfully using picture placeholder")
+                except Exception as e:
+                    print(f"  Error adding image to placeholder: {str(e)}")
+                    # Fall back to manual placement
+                    picture_placeholder = None
+            
+            # If no picture placeholder found, add the image directly to the slide
+            if not picture_placeholder:
+                # Check slide size to get dimensions
+                slide_width = prs.slide_width
+                slide_height = prs.slide_height
+                
+                # Define image position (right half of slide)
+                # Typically we want images to take up about 1/3 of the slide width
+                # and be positioned in the right part of the slide
+                img_width = slide_width / 2.5  # 40% of slide width
+                
+                # Placed on right side, with some margins
+                left = slide_width - img_width - Inches(0.5)  # 0.5 inches from right edge
+                top = Inches(1.5)  # 1.5 inches from top
+                
+                # Add the picture to the slide
+                try:
+                    # First try to import from PIL to verify the image
+                    try:
+                        from PIL import Image
+                        img = Image.open(image_path)
+                        img_format = img.format
+                        img_size = img.size
+                        print(f"  Verified image: format={img_format}, size={img_size}")
+                        img.close()
+                    except Exception as pil_err:
+                        print(f"  Warning: Failed to verify image with PIL: {str(pil_err)}")
+                    
+                    # Now add the image to the slide
+                    picture = slide_obj.shapes.add_picture(image_path, left, top, width=img_width)
+                    print(f"  Image added successfully using manual placement")
+                except Exception as e:
+                    print(f"  Error adding image: {str(e)}")
+                    import traceback
+                    print(f"  Error details: {traceback.format_exc()}")
+        except Exception as outer_e:
+            print(f"  Error processing image: {str(outer_e)}")
+            import traceback
+            print(f"  Error details: {traceback.format_exc()}")
     
     return slide_obj
 
@@ -465,6 +532,13 @@ def create_3images_slide(prs, slide_layout, slide_title, image_paths, subtitles)
             if not os.path.exists(image_path):
                 print(f"  Image file not found for {placeholder_name}: {image_path}")
                 image_path = None
+            else:
+                print(f"  Image file exists for {placeholder_name}: {image_path}")
+                print(f"  Image file size: {os.path.getsize(image_path)} bytes")
+        
+        if not image_path:
+            print(f"  No valid image path for {placeholder_name}")
+            continue
         
         try:
             # Get placeholder properties
@@ -474,26 +548,43 @@ def create_3images_slide(prs, slide_layout, slide_title, image_paths, subtitles)
             width = shape.width
             height = shape.height
             
-            if image_path:
-                # For picture placeholders, we can use the built-in insert_picture method if available
-                if hasattr(shape, "insert_picture") and callable(shape.insert_picture):
+            print(f"  Placeholder dimensions for {placeholder_name} - Left: {left}, Top: {top}, Width: {width}, Height: {height}")
+            
+            # Try to validate the image file
+            try:
+                from PIL import Image
+                img = Image.open(image_path)
+                print(f"  Successfully opened image with PIL - Format: {img.format}, Size: {img.size}")
+                img.close()
+            except Exception as e:
+                print(f"  Warning - Failed to validate image with PIL: {str(e)}")
+            
+            # First try using insert_picture if available
+            if hasattr(shape, "insert_picture") and callable(shape.insert_picture):
+                try:
                     shape.insert_picture(image_path)
                     print(f"  Added {placeholder_name} using insert_picture: {image_path}")
-                else:
-                    # Otherwise, remove placeholder and add picture directly
-                    try:
-                        # Try to remove the placeholder before adding the image
-                        placeholder._element.getparent().remove(placeholder._element)
-                    except:
-                        print(f"  Could not remove placeholder element, using alternative method")
-                    
-                    # Add the actual image
-                    slide_obj.shapes.add_picture(image_path, left, top, width, height)
-                    print(f"  Added {placeholder_name} using add_picture: {image_path}")
-            else:
-                print(f"  No image provided for {placeholder_name}")
+                    continue
+                except Exception as e:
+                    print(f"  Error with insert_picture for {placeholder_name}, trying alternative method: {str(e)}")
+            
+            # If insert_picture failed or isn't available, use the replacement method
+            try:
+                # Try to remove the placeholder before adding the image
+                shape._element.getparent().remove(shape._element)
+                print(f"  Successfully removed placeholder for {placeholder_name}")
+            except Exception as e:
+                print(f"  Error removing placeholder for {placeholder_name} (continuing anyway): {str(e)}")
+            
+            # Add the actual image
+            added_picture = slide_obj.shapes.add_picture(image_path, left, top, width, height)
+            print(f"  Added {placeholder_name} using add_picture: {image_path}")
+            print(f"  Added picture object ID: {id(added_picture)}")
+            
         except Exception as e:
             print(f"  Error processing {placeholder_name}: {str(e)}")
+            import traceback
+            print(f"  Error details:\n{traceback.format_exc()}")
     
     # Add each subtitle if available
     for i in range(3):
@@ -672,7 +763,8 @@ def create_content_with_logos_slide(prs, content_layout, slide_title, content, l
         print(f"LOGO DEBUG: Adding {valid_logo_count} logos to slide")
         print(f"LOGO DEBUG: Valid logo paths:")
         for k, v in valid_logo_paths.items():
-            print(f"    - {k}: {v} (exists: {os.path.exists(v)})")
+            file_size = os.path.getsize(v) if os.path.exists(v) else 0
+            print(f"    - {k}: {v} (exists: {os.path.exists(v)}, size: {file_size} bytes)")
         
         # Match logos to placeholders
         for i, (logo_key, logo_path) in enumerate(valid_logo_paths.items()):
@@ -695,6 +787,24 @@ def create_content_with_logos_slide(prs, content_layout, slide_title, content, l
                     
                     print(f"LOGO DEBUG: Placeholder dimensions - Left: {left}, Top: {top}, Width: {width}, Height: {height}")
                     
+                    # Try to validate the image file
+                    try:
+                        from PIL import Image
+                        img = Image.open(logo_path)
+                        print(f"LOGO DEBUG: Successfully opened image with PIL - Format: {img.format}, Size: {img.size}")
+                        img.close()
+                    except Exception as e:
+                        print(f"LOGO DEBUG: Warning - Failed to validate image with PIL: {str(e)}")
+                    
+                    # First try inserting directly if the shape supports it
+                    try:
+                        if hasattr(placeholder, "insert_picture") and callable(placeholder.insert_picture):
+                            placeholder.insert_picture(logo_path)
+                            print(f"LOGO DEBUG: Added logo using insert_picture: {logo_path}")
+                            continue  # Skip the rest of this logo's processing
+                    except Exception as e:
+                        print(f"LOGO DEBUG: insert_picture failed, trying alternative method: {str(e)}")
+                    
                     # Convert SVG to PNG if it's an SVG file
                     if logo_path.lower().endswith('.svg'):
                         try:
@@ -716,21 +826,12 @@ def create_content_with_logos_slide(prs, content_layout, slide_title, content, l
                         except Exception as e:
                             print(f"LOGO DEBUG: Error converting SVG to PNG: {str(e)}")
                     
-                    # Try to validate the image file
-                    try:
-                        from PIL import Image
-                        img = Image.open(logo_path)
-                        print(f"LOGO DEBUG: Successfully opened image with PIL - Format: {img.format}, Size: {img.size}")
-                        img.close()
-                    except Exception as e:
-                        print(f"LOGO DEBUG: Warning - Failed to validate image with PIL: {str(e)}")
-                    
                     # Delete the placeholder
                     try:
                         placeholder._element.getparent().remove(placeholder._element)
                         print(f"LOGO DEBUG: Successfully removed placeholder element")
                     except Exception as e:
-                        print(f"LOGO DEBUG: Error removing placeholder: {str(e)}")
+                        print(f"LOGO DEBUG: Error removing placeholder (continuing anyway): {str(e)}")
                     
                     # Add the logo picture at the same position
                     try:

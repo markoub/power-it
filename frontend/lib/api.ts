@@ -352,6 +352,33 @@ export const api = {
     }
   },
 
+  // Get PPTX slide images
+  async getPptxSlides(id: string): Promise<string[]> {
+    try {
+      console.log(`Requesting PPTX slides from ${API_URL}/presentations/${id}/pptx-slides`);
+      const resp = await fetch(`${API_URL}/presentations/${id}/pptx-slides`, {
+        method: "GET",
+        mode: "cors",
+      });
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch PPTX slides: ${resp.status}`);
+      }
+      const data = await resp.json();
+      console.log(`PPTX slides response:`, data);
+      
+      if (data && Array.isArray(data.slides)) {
+        const formattedUrls = data.slides.map((s: any) => formatImageUrl(s.url));
+        console.log(`Formatted ${formattedUrls.length} PPTX slide URLs`);
+        return formattedUrls;
+      }
+      return [];
+    } catch (error) {
+      console.error(`Error fetching PPTX slides for ${id}:`, error);
+      return [];
+    }
+  },
+
+  // Delete a presentation
   async deletePresentation(id: string): Promise<boolean> {
     try {
       const response = await fetch(`${API_URL}/presentations/${id}`, {

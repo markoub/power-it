@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Loader2, RefreshCw, Wand2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -207,6 +208,7 @@ export default function IllustrationStep({
   );
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedImageSlide, setSelectedImageSlide] = useState<Slide | null>(null);
 
   const regenerateImage = async (slide: Slide) => {
     const index = presentation.slides.findIndex((s) => s.id === slide.id);
@@ -285,7 +287,6 @@ export default function IllustrationStep({
             </Button>
           </div>
         ) : (
-        )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence>
               {presentation.slides
@@ -331,6 +332,7 @@ export default function IllustrationStep({
                 ))}
             </AnimatePresence>
           </div>
+        )}
       </motion.div>
       <Dialog
         open={dialogOpen}
@@ -341,34 +343,59 @@ export default function IllustrationStep({
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {currentSlide?.title || "Image Preview"}
+            </DialogTitle>
+            <DialogDescription>
+              You can customize the prompt and regenerate this image
+            </DialogDescription>
+          </DialogHeader>
+          
           {currentSlide && (
             <div className="space-y-4">
               {currentSlide.imageUrl && (
-                <img src={String(currentSlide.imageUrl)} alt="large" className="w-full rounded" />
+                <div className="max-h-[500px] overflow-auto flex justify-center">
+                  <img 
+                    src={String(currentSlide.imageUrl)} 
+                    alt={currentSlide.title || "Slide image"} 
+                    className="rounded object-contain max-h-[450px] max-w-full" 
+                  />
+                </div>
               )}
-              <Input
-                value={currentSlide.imagePrompt || ""}
-                onChange={(e) => updateSlide({ ...currentSlide, imagePrompt: e.target.value })}
-                placeholder="Enter image prompt"
-              />
-              <Button
-                onClick={() => regenerateImage(currentSlide)}
-                disabled={isGenerating}
-                className="bg-primary text-white"
-              >
-                {isGenerating ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 size={16} className="animate-spin" />
-                    Regenerating...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <RefreshCw size={16} />
-                    Regenerate
-                  </span>
-                )}
-              </Button>
+              
+              <div className="space-y-2">
+                <label htmlFor="imagePrompt" className="text-sm font-medium text-gray-700">
+                  Image prompt
+                </label>
+                <Input
+                  id="imagePrompt"
+                  value={currentSlide.imagePrompt || ""}
+                  onChange={(e) => updateSlide({ ...currentSlide, imagePrompt: e.target.value })}
+                  placeholder="Enter image prompt"
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  onClick={() => regenerateImage(currentSlide)}
+                  disabled={isGenerating}
+                  className="bg-primary text-white"
+                >
+                  {isGenerating ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      Regenerating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw size={16} />
+                      Regenerate
+                    </span>
+                  )}
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>

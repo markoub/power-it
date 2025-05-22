@@ -38,8 +38,12 @@ export default function PresentationList() {
   const handleDelete = async (id: string) => {
     try {
       const success = await api.deletePresentation(id)
+
       if (success) {
-        setPresentations(presentations.filter((presentation) => presentation.id !== id))
+        // Remove presentation locally for snappier UI
+        setPresentations(presentations.filter((p) => p.id !== id))
+        // Reload from server to ensure we stay in sync
+        await loadPresentations()
         toast.success("Presentation deleted successfully")
       } else {
         toast.error("Failed to delete presentation")

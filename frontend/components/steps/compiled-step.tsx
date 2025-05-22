@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
-
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Presentation, Slide } from "@/lib/types";
-import SlidePreview from "@/components/slide-preview";
+import SlidePreview from "@/components/slide-preview"; // Unified on SlidePreview as the rendering component
 
 interface CompiledStepProps {
   presentation: Presentation;
@@ -26,31 +24,28 @@ export default function CompiledStep({
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Set context to "all" by default for the compiled view
     onContextChange("all");
-
-    // If there's a current slide, find its index
     if (currentSlide) {
       const index = presentation.slides.findIndex(
-        (slide) => slide.id === currentSlide.id,
+        (slide) => slide.id === currentSlide.id
       );
-      if (index !== -1) {
-        setCurrentIndex(index);
-      }
+      if (index !== -1) setCurrentIndex(index);
     }
   }, [currentSlide, onContextChange, presentation.slides]);
 
   const goToNextSlide = () => {
     if (currentIndex < presentation.slides.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setCurrentSlide(presentation.slides[currentIndex + 1]);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setCurrentSlide(presentation.slides[nextIndex]);
     }
   };
 
   const goToPreviousSlide = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setCurrentSlide(presentation.slides[currentIndex - 1]);
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
+      setCurrentSlide(presentation.slides[prevIndex]);
     }
   };
 
@@ -85,7 +80,6 @@ export default function CompiledStep({
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation buttons */}
               <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
                 <Button
                   variant="outline"
@@ -128,7 +122,7 @@ export default function CompiledStep({
                     }}
                   >
                     <CardContent className="p-2">
-                      <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden">
+                      <div className="aspect-video bg-white rounded mb-2 overflow-hidden border border-gray-100 shadow-sm">
                         <SlidePreview slide={slide} mini />
                       </div>
                       <p className="text-xs font-medium truncate">

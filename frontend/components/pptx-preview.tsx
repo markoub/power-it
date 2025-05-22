@@ -10,20 +10,38 @@ import { api } from "@/lib/api";
 
 interface PptxPreviewProps {
   presentation: Presentation;
+  key?: string;
+  onSlidesLoaded?: (count: number) => void;
 }
 
-export default function PptxPreview({ presentation }: PptxPreviewProps) {
+export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPreviewProps) {
   const [images, setImages] = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchSlides() {
-      const slides = await api.getPptxSlides(presentation.id.toString());
-      setImages(slides);
-      setCurrent(0);
+      setIsLoading(true);
+      try {
+        console.log(`Fetching PPTX slides for presentation ${presentation.id}...`);
+        const slides = await api.getPptxSlides(presentation.id.toString());
+        console.log(`Received ${slides.length} PPTX slides:`, slides);
+        
+        setImages(slides);
+        setCurrent(0);
+        
+        // Notify parent about slide count
+        if (onSlidesLoaded) {
+          onSlidesLoaded(slides.length);
+        }
+      } catch (error) {
+        console.error("Error fetching PPTX slides:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchSlides();
-  }, [presentation.id]);
+  }, [presentation.id, onSlidesLoaded]);
 
   const next = () => {
     if (current < images.length - 1) setCurrent(current + 1);
@@ -31,6 +49,14 @@ export default function PptxPreview({ presentation }: PptxPreviewProps) {
   const prev = () => {
     if (current > 0) setCurrent(current - 1);
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
+        <p className="text-gray-500">Loading PPTX preview...</p>
+      </div>
+    );
+  }
 
   if (images.length === 0) {
     return (

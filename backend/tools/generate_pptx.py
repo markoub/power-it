@@ -16,7 +16,7 @@ from tools.slide_config import SLIDE_TYPES, PRESENTATION_STRUCTURE
 # Import our refactored modules
 from .pptx_utils import list_presentation_images
 from .pptx_shapes import get_layout_by_name, find_shape_by_name, get_toc_shapes
-from .pptx_text import adjust_text_size, format_content_text
+from .pptx_text import adjust_text_size
 from .pptx_toc import create_table_of_contents_slide, process_toc_slide
 
 # Import all slide creation functions
@@ -61,10 +61,60 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
             slides_list = slides.slides
             presentation_title = getattr(slides, 'title', "Generated Presentation")
         
+        # Create presentation directories if they don't exist
+        if output_path is not None:
+            if output_path == "test":
+                presentation_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, "test")
+            else:
+                presentation_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, str(output_path))
+            
+            # Create presentation directory and images subdirectory
+            os.makedirs(presentation_dir, exist_ok=True)
+            images_dir = os.path.join(presentation_dir, "images")
+            os.makedirs(images_dir, exist_ok=True)
+            print(f"Created/ensured directories: {presentation_dir} and {images_dir}")
+        
+        # Print summary of slides to be processed
+        print(f"\n===== Processing Presentation: {presentation_title} =====")
+        print(f"Output path: {output_path}")
+        print(f"Total slides to process: {len(slides_list)}")
+        
+        # Print slide types summary
+        slide_types = {}
+        image_slides = 0
+        for slide in slides_list:
+            slide_type = getattr(slide, 'type', None)
+            if not slide_type and hasattr(slide, 'get'):
+                slide_type = slide.get('type')
+            
+            slide_types[slide_type] = slide_types.get(slide_type, 0) + 1
+            
+            # Count slides that should contain images
+            if slide_type in ['ContentImage', '3Images', 'ContentWithLogos']:
+                image_slides += 1
+        
+        print("Slide types summary:")
+        for slide_type, count in slide_types.items():
+            print(f"  - {slide_type}: {count} slides")
+        print(f"Total slides that should contain images: {image_slides}\n")
+        
         # Debug images directory structure
         print(f"\n===== Debugging Image Structure for Presentation {output_path} =====")
         available_images = list_presentation_images(output_path, PRESENTATIONS_STORAGE_DIR)
-        print(f"Available images: {available_images}")
+        if available_images:
+            print(f"Available images: {len(available_images)}")
+            # Print details for first 10 images
+            for i, img_path in enumerate(available_images[:10]):
+                if os.path.exists(img_path):
+                    size = os.path.getsize(img_path)
+                    print(f"  - {os.path.basename(img_path)} (size: {size} bytes)")
+                else:
+                    print(f"  - {os.path.basename(img_path)} (file does not exist)")
+            
+            if len(available_images) > 10:
+                print(f"  ... and {len(available_images) - 10} more images")
+        else:
+            print("No images found for this presentation!")
         print(f"========================================================\n")
         
         # Load template and extract layouts
@@ -403,10 +453,18 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
                             if hasattr(slide, 'fields') and img_field in slide.fields:
                                 # Handle direct path or pattern
                                 image_attr = slide.fields[img_field]
-                                if image_attr and os.path.exists(image_attr):
-                                    image_paths[img_field] = image_attr
-                                    print(f"  Found direct {img_field} path: {image_attr}")
-                                    continue
+                                if image_attr:
+                                    print(f"  Found {img_field} in slide fields: {image_attr}")
+                                    
+                                    # If it's a direct path that exists, use it
+                                    if os.path.exists(image_attr):
+                                        file_size = os.path.getsize(image_attr)
+                                        if file_size > 0:
+                                            image_paths[img_field] = image_attr
+                                            print(f"  Using direct {img_field} path: {image_attr} (size: {file_size} bytes)")
+                                            continue
+                                        else:
+                                            print(f"  Warning: Direct image file is empty: {image_attr}")
                             
                             # Try various naming patterns for images
                             image_patterns = [
@@ -428,22 +486,78 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
                                                   if pattern.lower() in f.lower()]
                                 
                                 if matching_images:
+                                    # Print all matching images with timestamps for debugging
+                                    print(f"  Found {len(matching_images)} images matching pattern '{pattern}':")
+                                    for img in matching_images:
+                                        img_path = os.path.join(images_dir, img)
+                                        mod_time = os.path.getmtime(img_path)
+                                        size = os.path.getsize(img_path)
+                                        print(f"    - {img} (Modified: {mod_time}, Size: {size} bytes)")
+                                    
                                     # Sort by modification time (newest first)
                                     matching_images.sort(key=lambda f: os.path.getmtime(os.path.join(images_dir, f)), 
                                                         reverse=True)
-                                    image_path = os.path.join(images_dir, matching_images[0])
-                                    image_paths[img_field] = image_path
-                                    print(f"  Found {img_field} with pattern '{pattern}': {image_path}")
-                                    found_image = True
-                                    break
+                                    
+                                    # Try files until we find one that's not empty
+                                    for img_file in matching_images:
+                                        image_path = os.path.join(images_dir, img_file)
+                                        file_size = os.path.getsize(image_path)
+                                        
+                                        if file_size > 0:
+                                            image_paths[img_field] = image_path
+                                            print(f"  Found {img_field} with pattern '{pattern}': {image_path} (size: {file_size} bytes)")
+                                            found_image = True
+                                            break
+                                        else:
+                                            print(f"  Warning: Image file is empty, trying next: {image_path}")
+                                    
+                                    if found_image:
+                                        break
                             
                             if not found_image:
-                                print(f"  No image found for {img_field}")
+                                print(f"  No valid image found for {img_field}")
+                                
+                                # Last resort - look for any image with this number in the filename
+                                number_pattern = f"{img_num}"
+                                print(f"  Last resort - looking for any image with '{number_pattern}' in filename")
+                                matching_images = [f for f in os.listdir(images_dir) 
+                                                 if number_pattern in f and (
+                                                     f.lower().endswith('.png') or 
+                                                     f.lower().endswith('.jpg') or 
+                                                     f.lower().endswith('.jpeg'))]
+                                
+                                if matching_images:
+                                    # Take the newest non-empty image
+                                    matching_images.sort(key=lambda f: os.path.getmtime(os.path.join(images_dir, f)), 
+                                                       reverse=True)
+                                    
+                                    for img_file in matching_images:
+                                        image_path = os.path.join(images_dir, img_file)
+                                        file_size = os.path.getsize(image_path)
+                                        
+                                        if file_size > 0:
+                                            image_paths[img_field] = image_path
+                                            print(f"  Found {img_field} with number pattern: {image_path} (size: {file_size} bytes)")
+                                            break
+                
+                # Validate all image paths with PIL if possible
+                for key, path in image_paths.items():
+                    if path:
+                        try:
+                            from PIL import Image
+                            img = Image.open(path)
+                            print(f"  Validated {key} using PIL - Format: {img.format}, Size: {img.size}")
+                            img.close()
+                        except Exception as e:
+                            print(f"  Warning - Could not validate image for {key} with PIL: {str(e)}")
+                            # Continue anyway, let the PPTX library handle it
                 
                 print(f"Final image paths for 3Images slide:")
                 for key, path in image_paths.items():
                     if path:
-                        print(f"  {key}: {path} (exists: {os.path.exists(path)})")
+                        file_exists = os.path.exists(path)
+                        file_size = os.path.getsize(path) if file_exists else 0
+                        print(f"  {key}: {path} (exists: {file_exists}, size: {file_size} bytes)")
                     else:
                         print(f"  {key}: Not found")
                 
@@ -471,24 +585,52 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
                             if image_filename in os.listdir(images_dir):
                                 image_path = os.path.join(images_dir, image_filename)
                                 print(f"  Found exact image at: {image_path}")
+                                
+                                # Verify file is valid
+                                if os.path.getsize(image_path) == 0:
+                                    print(f"  WARNING: Image file is empty: {image_path}")
+                                    image_path = None
                 
                 # First try to find by slide ID if available
                 if not image_path and hasattr(slide, 'id') and output_path is not None:
                     slide_id = getattr(slide, 'id')
                     images_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, str(output_path), "images")
+                    print(f"  Looking for image by slide ID {slide_id} in {images_dir}")
+                    
                     if os.path.exists(images_dir):
                         # Look for image with exact slide ID
                         id_pattern = f"slide_id_{slide_id}_"
                         matching_id_images = [f for f in os.listdir(images_dir) if id_pattern in f.lower()]
+                        
                         if matching_id_images:
+                            # Print all matching images with timestamps for debugging
+                            print(f"  Found {len(matching_id_images)} images matching slide ID {slide_id}:")
+                            for img in matching_id_images:
+                                img_path = os.path.join(images_dir, img)
+                                mod_time = os.path.getmtime(img_path)
+                                size = os.path.getsize(img_path)
+                                print(f"    - {img} (Modified: {mod_time}, Size: {size} bytes)")
+                            
                             # Sort matching images by modification time (newest first)
                             matching_id_images.sort(key=lambda f: os.path.getmtime(os.path.join(images_dir, f)), reverse=True)
                             image_path = os.path.join(images_dir, matching_id_images[0])
                             print(f"  Found image by slide ID: {image_path} (Last modified: {os.path.getmtime(image_path)})")
+                            
+                            # Verify file is valid
+                            if os.path.getsize(image_path) == 0:
+                                print(f"  WARNING: Image file is empty: {image_path}")
+                                # Try next image if available
+                                if len(matching_id_images) > 1:
+                                    image_path = os.path.join(images_dir, matching_id_images[1])
+                                    print(f"  Trying next image instead: {image_path}")
+                                else:
+                                    image_path = None
                 
                 # Fall back to pattern matching only if no image_path was found
-                if not image_path and image_attr and output_path is not None:
+                if not image_path and output_path is not None:
                     images_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, str(output_path), "images")
+                    print(f"  Looking for images in directory: {images_dir}")
+                    
                     if os.path.exists(images_dir):
                         # Find image matching slide pattern - index is 0-based internally but 1-based for filenames
                         # Use slide_index+1 to match slide_1_*, slide_2_*, etc.
@@ -496,18 +638,51 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
                         image_pattern = f"slide_{slide_index}_"
                         print(f"  Looking for images with pattern: {image_pattern}")
                         matching_images = [f for f in os.listdir(images_dir) if image_pattern in f.lower()]
+                        
+                        # Also look for just 'image' in filename
+                        if not matching_images:
+                            print(f"  No images with slide index pattern found, looking for files with 'image' in the name")
+                            matching_images = [f for f in os.listdir(images_dir) if 'image' in f.lower()]
+                        
                         if matching_images:
                             # Print all matching images with their timestamps for debugging
                             print(f"  All matching images for slide {slide_index}:")
                             for img in matching_images:
                                 img_path = os.path.join(images_dir, img)
                                 mod_time = os.path.getmtime(img_path)
-                                print(f"    - {img} (Modified: {mod_time})")
+                                size = os.path.getsize(img_path)
+                                print(f"    - {img} (Modified: {mod_time}, Size: {size} bytes)")
                             
                             # Sort matching images by modification time (newest first)
                             matching_images.sort(key=lambda f: os.path.getmtime(os.path.join(images_dir, f)), reverse=True)
                             image_path = os.path.join(images_dir, matching_images[0])
                             print(f"  Selected image for slide {slide_index}: {image_path} (Last modified: {os.path.getmtime(image_path)})")
+                            
+                            # Verify file is valid
+                            if os.path.getsize(image_path) == 0:
+                                print(f"  WARNING: Image file is empty: {image_path}")
+                                # Try next image if available
+                                if len(matching_images) > 1:
+                                    image_path = os.path.join(images_dir, matching_images[1])
+                                    print(f"  Trying next image instead: {image_path}")
+                                else:
+                                    image_path = None
+                
+                # Last resort - check if there's a direct path to an image file
+                if not image_path and image_attr and os.path.exists(image_attr):
+                    print(f"  Using direct image path from slide data: {image_attr}")
+                    image_path = image_attr
+                
+                # Validate the image file using PIL if possible
+                if image_path:
+                    try:
+                        from PIL import Image
+                        img = Image.open(image_path)
+                        print(f"  Successfully validated image with PIL - Format: {img.format}, Size: {img.size}")
+                        img.close()
+                    except Exception as e:
+                        print(f"  Warning - Could not validate image with PIL: {str(e)}")
+                        # Continue anyway, let the PPTX library handle it
                 
                 create_content_slide(
                     prs, 
@@ -539,7 +714,18 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
             else:
                 presentation_dir = os.path.join(PRESENTATIONS_STORAGE_DIR, str(output_path))
             
+            # Create presentation directory
             os.makedirs(presentation_dir, exist_ok=True)
+            
+            # Also create images directory to ensure it exists
+            images_dir = os.path.join(presentation_dir, "images")
+            os.makedirs(images_dir, exist_ok=True)
+            print(f"Ensured directories exist: {presentation_dir} and {images_dir}")
+            
+            # Log existing images if any
+            if os.path.exists(images_dir) and os.listdir(images_dir):
+                print(f"Images directory contains: {os.listdir(images_dir)}")
+            
             pptx_path = os.path.join(presentation_dir, pptx_filename)
         else:
             os.makedirs(os.path.join(PRESENTATIONS_STORAGE_DIR, "temp"), exist_ok=True)
@@ -564,7 +750,8 @@ async def generate_pptx_from_slides(slides, output_path) -> PptxGeneration:
         raise
 
 async def convert_pptx_to_png(pptx_path: str, output_dir: Optional[str] = None) -> List[str]:
-    """Convert a PPTX file to PNG images using the LibreOffice CLI."""
+    """Convert a PPTX file to PNG images using LibreOffice to first create a PDF, then convert PDF to PNGs."""
+    print("DEBUG: Using backend/tools/generate_pptx.py implementation")
     if output_dir is None:
         output_dir = os.path.dirname(pptx_path)
     
@@ -577,43 +764,283 @@ async def convert_pptx_to_png(pptx_path: str, output_dir: Optional[str] = None) 
     print(f"Converting PPTX file: {pptx_path}")
     print(f"Output directory: {output_dir}")
     
-    # Use LibreOffice to export each slide to PNG images
-    cmd = ["soffice", "--headless", "--convert-to", "png", "--outdir", output_dir, pptx_path]
+    # Step 1: Convert PPTX to PDF using LibreOffice
+    pdf_path = os.path.join(output_dir, f"{basename}.pdf")
+    cmd_to_pdf = ["soffice", "--headless", "--convert-to", "pdf", "--outdir", output_dir, pptx_path]
     
+    pdf_success = False
     try:
-        print(f"Running command: {' '.join(cmd)}")
+        print(f"Running command to create PDF: {' '.join(cmd_to_pdf)}")
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmd_to_pdf,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
 
-        print(f"LibreOffice stdout: {stdout.decode() if stdout else 'None'}")
-        print(f"LibreOffice stderr: {stderr.decode() if stderr else 'None'}")
-        print(f"LibreOffice exit code: {process.returncode}")
-
-        if process.returncode != 0:
-            print(f"Error converting PPTX to PNG: {stderr.decode()}")
-            return []
-
-        # Gather generated PNG files
-        png_files = [
-            os.path.join(output_dir, f)
-            for f in os.listdir(output_dir)
-            if f.endswith('.png')
-        ]
-
-        png_files.sort()
-
-        print(f"Generated {len(png_files)} PNG files")
-        for png_file in png_files:
-            print(f"  - {png_file}")
-
-        return png_files
+        stdout_text = stdout.decode() if stdout else 'None'
+        stderr_text = stderr.decode() if stderr else 'None'
         
+        print(f"LibreOffice PDF stdout: {stdout_text}")
+        print(f"LibreOffice PDF stderr: {stderr_text}")
+        print(f"LibreOffice PDF exit code: {process.returncode}")
+
+        # Check if PDF was created successfully
+        if process.returncode == 0 and os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0:
+            pdf_success = True
+            print(f"Successfully created PDF at: {pdf_path}")
+        else:
+            print(f"Failed to create PDF from PPTX")
     except Exception as e:
-        print(f"Error in convert_pptx_to_png: {str(e)}")
+        print(f"Error in PDF creation: {str(e)}")
         import traceback
         print(traceback.format_exc())
-        return [] 
+    
+    # Step 2: If PDF creation succeeded, convert PDF pages to PNGs
+    png_files = []
+    if pdf_success:
+        try:
+            # Try to use pdf2image if available (which uses poppler internally)
+            try:
+                from pdf2image import convert_from_path
+                
+                print(f"Converting PDF to PNG images using pdf2image")
+                images = convert_from_path(pdf_path, dpi=150)
+                
+                print(f"Generated {len(images)} page images from PDF")
+                
+                # Save each image as PNG
+                for i, image in enumerate(images):
+                    png_filename = f"{basename}-{i+1:03d}.png"
+                    png_path = os.path.join(output_dir, png_filename)
+                    image.save(png_path, "PNG")
+                    png_files.append(png_path)
+                    print(f"Saved PNG for page {i+1}: {png_path}")
+                
+            except ImportError:
+                print("pdf2image not available, trying PyMuPDF (fitz)")
+                # Try PyMuPDF (fitz) as an alternative
+                try:
+                    import fitz  # PyMuPDF
+                    
+                    print(f"Converting PDF to PNG images using PyMuPDF")
+                    pdf_document = fitz.open(pdf_path)
+                    
+                    for page_num in range(len(pdf_document)):
+                        page = pdf_document.load_page(page_num)
+                        
+                        # Render page to an image (with higher resolution)
+                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                        
+                        # Save the image
+                        png_filename = f"{basename}-{page_num+1:03d}.png"
+                        png_path = os.path.join(output_dir, png_filename)
+                        pix.save(png_path)
+                        png_files.append(png_path)
+                        print(f"Saved PNG for page {page_num+1}: {png_path}")
+                    
+                    pdf_document.close()
+                except ImportError:
+                    print("PyMuPDF not available, falling back to direct LibreOffice PNG conversion")
+                    # If neither pdf2image nor PyMuPDF is available, fall back to direct PPTX to PNG conversion
+                    pdf_success = False
+                except Exception as e:
+                    print(f"Error using PyMuPDF: {str(e)}")
+                    pdf_success = False
+                    
+        except Exception as e:
+            print(f"Error converting PDF to PNG: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            pdf_success = False
+    
+    # Step 3: If PDF conversion failed or we couldn't convert PDF to PNGs, try direct PPTX to PNG conversion
+    if not pdf_success or not png_files:
+        print("PDF method failed, falling back to direct PPTX to PNG conversion")
+        
+        # Use LibreOffice to export each slide to PNG images directly
+        cmd = ["soffice", "--headless", "--convert-to", "png", "--outdir", output_dir, pptx_path]
+        
+        try:
+            print(f"Running command for direct PNG conversion: {' '.join(cmd)}")
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+
+            stdout_text = stdout.decode() if stdout else 'None'
+            stderr_text = stderr.decode() if stderr else 'None'
+            
+            print(f"LibreOffice PNG stdout: {stdout_text}")
+            print(f"LibreOffice PNG stderr: {stderr_text}")
+            print(f"LibreOffice PNG exit code: {process.returncode}")
+
+            # LibreOffice converts PPTX files to a series of PNG files with specific naming patterns
+            # First look for pattern: basename-001.png, basename-002.png, etc.
+            pattern1 = f"{basename}-"
+            # Alternate pattern sometimes used: basename.png
+            pattern2 = f"{basename}.png"
+            
+            # Collect all PNG files in the directory
+            all_png_files = [
+                os.path.join(output_dir, f)
+                for f in os.listdir(output_dir)
+                if f.endswith('.png')
+            ]
+            
+            print(f"Found {len(all_png_files)} total PNG files in directory")
+            
+            # Check for pattern matches
+            pattern1_matches = [f for f in all_png_files if os.path.basename(f).startswith(pattern1)]
+            pattern2_matches = [f for f in all_png_files if os.path.basename(f) == pattern2]
+            
+            print(f"Pattern '{pattern1}' matches: {len(pattern1_matches)}")
+            print(f"Pattern '{pattern2}' matches: {len(pattern2_matches)}")
+            
+            # Use pattern1 if we have matches, otherwise try pattern2
+            if pattern1_matches:
+                png_files = pattern1_matches
+                print(f"Using {len(png_files)} files matching pattern '{pattern1}'")
+            elif pattern2_matches:
+                png_files = pattern2_matches
+                print(f"Using single file matching pattern '{pattern2}'")
+            else:
+                # If no specific matches found, use all recent PNG files created in the last 60 seconds
+                # This is a fallback for cases where naming conventions might differ
+                import time
+                current_time = time.time()
+                recent_png_files = [
+                    f for f in all_png_files 
+                    if os.path.getmtime(f) > current_time - 60  # files modified in the last minute
+                ]
+                
+                if recent_png_files:
+                    png_files = recent_png_files
+                    print(f"Using {len(png_files)} recently created PNG files")
+                else:
+                    # Last resort: try to match PPTX filename in PNG files
+                    partial_matches = [
+                        f for f in all_png_files 
+                        if any(part in os.path.basename(f).lower() for part in basename.lower().split('_'))
+                    ]
+                    
+                    if partial_matches and len(partial_matches) > 1:  # Need more than 1 to have multiple slides
+                        png_files = partial_matches
+                        print(f"Using {len(png_files)} files with partial name match")
+                    else:
+                        # If still no matches, just use all PNG files as last resort
+                        if len(all_png_files) > 1:  # Need more than 1 to have multiple slides
+                            png_files = all_png_files
+                            print(f"Using all {len(png_files)} PNG files as last resort")
+                        else:
+                            png_files = []
+
+            # Sort files in a natural order (so -1, -2, -10 appear in the correct sequence)
+            if png_files:
+                png_files.sort(key=lambda path: [
+                    int(part) if part.isdigit() else part
+                    for part in re.split(r'(\d+)', path)
+                ])
+
+                print(f"Selected {len(png_files)} PNG files")
+                for i, png_file in enumerate(png_files[:10]):  # Show just first 10 for brevity
+                    print(f"  {i+1}. {os.path.basename(png_file)}")
+                
+                if len(png_files) > 10:
+                    print(f"  ... and {len(png_files) - 10} more files")
+            
+        except Exception as e:
+            print(f"Error in direct PPTX to PNG conversion: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+    
+    # Step 4: If we still don't have enough PNGs, generate them directly from the PPTX using python-pptx
+    if not png_files or len(png_files) < 2:
+        print("No PNG files found after conversion attempts. Generating them directly using python-pptx and PIL.")
+        
+        try:
+            from pptx import Presentation
+            from PIL import Image, ImageDraw, ImageFont
+            
+            # Load the presentation
+            prs = Presentation(pptx_path)
+            slide_count = len(prs.slides)
+            
+            print(f"Loaded presentation with {slide_count} slides")
+            
+            # Create PNGs for each slide
+            png_files = []
+            
+            for i, slide in enumerate(prs.slides):
+                slide_png_filename = f"{basename}-{i+1:03d}.png"
+                slide_png_path = os.path.join(output_dir, slide_png_filename)
+                
+                # Create a blank image with a white background
+                img = Image.new('RGB', (1280, 720), color=(255, 255, 255))
+                d = ImageDraw.Draw(img)
+                
+                # Try to use a system font
+                try:
+                    font = ImageFont.truetype("Arial", 20)
+                except IOError:
+                    try:
+                        font = ImageFont.truetype("DejaVuSans.ttf", 20)
+                    except IOError:
+                        font = ImageFont.load_default()
+                
+                # Add slide index and some text
+                d.text((40, 40), f"Slide {i+1} of {slide_count}", fill=(0, 0, 0), font=font)
+                
+                # Try to extract title if present
+                slide_title = None
+                for shape in slide.shapes:
+                    if hasattr(shape, "has_text_frame") and shape.has_text_frame:
+                        for paragraph in shape.text_frame.paragraphs:
+                            if paragraph.text:
+                                slide_title = paragraph.text
+                                break
+                        if slide_title:
+                            break
+                
+                if slide_title:
+                    d.text((40, 80), f"Title: {slide_title}", fill=(0, 0, 0), font=font)
+                
+                # Save the image
+                img.save(slide_png_path)
+                png_files.append(slide_png_path)
+                
+                print(f"Created PNG for slide {i+1}: {slide_png_path}")
+            
+            print(f"Generated {len(png_files)} PNG files directly from PPTX")
+            
+        except Exception as direct_conversion_error:
+            print(f"Error in direct PPTX to PNG conversion: {str(direct_conversion_error)}")
+            import traceback
+            print(traceback.format_exc())
+            
+            # Last resort: create a single fallback PNG
+            fallback_png_path = os.path.join(output_dir, f"{basename}_fallback.png")
+            
+            try:
+                # Create a simple image with text
+                img = Image.new('RGB', (800, 600), color=(255, 255, 255))
+                d = ImageDraw.Draw(img)
+                d.text((10, 10), f"Failed to convert presentation. Please check the PPTX file.", fill=(0, 0, 0))
+                img.save(fallback_png_path)
+                
+                png_files = [fallback_png_path]
+                print(f"Created fallback PNG: {fallback_png_path}")
+            except Exception as fallback_error:
+                print(f"Error creating fallback PNG: {str(fallback_error)}")
+    
+    # Clean up the PDF file if it exists and we don't need it anymore
+    if pdf_success and os.path.exists(pdf_path) and png_files:
+        try:
+            os.remove(pdf_path)
+            print(f"Removed temporary PDF file: {pdf_path}")
+        except Exception as e:
+            print(f"Warning: Failed to remove temporary PDF file: {str(e)}")
+    
+    return png_files 

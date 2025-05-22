@@ -53,20 +53,25 @@ async def recreate_database():
         except Exception as e:
             print(f"Error deleting presentations: {e}")
         
-        # Check if author column exists
+        # Check if author and is_deleted columns exist
         try:
             cursor.execute("PRAGMA table_info(presentations)")
             columns = cursor.fetchall()
             column_names = [col[1] for col in columns]
             print(f"Presentation table columns: {column_names}")
-            
+
             if "author" not in column_names:
                 print("Adding author column to presentations table")
                 cursor.execute("ALTER TABLE presentations ADD COLUMN author TEXT")
                 conn.commit()
                 print("Added author column successfully")
+            if "is_deleted" not in column_names:
+                print("Adding is_deleted column to presentations table")
+                cursor.execute("ALTER TABLE presentations ADD COLUMN is_deleted INTEGER DEFAULT 0")
+                conn.commit()
+                print("Added is_deleted column successfully")
         except Exception as e:
-            print(f"Error checking/adding author column: {e}")
+            print(f"Error checking/adding columns: {e}")
         
         # Close connection
         conn.close()

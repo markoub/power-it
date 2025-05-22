@@ -84,10 +84,9 @@ e2e-install:
 	cd $(TESTING_DIR) && npx playwright install
 	$(call INFO,Browsers installed.)
 
-# Install all dependencies for offline usage
 setup:
 	$(call INFO,Setting up project dependencies...)
-	sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip
+	sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip libreoffice ghostscript
 	cd backend && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
 	chmod +x backend/run_tests.sh backend/record_tests.sh backend/record_all_tests.sh
 	if [ -f frontend/package.json ]; then cd frontend && npm install && cd ..; else echo "Skipping frontend install - package.json missing"; fi

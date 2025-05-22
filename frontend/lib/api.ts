@@ -352,6 +352,28 @@ export const api = {
     }
   },
 
+  async regenerateImage(
+    id: string | number,
+    slideIndex: number,
+    prompt: string
+  ): Promise<any> {
+    const response = await fetch(
+      `${API_URL}/presentations/${id}/slides/${slideIndex}/image`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+        mode: "cors",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to regenerate image: ${response.status}`);
+    }
+
+    return await response.json();
+  },
+
   // Get PPTX slide images
   async getPptxSlides(id: string): Promise<string[]> {
     try {

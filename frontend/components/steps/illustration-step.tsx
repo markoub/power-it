@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Loader2, RefreshCw, Wand2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -202,7 +203,39 @@ export default function IllustrationStep({
 
   // Check if there are no slides or if slides have no images yet
   const noSlides = presentation.slides.length === 0;
-  const hasNoImages = presentation.slides.every(slide => !slide.imageUrl || slide.imageUrl === '');
+  const hasNoImages = presentation.slides.every(
+    (slide) => !slide.imageUrl || slide.imageUrl === ""
+  );
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedImageSlide, setSelectedImageSlide] = useState<Slide | null>(null);
+
+  const regenerateImage = async (slide: Slide) => {
+    const index = presentation.slides.findIndex((s) => s.id === slide.id);
+    if (index === -1) return;
+    setIsGenerating(true);
+    setGeneratingSlideId(slide.id);
+    const prompt = slide.imagePrompt || generateImagePrompt(slide);
+
+    try {
+      const data = await api.regenerateImage(presentation.id, index, prompt);
+      let imageUrl = data.image_url || "";
+      if (imageUrl && !imageUrl.startsWith("http")) {
+        imageUrl = `${API_URL}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+      }
+      updateSlide({ ...slide, imagePrompt: prompt, imageUrl });
+    } catch (error) {
+      console.error("Error regenerating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate image.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      setGeneratingSlideId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -256,105 +289,117 @@ export default function IllustrationStep({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence>
-              {presentation.slides.map((slide, index) => (
-                <motion.div
-                  key={slide.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <Card
-                    className={`overflow-hidden slide-card ${
-                      currentSlide?.id === slide.id ? "ring-2 ring-primary-500" : ""
-                    }`}
-                    onClick={() => setCurrentSlide(slide)}
+              {presentation.slides
+                .filter((s) => s.imageUrl)
+                .map((slide, index) => (
+                  <motion.div
+                    key={slide.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2 truncate">{slide.title || `Slide ${index + 1}`}</h3>
+                    <Card
+                      className={`overflow-hidden slide-card ${
+                        currentSlide?.id === slide.id ? "ring-2 ring-primary-500" : ""
+                      }`}
+                      onClick={() => {
+                        setCurrentSlide(slide);
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2 truncate">{slide.title || `Slide ${index + 1}`}</h3>
 
-                      <div className="aspect-video bg-gray-100 rounded-lg mb-3 overflow-hidden relative">
-                        {slide.imageUrl ? (
-                          <>
-                            <img
-                              src={String(slide.imageUrl)}
-                              alt={String(slide.title)}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                              onError={(e) => {
-                                console.error(`Failed to load image for slide "${slide.title}":`, slide.imageUrl);
-                                // Replace with a placeholder and show error info
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = "/placeholder.svg";
-                                
-                                // Add error overlay
-                                const target = e.currentTarget as HTMLImageElement;
-                                target.style.opacity = "0.5";
-                                
-                                // Add an error indicator
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const errorDiv = document.createElement('div');
-                                  errorDiv.className = "absolute inset-0 flex items-center justify-center text-red-500 text-sm font-bold";
-                                  errorDiv.textContent = "Image failed to load";
-                                  parent.appendChild(errorDiv);
-                                }
-                              }}
-                            />
-                            <div className="absolute inset-0 opacity-0 hover:opacity-100 bg-black/70 transition-opacity duration-300 flex items-center justify-center text-white text-xs p-2 text-center overflow-auto">
-                              <div>
-                                <p className="font-bold mb-1">Image URL:</p>
-                                <p className="break-all">{slide.imageUrl}</p>
+                        <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+                          {slide.imageUrl ? (
+                            <img src={String(slide.imageUrl)} alt={String(slide.title)} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
+                          )}
+                          {isGenerating && generatingSlideId === slide.id && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <div className="text-white text-center">
+                                <Loader2 size={24} className="animate-spin mx-auto mb-2" />
+                                <p className="text-sm">Generating...</p>
                               </div>
                             </div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            No image generated
-                          </div>
-                        )}
-
-                        {isGenerating && generatingSlideId === slide.id && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <div className="text-white text-center">
-                              <Loader2 size={24} className="animate-spin mx-auto mb-2" />
-                              <p className="text-sm">Generating...</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-gray-500">Image Prompt</label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={slide.imagePrompt || ""}
-                            onChange={(e) => updateSlide({ ...slide, imagePrompt: e.target.value })}
-                            placeholder="Enter image prompt"
-                            className="text-sm"
-                          />
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              generateImage(slide);
-                            }}
-                            disabled={isGenerating}
-                            className="flex-shrink-0"
-                            data-testid="generate-image-button"
-                          >
-                            <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
-                          </Button>
+                          )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
             </AnimatePresence>
           </div>
         )}
       </motion.div>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDialogOpen(false);
+            setCurrentSlide(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {currentSlide?.title || "Image Preview"}
+            </DialogTitle>
+            <DialogDescription>
+              You can customize the prompt and regenerate this image
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentSlide && (
+            <div className="space-y-4">
+              {currentSlide.imageUrl && (
+                <div className="max-h-[500px] overflow-auto flex justify-center">
+                  <img 
+                    src={String(currentSlide.imageUrl)} 
+                    alt={currentSlide.title || "Slide image"} 
+                    className="rounded object-contain max-h-[450px] max-w-full" 
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <label htmlFor="imagePrompt" className="text-sm font-medium text-gray-700">
+                  Image prompt
+                </label>
+                <Input
+                  id="imagePrompt"
+                  value={currentSlide.imagePrompt || ""}
+                  onChange={(e) => updateSlide({ ...currentSlide, imagePrompt: e.target.value })}
+                  placeholder="Enter image prompt"
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  onClick={() => regenerateImage(currentSlide)}
+                  disabled={isGenerating}
+                  className="bg-primary text-white"
+                >
+                  {isGenerating ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      Regenerating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw size={16} />
+                      Regenerate
+                    </span>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

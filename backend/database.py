@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, create_engine, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Boolean, create_engine, ForeignKey, text
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from datetime import datetime
@@ -35,6 +35,7 @@ class Presentation(Base):
     name = Column(String, unique=True, index=True)
     topic = Column(String)
     author = Column(String, nullable=True)
+    is_deleted = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -97,4 +98,10 @@ async def get_db():
 # Initialize the database
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all) 
+        await conn.run_sync(Base.metadata.create_all)
+
+        # Ensure new columns exist when database already created
+        result = await conn.execute(text("PRAGMA table_info(presentations)"))
+        columns = [row[1] for row in result.fetchall()]
+        if "is_deleted" not in columns:
+            await conn.execute(text("ALTER TABLE presentations ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))

@@ -213,14 +213,18 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
         return _presentations_cache["data"]
     
     # Use a more efficient query that doesn't load relationships we don't need
-    query = select(
-        Presentation.id,
-        Presentation.name,
-        Presentation.topic,
-        Presentation.author,
-        Presentation.created_at,
-        Presentation.updated_at
-    ).order_by(Presentation.created_at.desc())
+    query = (
+        select(
+            Presentation.id,
+            Presentation.name,
+            Presentation.topic,
+            Presentation.author,
+            Presentation.created_at,
+            Presentation.updated_at,
+        )
+        .where(Presentation.is_deleted == False)
+        .order_by(Presentation.created_at.desc())
+    )
     
     result = await db.execute(query)
     presentations = result.all()
@@ -250,7 +254,9 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
 async def get_presentation(presentation_id: int, db: AsyncSession = Depends(get_db)):
     try:
         print(f"Retrieving presentation with ID: {presentation_id} from routers/presentations.py")
-        stmt = select(Presentation).filter(Presentation.id == presentation_id)
+        stmt = select(Presentation).filter(
+            (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+        )
         result = await db.execute(stmt)
         presentation = result.scalar_one_or_none()
         
@@ -336,9 +342,30 @@ async def get_presentation(presentation_id: int, db: AsyncSession = Depends(get_
         print(f"FATAL ERROR in get_presentation (P:{presentation_id}): {str(e)}\nTraceback: {error_details}")
         # This will now be caught by the universal middleware if not a Pydantic validation error during response build
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"An unexpected error occurred while retrieving presentation {presentation_id}: {str(e)}"
         ) # It's better to raise HTTPException so universal middleware isn't the only defense.
+
+
+@router.delete("/{presentation_id}", status_code=204,
+              summary="Delete a presentation",
+              description="Soft delete a presentation by id")
+async def delete_presentation(presentation_id: int, db: AsyncSession = Depends(get_db)):
+    stmt = select(Presentation).where(
+        (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+    )
+    result = await db.execute(stmt)
+    presentation = result.scalar_one_or_none()
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+
+    presentation.is_deleted = True
+    await db.commit()
+
+    # invalidate cache so list reflects deletion
+    _presentations_cache["data"] = None
+
+    return Response(status_code=204)
 
 @router.post("/{presentation_id}/steps/{step_name}/run",
            summary="Run a specific presentation step",
@@ -356,7 +383,9 @@ async def run_step(
         raise HTTPException(status_code=400, detail=f"Invalid step name: {step_name}")
     
     # Get presentation
-    query = select(Presentation).where(Presentation.id == presentation_id)
+    query = select(Presentation).where(
+        (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+    )
     result = await db.execute(query)
     presentation = result.scalars().first()
     
@@ -434,7 +463,11 @@ async def save_modified_presentation(
     The data will be saved to the slides step and compiled step if the latter exists.
     """
     # Get the presentation
-    result = await db.execute(select(Presentation).filter(Presentation.id == presentation_id))
+    result = await db.execute(
+        select(Presentation).filter(
+            (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+        )
+    )
     presentation = result.scalar_one_or_none()
     
     if not presentation:

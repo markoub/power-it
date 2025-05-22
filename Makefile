@@ -18,6 +18,8 @@ WARN := @echo "$(YELLOW)$(1)$(NC)"
 # Default target when just running `make`
 help:
 	@echo "$(GREEN)Available commands:$(NC)"
+	@echo "  $(YELLOW)make run$(NC)            - Run the complete application (backend + frontend)"
+	@echo "  $(YELLOW)make test-backend$(NC)   - Run backend tests"
 	@echo "  $(YELLOW)make setup$(NC)         - Install backend and E2E dependencies"
 	@echo "  $(YELLOW)make e2e$(NC)            - Run all E2E tests"
 	@echo "  $(YELLOW)make e2e-headed$(NC)     - Run all E2E tests with browser visible"
@@ -27,8 +29,21 @@ help:
 	@echo "  $(YELLOW)make e2e-install$(NC)    - Install Playwright browsers"
 	@echo ""
 	@echo "$(GREEN)Examples:$(NC)"
+	@echo "  $(YELLOW)make test-backend$(NC)"
 	@echo "  $(YELLOW)make e2e-test test=presentations-list$(NC)"
 	@echo "  $(YELLOW)make e2e-headed$(NC)"
+
+# Run the application
+run:
+	$(call INFO,Starting the application...)
+	chmod +x run.sh && ./run.sh
+	$(call INFO,Application has been stopped.)
+
+# Run backend tests
+test-backend:
+	$(call INFO,Running backend tests...)
+	cd $(BACKEND_DIR) && chmod +x run_tests.sh && ./run_tests.sh
+	$(call INFO,Backend tests complete. See results above.)
 
 # Run all E2E tests
 e2e:

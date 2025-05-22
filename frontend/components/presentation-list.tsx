@@ -36,6 +36,8 @@ export default function PresentationList() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure")) return
+
     try {
       const success = await api.deletePresentation(id)
 

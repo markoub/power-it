@@ -14,6 +14,12 @@ test.describe('Delete Presentation', () => {
     const card = page.getByTestId(`presentation-card-${id}`);
     await expect(card).toBeVisible();
 
+    // Accept the confirmation dialog
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Are you sure');
+      await dialog.accept();
+    });
+
     await card.getByTestId('delete-presentation-button').click();
 
     await expect(card).not.toBeVisible({ timeout: 5000 });

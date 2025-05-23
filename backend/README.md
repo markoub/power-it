@@ -93,7 +93,7 @@ The application has been refactored into a modular structure:
 
 ```
 backend/
-├── api_new.py                # Main FastAPI application entry point
+├── api.py                    # Main FastAPI application entry point
 ├── database.py               # Database models and connection
 ├── models.py                 # Pydantic models for application data
 ├── config.py                 # Configuration settings
@@ -101,6 +101,7 @@ backend/
 │   ├── presentations.py      # Presentation-related endpoints
 │   ├── images.py             # Image generation endpoints
 │   ├── logos.py              # Logo fetching endpoints
+│   ├── pptx.py               # PPTX and download endpoints
 ├── schemas/                  # API request/response schemas
 │   ├── presentations.py      # Presentation schemas
 │   ├── images.py             # Image schemas

@@ -23,9 +23,10 @@ logger = logging.getLogger("powerit-backend")
 from database import init_db
 
 # Import routers
-from routers.presentations import router as presentations_router 
+from routers.presentations import router as presentations_router
 from routers.images import router as images_router
 from routers.logos import router as logos_router
+from routers.pptx import router as pptx_router
 
 # Lifespan context manager
 @asynccontextmanager
@@ -81,6 +82,7 @@ app.add_middleware(
 app.include_router(presentations_router)
 app.include_router(images_router)
 app.include_router(logos_router)
+app.include_router(pptx_router)
 
 # Custom OpenAPI schema and documentation
 @app.get("/docs", include_in_schema=False)

@@ -13,6 +13,11 @@ powerit/
 │   ├── database.py     # SQLite database with SQLAlchemy
 │   ├── api.py          # FastAPI application wrapper
 │   ├── server.py       # FastMCP server
+│   ├── routers/        # FastAPI route modules
+│   │   ├── presentations.py
+│   │   ├── images.py
+│   │   ├── logos.py
+│   │   └── pptx.py
 │   └── ...
 └── frontend/           # Next.js frontend application
     ├── app/            # Next.js app router

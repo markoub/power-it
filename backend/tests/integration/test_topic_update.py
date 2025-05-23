@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from fastapi import FastAPI
 
-from api_new import app
+from api import app
 from database import init_db, SessionLocal, Presentation, PresentationStepModel, PresentationStep, StepStatus
 
 @pytest.fixture

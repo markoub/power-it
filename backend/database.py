@@ -1,10 +1,14 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Boolean, create_engine, ForeignKey, text
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 import json
 import os
+
+# Helper function to get current UTC time
+def utc_now():
+    return datetime.now(timezone.utc)
 
 # Create async engine
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./presentations.db"
@@ -36,8 +40,8 @@ class Presentation(Base):
     topic = Column(String)
     author = Column(String, nullable=True)
     is_deleted = Column(Boolean, default=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     
     steps = relationship("PresentationStepModel", back_populates="presentation", cascade="all, delete-orphan")
 
@@ -50,8 +54,8 @@ class PresentationStepModel(Base):
     status = Column(String, default=StepStatus.PENDING.value)
     result = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     presentation = relationship("Presentation", back_populates="steps")
 

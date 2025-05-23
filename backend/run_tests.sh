@@ -16,11 +16,16 @@ else
 fi
 
 # Run tests with specified arguments or all tests if none provided
+# Ensure test environment variables
+export POWERIT_ENV=test
+# Use dedicated test database file if provided
+export DATABASE_FILE="${TEST_DATABASE_FILE:-${DATABASE_FILE:-presentations_test.db}}"
+
 if [ $# -eq 0 ]; then
-    # Run all tests with the POWERIT_OFFLINE=true environment variable for offline testing
+    # Run all tests with offline mode enabled
     POWERIT_OFFLINE=true python -m pytest tests/ -v
 else
-    # Run specific test file or with specific options with the POWERIT_OFFLINE=true environment variable
+    # Run specific test file or with specific options
     POWERIT_OFFLINE=true python -m pytest "$@"
 fi
 

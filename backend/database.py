@@ -5,13 +5,25 @@ from datetime import datetime, timezone
 import enum
 import json
 import os
+from dotenv import load_dotenv
 
 # Helper function to get current UTC time
 def utc_now():
     return datetime.now(timezone.utc)
 
+# Load environment variables
+load_dotenv()
+
+# Determine which database file to use
+DATABASE_FILE = os.getenv("DATABASE_FILE", "presentations.db")
+TEST_DATABASE_FILE = os.getenv("TEST_DATABASE_FILE", "presentations_test.db")
+ENVIRONMENT = os.getenv("POWERIT_ENV", "production")
+
+db_file = TEST_DATABASE_FILE if ENVIRONMENT == "test" else DATABASE_FILE
+db_path = db_file if os.path.isabs(db_file) else os.path.join(os.path.dirname(__file__), db_file)
+
 # Create async engine
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./presentations.db"
+SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

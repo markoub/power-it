@@ -13,7 +13,7 @@ NC := \033[0m # No Color
 INFO := @echo "$(GREEN)$(1)$(NC)"
 WARN := @echo "$(YELLOW)$(1)$(NC)"
 
-.PHONY: setup e2e e2e-headed e2e-debug e2e-list e2e-install help
+.PHONY: setup e2e e2e-headed e2e-debug e2e-list e2e-install e2e-api help
 
 # Default target when just running `make`
 help:
@@ -24,12 +24,14 @@ help:
 	@echo "  $(YELLOW)make e2e$(NC)            - Run all E2E tests"
 	@echo "  $(YELLOW)make e2e-headed$(NC)     - Run all E2E tests with browser visible"
 	@echo "  $(YELLOW)make e2e-debug$(NC)      - Run E2E tests with debugging enabled (headed + slow motion)"
+	@echo "  $(YELLOW)make e2e-api$(NC)        - Run API documentation tests"
 	@echo "  $(YELLOW)make e2e-test$(NC) test=file-name - Run specific E2E tests (e.g., make e2e-test test=presentations-list)"
 	@echo "  $(YELLOW)make e2e-list$(NC)       - List all available E2E tests"
 	@echo "  $(YELLOW)make e2e-install$(NC)    - Install Playwright browsers"
 	@echo ""
 	@echo "$(GREEN)Examples:$(NC)"
 	@echo "  $(YELLOW)make test-backend$(NC)"
+	@echo "  $(YELLOW)make e2e-api$(NC)"
 	@echo "  $(YELLOW)make e2e-test test=presentations-list$(NC)"
 	@echo "  $(YELLOW)make e2e-headed$(NC)"
 
@@ -62,6 +64,12 @@ e2e-debug:
 	$(call INFO,Running E2E tests with debugging enabled...)
 	cd $(TESTING_DIR) && npx playwright test --headed --debug --timeout 60000
 	$(call INFO,E2E debug tests complete.)
+
+# Run API documentation tests
+e2e-api:
+	$(call INFO,Running API documentation tests...)
+	cd $(TESTING_DIR) && npx playwright test e2e/api-docs.spec.ts
+	$(call INFO,API tests complete. See results above.)
 
 # Run specific E2E tests
 e2e-test:

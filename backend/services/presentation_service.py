@@ -565,3 +565,154 @@ async def execute_pptx_task(presentation_id: int):
             )
             await db.execute(query)
             await db.commit() 
+
+async def execute_topic_update_task(presentation_id: int, new_topic: str, author: str = None):
+    """
+    Update the topic of a presentation and rerun research and slides generation.
+    This function updates the presentation's topic in the database and triggers a
+    re-execution of the research and slides generation steps.
+    """
+    # Create a new session for the background task
+    async with SessionLocal() as db:
+        try:
+            # First, update the presentation topic in the database
+            presentation_result = await db.execute(
+                select(Presentation).filter(Presentation.id == presentation_id)
+            )
+            presentation = presentation_result.scalars().first()
+            
+            if not presentation:
+                print(f"Presentation with ID {presentation_id} not found")
+                return
+            
+            # Update the topic
+            presentation.topic = new_topic
+            
+            # If author wasn't provided, use it from the presentation
+            if author is None and presentation.author:
+                author = presentation.author
+            
+            # Reset the research step to pending
+            research_step_result = await db.execute(
+                select(PresentationStepModel).filter(
+                    PresentationStepModel.presentation_id == presentation_id,
+                    PresentationStepModel.step == PresentationStep.RESEARCH.value
+                )
+            )
+            research_step = research_step_result.scalars().first()
+            
+            if research_step:
+                research_step.status = StepStatus.PROCESSING.value
+                
+                # Run research tool with new topic
+                try:
+                    research_data = await research_topic(new_topic)
+                    
+                    # Update step with result
+                    research_step.set_result(research_data.model_dump())
+                    research_step.status = StepStatus.COMPLETED.value
+                except Exception as e:
+                    research_step.status = StepStatus.FAILED.value
+                    research_step.set_result({"error": str(e)})
+                    research_step.error_message = str(e)
+                    await db.commit()
+                    return
+            else:
+                # If there's no research step, create one
+                research_step = PresentationStepModel(
+                    presentation_id=presentation_id,
+                    step=PresentationStep.RESEARCH.value,
+                    status=StepStatus.PROCESSING.value
+                )
+                db.add(research_step)
+                await db.commit()
+                await db.refresh(research_step)
+                
+                # Run research tool with new topic
+                try:
+                    research_data = await research_topic(new_topic)
+                    
+                    # Update step with result
+                    research_step.set_result(research_data.model_dump())
+                    research_step.status = StepStatus.COMPLETED.value
+                except Exception as e:
+                    research_step.status = StepStatus.FAILED.value
+                    research_step.set_result({"error": str(e)})
+                    research_step.error_message = str(e)
+                    await db.commit()
+                    return
+            
+            # Reset the slides step to pending
+            slides_step_result = await db.execute(
+                select(PresentationStepModel).filter(
+                    PresentationStepModel.presentation_id == presentation_id,
+                    PresentationStepModel.step == PresentationStep.SLIDES.value
+                )
+            )
+            slides_step = slides_step_result.scalars().first()
+            
+            if slides_step:
+                slides_step.status = StepStatus.PROCESSING.value
+                
+                # Run slides generation with new research data
+                try:
+                    # Convert research data to ResearchData model
+                    research_data = ResearchData(**research_step.get_result())
+                    
+                    # Use default 10 slides or get previous count
+                    target_slides = 10
+                    if slides_step.get_result() and "slides" in slides_step.get_result():
+                        target_slides = len(slides_step.get_result()["slides"])
+                    
+                    # Generate new slides based on updated research
+                    slides_data = await generate_slides(research_data, target_slides, author)
+                    
+                    # Update slides step with result
+                    slides_step.set_result(slides_data.model_dump())
+                    slides_step.status = StepStatus.COMPLETED.value
+                except Exception as e:
+                    slides_step.status = StepStatus.FAILED.value
+                    slides_step.set_result({"error": str(e)})
+                    slides_step.error_message = str(e)
+                    await db.commit()
+                    return
+            
+            # Reset the images and compiled steps to pending so they can be regenerated
+            for step_type in [PresentationStep.IMAGES.value, PresentationStep.COMPILED.value, PresentationStep.PPTX.value]:
+                step_result = await db.execute(
+                    select(PresentationStepModel).filter(
+                        PresentationStepModel.presentation_id == presentation_id,
+                        PresentationStepModel.step == step_type
+                    )
+                )
+                step = step_result.scalars().first()
+                
+                if step:
+                    step.status = StepStatus.PENDING.value
+            
+            # Commit all changes
+            await db.commit()
+            
+        except Exception as e:
+            # Log the error and rollback
+            print(f"Error updating topic: {str(e)}")
+            traceback.print_exc()
+            await db.rollback()
+            
+            # Try to update research step status to failed if possible
+            try:
+                research_step_result = await db.execute(
+                    select(PresentationStepModel).filter(
+                        PresentationStepModel.presentation_id == presentation_id,
+                        PresentationStepModel.step == PresentationStep.RESEARCH.value
+                    )
+                )
+                research_step = research_step_result.scalars().first()
+                
+                if research_step:
+                    research_step.status = StepStatus.FAILED.value
+                    research_step.set_result({"error": str(e)})
+                    research_step.error_message = str(e)
+                    await db.commit()
+            except:
+                pass 

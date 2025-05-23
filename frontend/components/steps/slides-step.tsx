@@ -52,7 +52,8 @@ export default function SlidesStep({
       setIsGenerating(true);
 
       // Call the API to run the slides step
-      const result = await api.runPresentationStep(presentation.id, "slides");
+      const presentationId = typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id;
+      const result = await api.runPresentationStep(presentationId, "slides");
 
       if (result) {
         toast({
@@ -74,7 +75,7 @@ export default function SlidesStep({
 
           // Fetch the updated presentation
           const updatedPresentation = await api.getPresentation(
-            presentation.id,
+            presentationId
           );
 
           if (updatedPresentation) {

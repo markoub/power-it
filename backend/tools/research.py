@@ -119,12 +119,37 @@ async def research_topic(query: str, mode: str = "ai") -> ResearchData:
     
     # Process response
     try:
-        # Try to parse as JSON
-        data = json.loads(response.text)
+        # Debug logging to see the raw response
+        print("Gemini API response raw text:")
+        print(response.text)
+        print("=====================")
         
-        # Extract content and links
-        content = data.get("content", "")
-        links = data.get("links", [])
+        # Since the Gemini API is returning text with JSON in markdown code blocks,
+        # we'll manually extract the content and links
+        content = ""
+        links = []
+        
+        # First, try to strip markdown code blocks if present
+        response_text = response.text
+        if response_text.startswith("```json") and response_text.endswith("```"):
+            # Remove the json code block markers
+            response_text = response_text[7:-3].strip()  # Remove ```json and ``` 
+        elif response_text.startswith("```") and response_text.endswith("```"):
+            # Remove generic code block markers
+            response_text = response_text[3:-3].strip()  # Remove ``` and ```
+        
+        # Try to parse as JSON first
+        try:
+            data = json.loads(response_text)
+            content = data.get("content", "")
+            links = data.get("links", [])
+        except json.JSONDecodeError:
+            # If JSON parsing fails, use a fallback approach to extract content
+            # This is a simple fallback that assumes the response has useful markdown content
+            content = f"# Research Results for {query}\n\n{response.text}"
+            if "```json" in response.text and "```" in response.text:
+                # Try to clean up markdown formatting
+                content = content.replace("```json", "").replace("```", "")
         
         # Return as ResearchData
         return ResearchData(content=content, links=links)

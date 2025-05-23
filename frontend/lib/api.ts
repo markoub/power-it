@@ -194,18 +194,13 @@ export const api = {
     presentation: Omit<Presentation, "id" | "createdAt" | "updatedAt">
   ): Promise<Presentation | null> {
     try {
+      // For simplified creation, we only send name and author
+      // Research method will be determined later on the edit page
       const backendPresentationData: Record<string, any> = {
         name: presentation.name,
         author: presentation.author,
-        research_type:
-          presentation.researchMethod === "ai" ? "research" : "manual_research",
+        research_type: "pending", // Default to pending, will be set later
       };
-
-      if (presentation.researchMethod === "ai") {
-        backendPresentationData.topic = presentation.topic;
-      } else {
-        backendPresentationData.research_content = presentation.manualResearch;
-      }
 
       console.log(
         "Sending presentation data to API:",
@@ -249,9 +244,9 @@ export const api = {
         id: responseData.id.toString(),
         name: responseData.name,
         author: responseData.author || "",
-        researchMethod: presentation.researchMethod,
-        topic: responseData.topic || "",
-        manualResearch: responseData.research_content || "",
+        researchMethod: undefined, // Will be set later
+        topic: "",
+        manualResearch: "",
         slides: [],
         createdAt: responseData.created_at,
         updatedAt: responseData.updated_at,
@@ -328,8 +323,11 @@ export const api = {
     return response.ok;
   },
 
-  async runPresentationStep(id: string, step: string): Promise<any> {
+  async runPresentationStep(id: string, step: string, params?: { topic?: string; research_content?: string }): Promise<any> {
     try {
+      // Prepare request body with optional parameters
+      const body = params ? JSON.stringify(params) : undefined;
+
       const response = await fetch(
         `${API_URL}/presentations/${id}/steps/${step}/run`,
         {
@@ -337,6 +335,7 @@ export const api = {
           headers: {
             "Content-Type": "application/json",
           },
+          body: body,
           mode: "cors",
         }
       );
@@ -405,7 +404,9 @@ export const api = {
     try {
       const response = await fetch(`${API_URL}/presentations/${id}`, {
         method: "DELETE",
-        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       return response.ok;
@@ -414,4 +415,30 @@ export const api = {
       return false;
     }
   },
+
+  async updatePresentationTopic(
+    id: string,
+    data: { topic: string }
+  ): Promise<Presentation | null> {
+    try {
+      const response = await fetch(`${API_URL}/presentations/${id}/update-topic`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Server error ${response.status}:`, errorData);
+        throw new Error(errorData.detail || `Failed to update topic: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating topic for presentation ${id}:`, error);
+      throw error;
+    }
+  }
 };

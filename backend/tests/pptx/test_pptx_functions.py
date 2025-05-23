@@ -43,6 +43,8 @@ class MockSlideLayout:
 class MockSlide:
     def __init__(self, layouts, shapes=None):
         self.shapes = shapes or []
+        # Add placeholders attribute that mirrors shapes for backward compatibility
+        self.placeholders = self.shapes
         self.notes_slide = MagicMock()
         self.notes_slide.notes_text_frame = MagicMock()
 

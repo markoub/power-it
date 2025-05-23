@@ -21,16 +21,18 @@ from schemas.presentations import (
     PresentationResponse,
     PresentationDetailResponse,
     PresentationStepResponse,
-    StepUpdateRequest
+    StepUpdateRequest,
+    TopicUpdateRequest
 )
 from schemas.images import SlideTypesResponse
-from services.presentation_service import (
+from services import (
     execute_research_task,
     execute_manual_research_task,
     execute_slides_task,
     execute_images_task,
     execute_compiled_task,
-    execute_pptx_task
+    execute_pptx_task,
+    execute_topic_update_task
 )
 from tools.images import generate_image_from_prompt
 from config import PRESENTATIONS_STORAGE_DIR
@@ -96,15 +98,17 @@ async def create_presentation(
         await db.refresh(db_presentation)
         
         # Determine which research step to use based on research_type
-        research_step_type = PresentationStep.MANUAL_RESEARCH.value if presentation.research_type == "manual_research" else PresentationStep.RESEARCH.value
-        
-        # Initialize research step as pending
-        research_step = PresentationStepModel(
-            presentation_id=db_presentation.id,
-            step=research_step_type,
-            status=StepStatus.PENDING.value
-        )
-        db.add(research_step)
+        # For pending research type, we don't create a research step yet
+        if presentation.research_type != "pending":
+            research_step_type = PresentationStep.MANUAL_RESEARCH.value if presentation.research_type == "manual_research" else PresentationStep.RESEARCH.value
+            
+            # Initialize research step as pending
+            research_step = PresentationStepModel(
+                presentation_id=db_presentation.id,
+                step=research_step_type,
+                status=StepStatus.PENDING.value
+            )
+            db.add(research_step)
         
         # Initialize slides step as pending
         slides_step = PresentationStepModel(
@@ -151,7 +155,7 @@ async def create_presentation(
                 }
             )
         
-        # Start appropriate research task in background
+        # Start appropriate research task in background only if research type is not pending
         if presentation.research_type == "manual_research":
             if not presentation.research_content:
                 return JSONResponse(
@@ -163,7 +167,7 @@ async def create_presentation(
                 db_presentation.id, 
                 presentation.research_content
             )
-        else:
+        elif presentation.research_type == "research":
             if not presentation.topic:
                 return JSONResponse(
                     status_code=400,
@@ -175,11 +179,12 @@ async def create_presentation(
                 presentation.topic,
                 presentation.author
             )
+        # If research_type is "pending", we don't start any background tasks
         
         return {
             "id": db_presentation.id,
             "name": db_presentation.name,
-            "topic": presentation.topic if presentation.topic else "Manual Research",
+            "topic": presentation.topic if presentation.topic else None,
             "author": presentation.author,
             "created_at": db_presentation.created_at.isoformat(),
             "updated_at": db_presentation.updated_at.isoformat()
@@ -374,9 +379,19 @@ async def delete_presentation(presentation_id: int, db: AsyncSession = Depends(g
 async def run_step(
     presentation_id: int, 
     step_name: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
+    # Parse request body for optional parameters
+    params = {}
+    try:
+        body = await request.body()
+        if body:
+            params = json.loads(body)
+    except json.JSONDecodeError:
+        params = {}
+    
     # Validate step name
     try:
         step = PresentationStep(step_name)
@@ -393,6 +408,25 @@ async def run_step(
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
     
+    # For manual research or research steps, create the step if it doesn't exist
+    if step in [PresentationStep.RESEARCH, PresentationStep.MANUAL_RESEARCH]:
+        step_exists_query = select(PresentationStepModel).where(
+            (PresentationStepModel.presentation_id == presentation_id) &
+            (PresentationStepModel.step == step_name)
+        )
+        step_exists_result = await db.execute(step_exists_query)
+        step_exists = step_exists_result.scalars().first()
+        
+        if not step_exists:
+            # Create the step
+            new_step = PresentationStepModel(
+                presentation_id=presentation_id,
+                step=step_name,
+                status=StepStatus.PENDING.value
+            )
+            db.add(new_step)
+            await db.commit()
+    
     # Update step status to PROCESSING
     query = update(PresentationStepModel).where(
         (PresentationStepModel.presentation_id == presentation_id) &
@@ -403,11 +437,19 @@ async def run_step(
     
     # Run appropriate task based on step name
     if step == PresentationStep.RESEARCH:
-        background_tasks.add_task(execute_research_task, presentation_id, presentation.topic)
+        topic = params.get('topic') or presentation.topic
+        if not topic:
+            raise HTTPException(status_code=400, detail="Topic is required for AI research")
+        # Update presentation topic if provided
+        if params.get('topic'):
+            presentation.topic = topic
+            await db.commit()
+        background_tasks.add_task(execute_research_task, presentation_id, topic, presentation.author)
     elif step == PresentationStep.MANUAL_RESEARCH:
-        # For manual research, we need research content
-        # This step should typically not be run directly, but just in case
-        raise HTTPException(status_code=400, detail="Manual research requires content to be submitted")
+        research_content = params.get('research_content')
+        if not research_content:
+            raise HTTPException(status_code=400, detail="Research content is required for manual research")
+        background_tasks.add_task(execute_manual_research_task, presentation_id, research_content)
     elif step == PresentationStep.SLIDES:
         background_tasks.add_task(execute_slides_task, presentation_id)
     elif step == PresentationStep.IMAGES:
@@ -1200,3 +1242,58 @@ async def get_slide_types():
     ]
     
     return {"slide_types": slide_types} 
+
+@router.post("/{presentation_id}/update-topic", response_model=PresentationResponse,
+            summary="Update presentation topic",
+            description="Updates the presentation topic and reruns research and slide generation")
+async def update_presentation_topic(
+    presentation_id: int,
+    update_data: TopicUpdateRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        # Check if presentation exists
+        result = await db.execute(select(Presentation).filter(Presentation.id == presentation_id))
+        presentation = result.scalars().first()
+        
+        if not presentation:
+            raise HTTPException(status_code=404, detail="Presentation not found")
+        
+        # Extract new topic from request data
+        new_topic = update_data.topic
+        
+        # Update the presentation topic in the database
+        presentation.topic = new_topic
+        await db.commit()
+        await db.refresh(presentation)
+        
+        # Start background task to update research and slides
+        background_tasks.add_task(
+            execute_topic_update_task,
+            presentation_id,
+            new_topic,
+            presentation.author
+        )
+        
+        # Return updated presentation
+        return {
+            "id": presentation.id,
+            "name": presentation.name,
+            "topic": new_topic,
+            "author": presentation.author,
+            "created_at": presentation.created_at.isoformat(),
+            "updated_at": presentation.updated_at.isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Unexpected error in update_presentation_topic: {str(e)}")
+        print(f"Traceback: {error_traceback}")
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        ) 

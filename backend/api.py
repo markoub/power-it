@@ -197,6 +197,58 @@ async def custom_swagger_ui_html():
 async def root():
     return {"message": "PowerIt Presentation Assistant API is running"}
 
+@app.get("/health")
+async def health():
+    """Health endpoint that shows current configuration"""
+    import config
+    return {
+        "status": "ok",
+        "message": "PowerIt Presentation Assistant API is running",
+        "offline_mode": config.OFFLINE_MODE,
+        "powerit_offline_env": os.environ.get("POWERIT_OFFLINE", "0")
+    }
+
+@app.post("/health/config")
+async def update_config(offline: bool = None):
+    """Update runtime configuration for testing purposes"""
+    if offline is not None:
+        # Update the environment variable
+        os.environ["POWERIT_OFFLINE"] = "1" if offline else "0"
+        
+        # Force reload of config and all modules that depend on OFFLINE_MODE
+        import importlib
+        import sys
+        
+        # List of modules that need to be reloaded when OFFLINE_MODE changes
+        modules_to_reload = [
+            'config',
+            'tools.research', 
+            'tools.slides',
+            'tools.images',
+            'tools.logo_fetcher',
+            'tools.modify'
+        ]
+        
+        for module_name in modules_to_reload:
+            if module_name in sys.modules:
+                try:
+                    importlib.reload(sys.modules[module_name])
+                    print(f"Reloaded module: {module_name}")
+                except Exception as e:
+                    print(f"Warning: Could not reload {module_name}: {e}")
+        
+        # Import config after reload to get the new OFFLINE_MODE value
+        import config
+        
+        return {
+            "status": "updated",
+            "offline_mode": config.OFFLINE_MODE,
+            "powerit_offline_env": os.environ.get("POWERIT_OFFLINE", "0"),
+            "reloaded_modules": modules_to_reload
+        }
+    
+    return {"status": "no changes"}
+
 # Replace custom_openapi with the enhanced version from server.py
 app.openapi = lambda: enhanced_openapi_schema(app)
 

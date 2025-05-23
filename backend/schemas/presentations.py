@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 class PresentationResponse(BaseModel):
     """Base presentation response model"""
@@ -142,16 +143,15 @@ class PresentationCreate(BaseModel):
     name: str = Field(description="Name of the presentation")
     topic: Optional[str] = Field(None, description="Main topic for the presentation. Required if research_type is 'research'")
     research_content: Optional[str] = Field(None, description="Manual research content. Required if research_type is 'manual_research'")
-    research_type: str = Field("research", description="Type of research to perform: 'research' for AI-generated or 'manual_research' for user-provided content")
+    research_type: str = Field("pending", description="Type of research to perform: 'research' for AI-generated, 'manual_research' for user-provided content, or 'pending' for initial creation")
     author: Optional[str] = Field(None, description="Author name for the presentation")
     
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "name": "Introduction to AI",
-                "topic": "Artificial Intelligence",
-                "research_type": "research",
-                "author": "John Doe"
+                "author": "John Doe",
+                "research_type": "pending"
             }
         }
     )
@@ -170,4 +170,10 @@ class SlideModificationRequest(BaseModel):
                 "current_step": "slides"
             }
         }
+    )
+
+class TopicUpdateRequest(BaseModel):
+    """Request schema for updating presentation topic"""
+    topic: str = Field(
+        description="The new topic for the presentation"
     ) 

@@ -64,4 +64,7 @@ PRESENTATIONS_STORAGE_DIR = os.path.join(STORAGE_DIR, "presentations")
 
 # Create storage directories
 os.makedirs(STORAGE_DIR, exist_ok=True)
-os.makedirs(PRESENTATIONS_STORAGE_DIR, exist_ok=True) 
+os.makedirs(PRESENTATIONS_STORAGE_DIR, exist_ok=True)
+
+# Test mode configuration - enable offline mode for most tests unless recording
+OFFLINE_MODE = os.environ.get("GEMINI_VCR_MODE", "replay") != "record" 

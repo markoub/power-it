@@ -1,62 +1,99 @@
-# Presentation Assistant E2E Tests
+# PowerIt Testing
 
-This directory contains end-to-end tests for the Presentation Assistant application using Playwright.
-
-## Test Structure
-
-- `e2e/` - Contains all end-to-end tests
-  - `utils.ts` - Common testing utilities and helper functions
-  - `presentations-list.spec.ts` - Tests for the presentations list page
-  - `create-presentation.spec.ts` - Tests for creating a new presentation
-  - `presentation-steps.spec.ts` - Tests for running presentation steps
+This directory contains the e2e tests for the PowerIt application using Playwright.
 
 ## Prerequisites
 
-Before running the tests, ensure:
+Before running e2e tests, ensure that both servers are running:
 
-1. The backend server is running on http://localhost:8000
-2. The frontend server is running on http://localhost:3000
-3. Playwright browsers are installed
+1. **Frontend Server**: `http://localhost:3000`
+2. **Backend Server**: `http://localhost:8000`
 
-## Running Tests
+## Running E2E Tests
 
-To run all tests:
+### Quick Start (Recommended)
+
+Use the run script for the best experience:
 
 ```bash
-# From the testing directory
+# Run with offline mode (default - faster and more reliable)
+./run-e2e.sh
+
+# Run with online mode (actual API calls - slower)
+POWERIT_OFFLINE_E2E=false ./run-e2e.sh
+
+# Run specific tests
+./run-e2e.sh research-content-display.spec.ts
+
+# Run with headed browser (for debugging)
+./run-e2e.sh --headed
+```
+
+### Manual Execution
+
+You can also run tests directly with npx:
+
+```bash
+# Default offline mode
 npx playwright test
+
+# Force online mode
+POWERIT_OFFLINE_E2E=false npx playwright test
+
+# Run specific test file
+npx playwright test research-content-display.spec.ts
 ```
 
-To run a specific test file:
+## Offline vs Online Mode
 
-```bash
-npx playwright test e2e/presentations-list.spec.ts
-```
+### Offline Mode (Default)
+- **Fast**: Tests run quickly using mock API responses
+- **Reliable**: No dependency on external APIs or internet connection
+- **Free**: No API usage charges
+- **No Credentials**: No need for API keys
 
-To run tests with UI mode (recommended for debugging):
+### Online Mode 
+- **Realistic**: Uses actual API calls
+- **Slow**: Takes longer due to real API response times
+- **Requires**: Valid API keys (GEMINI_API_KEY, OPENAI_API_KEY)
+- **Costs**: May incur API usage charges
 
-```bash
-npx playwright test --ui
-```
+## Configuration
 
-## Test with Specific Browser
+The test setup automatically configures the backend for offline/online mode through the `/health/config` endpoint.
 
-By default, tests run on Chromium. To run on a specific browser:
+Environment variables:
+- `POWERIT_OFFLINE_E2E`: Set to `false` to enable online mode (default is offline)
 
-```bash
-npx playwright test --project=chromium
-```
+## Test Structure
 
-## Viewing Test Reports
+- `research-content-display.spec.ts`: Tests for AI and manual research content display
+- `create-presentation.spec.ts`: Tests for presentation creation flow
+- `presentations-list.spec.ts`: Tests for presentation listing and management
+- `wizard.spec.ts`: Tests for the presentation wizard
+- And more...
 
-After running tests, you can view the HTML report:
+## Debugging Failed Tests
 
-```bash
-npx playwright show-report
-```
+1. **View Test Report**: `npx playwright show-report`
+2. **Screenshots**: Failed tests automatically capture screenshots
+3. **Videos**: Test videos are recorded on failure
+4. **Console Logs**: Check browser console output in test results
 
-## Notes
+## Troubleshooting
 
-- Some tests may take several minutes to complete due to the nature of the presentation generation process
-- The tests use data-testid attributes for robust element selection
-- Failed tests will generate screenshots automatically 
+### Backend Not Available
+If you see "Backend not available" during test setup:
+1. Make sure the backend server is running on `http://localhost:8000`
+2. Check backend logs for any startup errors
+
+### Tests Taking Too Long
+If tests are running slowly:
+1. Ensure you're using offline mode (default)
+2. Check if `POWERIT_OFFLINE_E2E=false` is set somewhere
+
+### API Key Errors (Online Mode Only)
+If running in online mode without API keys:
+1. Set `GEMINI_API_KEY` environment variable
+2. Set `OPENAI_API_KEY` environment variable
+3. Or switch back to offline mode for testing 

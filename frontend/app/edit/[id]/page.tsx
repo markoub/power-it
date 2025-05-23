@@ -541,7 +541,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       presentation={presentation}
                       setPresentation={setPresentation}
                       savePresentation={savePresentation}
-                      mode="view"
+                      mode="edit"
                     />
                   )}
                   {currentStep === 1 && (

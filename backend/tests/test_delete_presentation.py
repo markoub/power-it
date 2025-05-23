@@ -5,7 +5,7 @@ import asyncio
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api_new import app
+from api import app
 from database import init_db
 
 asyncio.run(init_db())

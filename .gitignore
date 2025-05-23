@@ -80,6 +80,7 @@ backend/presentations_backup.txt
 storage/presentations/
 temp_pptx/
 backend/storage/presentations/
+backend/tests/output/
 
 # Ignore environment and config files
 .env*

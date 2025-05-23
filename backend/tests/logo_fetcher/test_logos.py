@@ -1,6 +1,8 @@
 import os
 import sys
 import asyncio
+from pathlib import Path
+import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.generate_pptx import generate_pptx_from_slides
@@ -45,20 +47,22 @@ async def test_content_with_logos():
             if 'content' in slide['fields']:
                 print(f"    Content: {slide['fields']['content']}")
     
-    # Create test presentation in current directory
-    output_path = "logo_test.pptx"
+    # Create test presentation in the dedicated output directory
+    output_dir = Path(os.getenv("TEST_OUTPUT_DIR", Path(__file__).resolve().parent.parent / "output"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "logo_test.pptx"
+    presentation_id = "logo_test"
     
     # Generate the presentation
     try:
         # Modify the save path in generate_pptx to save directly
         old_pptx_path = None
         
-        result = await generate_pptx_from_slides(slides, output_path)
+        result = await generate_pptx_from_slides(slides, presentation_id)
         print(f"Generation result: {result}")
         
         # Copy from storage to local directory
         if os.path.exists(result.pptx_path):
-            import shutil
             shutil.copy(result.pptx_path, output_path)
             print(f"Copied presentation from {result.pptx_path} to {output_path}")
     except Exception as e:
@@ -67,10 +71,10 @@ async def test_content_with_logos():
         print(traceback.format_exc())
     
     # Verify the output
-    if os.path.exists(output_path):
+    if output_path.exists():
         print(f"\n✅ Test presentation created successfully: {output_path}")
         # Open the presentation to verify logos
-        prs = Presentation(output_path)
+        prs = Presentation(str(output_path))
         
         # Check slide count
         print(f"Presentation has {len(prs.slides)} slides")
@@ -117,6 +121,10 @@ async def test_content_with_logos():
             print("❌ No ContentWithLogos slide found in the presentation!")
     else:
         print(f"\n❌ Failed to create test presentation: {output_path}")
+
+    # Clean up created file
+    if output_path.exists():
+        output_path.unlink()
     
     print("\n=== ContentWithLogos diagnostic test completed ===\n")
     

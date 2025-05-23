@@ -16,10 +16,12 @@ if [ "$OFFLINE_MODE" = "false" ]; then
     echo "🌐 Running tests in ONLINE mode (will make actual API calls)"
     echo "⚠️  This may take longer and requires valid API keys"
     BACKEND_OFFLINE="false"
+    TEST_TIMEOUT="900" # 15 minutes for online tests
 else
     echo "⚡ Running tests in OFFLINE mode (using mock responses)"
     echo "💡 To run with actual API calls, use: POWERIT_OFFLINE_E2E=false ./run-e2e.sh"
     BACKEND_OFFLINE="true"
+    TEST_TIMEOUT="300" # 5 minutes for offline tests
 fi
 
 echo ""
@@ -84,13 +86,36 @@ fi
 
 echo ""
 
+# Function to run tests with timeout
+run_tests_with_timeout() {
+    echo "🚀 Starting Playwright tests (timeout: ${TEST_TIMEOUT}s)..."
+    echo "⏱️  Progress will be shown below:"
+    echo ""
+    
+    # Run playwright with timeout using GNU timeout if available, otherwise use built-in timeout
+    if command -v timeout > /dev/null 2>&1; then
+        timeout ${TEST_TIMEOUT}s npx playwright test "$@"
+    elif command -v gtimeout > /dev/null 2>&1; then
+        # macOS with coreutils
+        gtimeout ${TEST_TIMEOUT}s npx playwright test "$@"
+    else
+        # Fallback: run normally but warn about no timeout
+        echo "⚠️  No timeout utility found - tests may run indefinitely"
+        npx playwright test "$@"
+    fi
+}
+
 # Run the playwright tests with environment variables set
-echo "🚀 Starting Playwright tests..."
-npx playwright test "$@"
+run_tests_with_timeout "$@"
 
 EXIT_CODE=$?
 
-if [ $EXIT_CODE -eq 0 ]; then
+if [ $EXIT_CODE -eq 124 ]; then
+    echo ""
+    echo "⏰ Tests timed out after ${TEST_TIMEOUT} seconds"
+    echo "   This may indicate hanging tests or slow performance"
+    exit 1
+elif [ $EXIT_CODE -eq 0 ]; then
     echo ""
     echo "✅ All e2e tests passed!"
 else

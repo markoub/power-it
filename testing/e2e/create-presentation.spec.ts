@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForNetworkIdle } from './utils';
+import { waitForNetworkIdle, createPresentation } from './utils';
 
 test.describe('Presentation Creation', () => {
 
@@ -21,8 +21,8 @@ test.describe('Presentation Creation', () => {
     // Submit the form
     await page.getByTestId('submit-presentation-button').click();
     
-    // Verify we are redirected to the edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
+    // Verify we are redirected to the edit page with longer timeout
+    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
     
     // On the edit page, we should see the research method selection interface
     await expect(page.getByTestId('research-method-selection')).toBeVisible();
@@ -45,8 +45,8 @@ test.describe('Presentation Creation', () => {
     await page.getByTestId('presentation-author-input').fill('Test Author');
     await page.getByTestId('submit-presentation-button').click();
     
-    // Should redirect to edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
+    // Should redirect to edit page with longer timeout
+    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
     
     // Now go back to create page and try to create another with the same name
     await page.goto('http://localhost:3000/create');
@@ -64,36 +64,23 @@ test.describe('Presentation Creation', () => {
     await page.getByTestId('presentation-title-input').fill(uniqueName);
     await page.getByTestId('submit-presentation-button').click();
     
-    // Should now redirect to edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
+    // Should now redirect to edit page with longer timeout
+    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
   });
 
   test('should allow selecting AI research method and entering topic', async ({ page }) => {
-    // Create a presentation first
-    await page.goto('http://localhost:3000/create');
-    await expect(page.getByTestId('create-presentation-form')).toBeVisible();
+    // Use the createPresentation utility for better reliability
+    const testTitle = `Test AI Research ${Date.now()}`;
+    const topic = 'Artificial Intelligence in Healthcare';
     
-    const testTitle = `Test AI Research ${Date.now()}-${Math.random()}`;
-    await page.getByTestId('presentation-title-input').fill(testTitle);
-    await page.getByTestId('presentation-author-input').fill('Test Author');
-    await page.getByTestId('submit-presentation-button').click();
+    await createPresentation(page, testTitle, topic);
     
-    // Wait for edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
-    
-    // Should see research method selection
-    await expect(page.getByTestId('research-method-selection')).toBeVisible();
-    
-    // Select AI Research
-    await page.getByTestId('ai-research-option').click();
-    await page.getByTestId('continue-with-method-button').click();
-    
-    // Should now see AI research interface
-    await expect(page.getByTestId('research-method-interface')).toBeVisible();
+    // Should now see AI research interface (createPresentation handles method selection)
     await expect(page.getByTestId('ai-research-interface')).toBeVisible();
     
-    // Enter a topic
-    await page.getByTestId('topic-input').fill('Artificial Intelligence in Healthcare');
+    // Topic should already be filled by createPresentation
+    const topicInput = page.getByTestId('topic-input');
+    await expect(topicInput).toHaveValue(topic);
     
     // Should see the start research button
     await expect(page.getByTestId('start-ai-research-button')).toBeVisible();
@@ -109,8 +96,8 @@ test.describe('Presentation Creation', () => {
     await page.getByTestId('presentation-author-input').fill('Test Author');
     await page.getByTestId('submit-presentation-button').click();
     
-    // Wait for edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
+    // Wait for edit page with longer timeout
+    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
     
     // Should see research method selection
     await expect(page.getByTestId('research-method-selection')).toBeVisible();

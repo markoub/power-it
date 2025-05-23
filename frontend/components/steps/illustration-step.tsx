@@ -20,6 +20,7 @@ interface IllustrationStepProps {
   setCurrentSlide: (slide: Slide | null) => void
   updateSlide: (slide: Slide) => void
   onContextChange: (context: "all" | "single") => void
+  refreshPresentation?: () => Promise<Presentation | null>
 }
 
 export default function IllustrationStep({
@@ -28,6 +29,7 @@ export default function IllustrationStep({
   setCurrentSlide,
   updateSlide,
   onContextChange,
+  refreshPresentation,
 }: IllustrationStepProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatingSlideId, setGeneratingSlideId] = useState<string | null>(null)
@@ -175,6 +177,11 @@ export default function IllustrationStep({
               applyImageResults(imagesStep.result.images);
               if (imagesStep.status === "completed") {
                 imagesReady = true;
+                
+                // Refresh main presentation data to update step status
+                if (refreshPresentation) {
+                  await refreshPresentation();
+                }
               }
             }
           }
@@ -247,7 +254,7 @@ export default function IllustrationStep({
               onClick={generateAllImages}
               className="bg-primary hover:bg-primary-600 text-white"
               disabled={isGenerating}
-              data-testid="run-images-button"
+              data-testid="run-images-button-header"
             >
               {isGenerating ? (
                 <span className="flex items-center gap-2">
@@ -280,7 +287,7 @@ export default function IllustrationStep({
               onClick={generateAllImages}
               className="bg-primary hover:bg-primary-600 text-white px-6"
               size="lg"
-              data-testid="run-images-button"
+              data-testid="run-images-button-center"
             >
               <Wand2 size={16} className="mr-2" />
               Generate Images

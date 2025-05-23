@@ -19,8 +19,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   /* Opt out of parallel tests on CI. */
   workers: 1,
+  maxFailures: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
+    ['list'],
     ['json'],
     ['html', { open: 'never' }]
   ],
@@ -37,6 +39,12 @@ export default defineConfig({
     
     /* Record video on failure */
     video: 'retain-on-failure',
+    
+    /* Navigation timeout - longer for both modes to handle slow responses */
+    navigationTimeout: process.env.POWERIT_OFFLINE_E2E !== 'false' ? 15000 : 30000,
+    
+    /* Action timeout - reasonable for both modes */
+    actionTimeout: process.env.POWERIT_OFFLINE_E2E !== 'false' ? 10000 : 20000,
   },
 
   /* Configure projects for major browsers */
@@ -77,6 +85,6 @@ export default defineConfig({
   //   reuseExistingServer: !process.env.CI,
   // },
   
-  /* Increase the global timeout to allow for long-running tests */
-  globalTimeout: 30 * 60 * 1000, // 30 minutes
+  /* Shorter timeout for offline mode */
+  globalTimeout: process.env.POWERIT_OFFLINE_E2E !== 'false' ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 or 30 minutes
 });

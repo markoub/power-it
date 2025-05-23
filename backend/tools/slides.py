@@ -16,128 +16,224 @@ from tools.logo_fetcher import search_logo, download_logo
 # Check for offline mode
 OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
 
-# Fixed offline slides response
-OFFLINE_SLIDES_RESPONSE = {
-    "title": "Artificial Intelligence in Modern Business",
-    "slides": [
-        {
-            "type": "Welcome",
-            "fields": {
-                "title": "Artificial Intelligence in Modern Business",
-                "subtitle": "Transforming Industries Through Innovation",
-                "author": "AI Presenter"
-            }
-        },
-        {
-            "type": "Section",
-            "fields": {
-                "title": "Introduction"
-            }
-        },
-        {
-            "type": "Content",
-            "fields": {
-                "title": "Introduction to AI in Business",
-                "content": [
-                    "AI is revolutionizing how businesses operate",
-                    "Companies are using AI to automate tasks, gain insights, and create new products",
-                    "85% of executives believe AI will significantly change their business model"
-                ]
-            }
-        },
-        {
-            "type": "Section",
-            "fields": {
-                "title": "Key Technologies"
-            }
-        },
-        {
-            "type": "Content",
-            "fields": {
-                "title": "Key AI Technologies",
-                "content": [
-                    "Machine Learning algorithms for prediction and pattern recognition",
-                    "Natural Language Processing for communication and text analysis",
-                    "Computer Vision for image and video understanding",
-                    "Robotics and automation for physical tasks"
-                ]
-            }
-        },
-        {
-            "type": "ImageFull",
-            "fields": {
-                "title": "AI Transformation",
-                "image": "AI-powered business transformation",
-                "explanation": "Visual representation of how AI transforms traditional business processes into intelligent, automated systems"
-            }
-        },
-        {
-            "type": "Section",
-            "fields": {
-                "title": "Applications"
-            }
-        },
-        {
-            "type": "ContentImage",
-            "fields": {
-                "title": "Business Applications",
-                "subtitle": "AI Applications Across Business Functions",
-                "content": [
-                    "Customer service automation and personalized marketing",
-                    "Supply chain optimization and predictive maintenance",
-                    "Fraud detection and risk analysis",
-                    "Automated recruiting and talent management"
-                ],
-                "image": "Business applications of AI across different departments"
-            }
-        },
-        {
-            "type": "ContentWithLogos",
-            "fields": {
-                "title": "Companies Leading AI Innovation",
-                "content": [
-                    "Google: Advanced machine learning and search",
-                    "Microsoft: Enterprise AI and cloud services",
-                    "Amazon: E-commerce and logistics AI",
-                    "IBM: Enterprise AI solutions"
-                ],
-                "logo1": "Google",
-                "logo2": "Microsoft",
-                "logo3": "Amazon"
-            }
-        },
-        {
-            "type": "Section",
-            "fields": {
-                "title": "Implementation"
-            }
-        },
-        {
-            "type": "Content",
-            "fields": {
-                "title": "Getting Started with AI",
-                "content": [
-                    "Identify high-value use cases",
-                    "Start with small, measurable pilot projects",
-                    "Build cross-functional teams with business and technical expertise",
-                    "Focus on data strategy and governance",
-                    "Measure ROI and scale successful initiatives"
-                ]
-            }
-        },
-        {
-            "type": "Content",
-            "fields": {
-                "title": "Thank You",
-                "content": [
-                    "Questions & Discussion",
-                    "Contact information",
-                    "Additional resources"
-                ]
-            }
+def generate_offline_slides(research: ResearchData, target_slides: int = 10, author: str = None) -> dict:
+    """
+    Generate realistic offline slides response based on the research content.
+    This creates a dynamic response that better matches what the real API would return.
+    """
+    # Use default author if none provided
+    if author is None:
+        author = PRESENTATION_STRUCTURE.get("default_author", "AI Presenter")
+    
+    # Extract key information from research content
+    research_content = research.content if research and research.content else "Artificial Intelligence in Modern Business"
+    
+    # Try to extract a title from the research content
+    lines = research_content.split('\n')
+    title_candidates = []
+    
+    # Look for title-like content in the first few lines
+    for line in lines[:10]:
+        line = line.strip()
+        if len(line) > 10 and len(line) < 100 and not line.startswith('-') and not line.startswith('•'):
+            title_candidates.append(line)
+    
+    # Use the first good candidate or generate a generic title
+    if title_candidates:
+        presentation_title = title_candidates[0].rstrip('.').rstrip(':')
+    else:
+        presentation_title = "Business Presentation"
+    
+    # Extract key topics for sections
+    content_sections = []
+    current_section = []
+    
+    for line in lines:
+        line = line.strip()
+        if line and len(line) > 5:
+            # Check if this looks like a section header
+            if (line.isupper() or 
+                line.endswith(':') or 
+                line.startswith('#') or 
+                (len(line) < 50 and not line.startswith('-') and not line.startswith('•'))):
+                if current_section:
+                    content_sections.append(current_section)
+                    current_section = []
+                current_section.append(line.rstrip(':').rstrip('#').strip())
+            else:
+                current_section.append(line)
+    
+    if current_section:
+        content_sections.append(current_section)
+    
+    # If no sections found, create generic ones
+    if not content_sections:
+        content_sections = [
+            ["Introduction", "Overview of the topic", "Key concepts and definitions"],
+            ["Main Content", "Core information and insights", "Important details and analysis"],
+            ["Applications", "Practical applications", "Real-world examples and use cases"],
+            ["Conclusion", "Summary of key points", "Next steps and recommendations"]
+        ]
+    
+    # Generate slides dynamically
+    slides = []
+    
+    # 1. Welcome slide
+    slides.append({
+        "type": "Welcome",
+        "fields": {
+            "title": presentation_title,
+            "subtitle": "Professional Business Presentation",
+            "author": author
         }
-    ]
-}
+    })
+    
+    # 2. Process sections and create content
+    section_count = 0
+    slide_count = 1  # Already have welcome slide
+    
+    for section_data in content_sections[:4]:  # Limit to 4 sections to keep reasonable length
+        section_title = section_data[0] if section_data else f"Section {section_count + 1}"
+        section_content = section_data[1:] if len(section_data) > 1 else ["Content for this section"]
+        
+        # Add section divider
+        slides.append({
+            "type": "Section", 
+            "fields": {
+                "title": section_title
+            }
+        })
+        slide_count += 1
+        section_count += 1
+        
+        # Add 2-3 content slides per section with variety
+        slides_in_section = 0
+        max_slides_per_section = min(3, max(1, (target_slides - len(content_sections) - 1) // len(content_sections)))
+        
+        for i, content_item in enumerate(section_content[:max_slides_per_section]):
+            if slide_count >= target_slides:
+                break
+                
+            # Vary slide types for visual interest
+            if slides_in_section == 0 and len(content_item) > 20:
+                # First slide in section - use ContentImage for visual appeal
+                slides.append({
+                    "type": "ContentImage",
+                    "fields": {
+                        "title": f"{section_title} Overview",
+                        "subtitle": "Key Points and Insights",
+                        "content": [
+                            content_item,
+                            f"Important aspects of {section_title.lower()}",
+                            "Supporting details and context"
+                        ],
+                        "image": f"Professional illustration representing {section_title.lower()} concepts and applications in business environment"
+                    }
+                })
+            elif slides_in_section == 1 and section_count <= 2:
+                # Second slide - use ImageFull for emphasis
+                slides.append({
+                    "type": "ImageFull",
+                    "fields": {
+                        "title": f"{section_title} in Detail",
+                        "image": f"Detailed visual representation of {content_item[:50]}... showing modern business applications and innovative solutions",
+                        "explanation": f"This image illustrates the key concepts and practical applications related to {section_title.lower()}, demonstrating real-world implementation and benefits"
+                    }
+                })
+            elif slides_in_section == 2 and section_count == 2:
+                # Third slide in second section - use 3Images for comparison
+                slides.append({
+                    "type": "3Images",
+                    "fields": {
+                        "title": f"Three Aspects of {section_title}",
+                        "image1": f"Modern technology solutions for {section_title.lower()} showing digital transformation",
+                        "image2": f"Business processes and workflows related to {section_title.lower()} in corporate environment", 
+                        "image3": f"Future trends and innovations in {section_title.lower()} with growth projections",
+                        "image1subtitle": "Technology Solutions",
+                        "image2subtitle": "Business Processes", 
+                        "image3subtitle": "Future Innovations"
+                    }
+                })
+            elif "company" in content_item.lower() or "business" in content_item.lower() or any(word in content_item.lower() for word in ["google", "microsoft", "amazon", "apple", "meta"]):
+                # Use ContentWithLogos when content mentions companies
+                slides.append({
+                    "type": "ContentWithLogos",
+                    "fields": {
+                        "title": f"Leading Companies in {section_title}",
+                        "content": [
+                            content_item,
+                            "Industry leaders and innovators",
+                            "Key players driving innovation",
+                            "Market leaders setting industry standards"
+                        ],
+                        "logo1": "Google",
+                        "logo2": "Microsoft", 
+                        "logo3": "Amazon"
+                    }
+                })
+            else:
+                # Default to regular Content slide
+                slides.append({
+                    "type": "Content",
+                    "fields": {
+                        "title": content_item if len(content_item) < 60 else f"{section_title} Details",
+                        "content": [
+                            content_item,
+                            f"Key insights about {section_title.lower()}",
+                            "Supporting information and context",
+                            "Practical implications and applications"
+                        ]
+                    }
+                })
+            
+            slides_in_section += 1
+            slide_count += 1
+    
+    # Add a conclusion slide if we have room
+    if slide_count < target_slides:
+        slides.append({
+            "type": "Content",
+            "fields": {
+                "title": "Thank You & Questions",
+                "content": [
+                    "Thank you for your attention",
+                    "Questions and discussion",
+                    "Contact information available",
+                    "Additional resources provided"
+                ]
+            }
+        })
+    
+    # Process logos just like in online mode
+    print(f"OFFLINE MODE: Processing logos for ContentWithLogos slides")
+    for i, slide in enumerate(slides):
+        slide_type = slide.get('type')
+        if slide_type == 'ContentWithLogos':
+            print(f"OFFLINE MODE: Processing ContentWithLogos slide {i}")
+            
+            # Fetch logos from worldvectorlogo.com (same as online mode)
+            for logo_field in ['logo1', 'logo2', 'logo3']:
+                if logo_field in slide["fields"] and slide["fields"][logo_field]:
+                    logo_term = slide["fields"][logo_field]
+                    print(f"OFFLINE MODE: Fetching logo for '{logo_term}'")
+                    
+                    try:
+                        success, result = download_logo(logo_term)
+                        if success:
+                            # Update the slide with the path to the downloaded logo
+                            slide["fields"][logo_field] = result
+                            print(f"OFFLINE MODE: Successfully fetched logo for '{logo_term}': {result}")
+                        else:
+                            print(f"OFFLINE MODE WARNING: Failed to fetch logo for '{logo_term}': {result}")
+                            # If logo fetch fails, keep the text name
+                    except Exception as e:
+                        print(f"OFFLINE MODE ERROR: Exception while fetching logo '{logo_term}': {str(e)}")
+    
+    return {
+        "title": presentation_title,
+        "author": author,
+        "slides": slides
+    }
 
 async def generate_slides(research: ResearchData, target_slides: int = 10, author: str = None) -> SlidePresentation:
     """
@@ -152,8 +248,20 @@ async def generate_slides(research: ResearchData, target_slides: int = 10, autho
         A SlidePresentation object with slide content
     """
     if OFFLINE_MODE:
-        print(f"OFFLINE MODE: Returning fixed slides response")
-        return SlidePresentation(**OFFLINE_SLIDES_RESPONSE)
+        print(f"OFFLINE MODE: Generating dynamic slides response based on research content")
+        offline_response = generate_offline_slides(research, target_slides, author)
+        print(f"OFFLINE MODE: Generated {len(offline_response['slides'])} slides with title: {offline_response['title']}")
+        
+        # Log the slide types for debugging
+        slide_types = [slide['type'] for slide in offline_response['slides']]
+        print(f"OFFLINE MODE: Slide types generated: {slide_types}")
+        
+        # Count slides that should have images
+        image_slide_types = ['ContentImage', 'ImageFull', '3Images', 'ContentWithLogos']
+        image_slides = [slide for slide in offline_response['slides'] if slide['type'] in image_slide_types]
+        print(f"OFFLINE MODE: {len(image_slides)} slides require images")
+        
+        return SlidePresentation(**offline_response)
 
     print(f"\n===== DEBUG: Starting slide generation =====")
     print(f"Target slides: {target_slides}")

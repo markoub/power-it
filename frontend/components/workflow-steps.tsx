@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { CheckCircle2, ArrowRight } from "lucide-react"
+import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface WorkflowStepsProps {
@@ -11,6 +11,8 @@ interface WorkflowStepsProps {
   onContinue?: () => Promise<void>
   isProcessing?: boolean
   completedSteps?: boolean[] // Array of booleans indicating which steps are completed
+  pendingSteps?: boolean[] // Array of booleans indicating which steps are pending
+  processSteps?: boolean[] // Array of booleans indicating which steps are processing
 }
 
 export default function WorkflowSteps({ 
@@ -19,7 +21,9 @@ export default function WorkflowSteps({
   onChange, 
   onContinue,
   isProcessing = false,
-  completedSteps = [] 
+  completedSteps = [],
+  pendingSteps = [],
+  processSteps = []
 }: WorkflowStepsProps) {
   
   // Function to check if a step is enabled for navigation
@@ -53,6 +57,25 @@ export default function WorkflowSteps({
     // Otherwise, fallback to assuming all previous steps are completed
     return index < currentStep;
   }
+
+  // Check if a step is pending (waiting, greyed out)
+  const isStepPending = (index: number) => {
+    if (pendingSteps && pendingSteps.length > index) {
+      return pendingSteps[index];
+    }
+    return false;
+  }
+
+  // Check if a step is processing (yellow with spinner)
+  const isStepProcessing = (index: number) => {
+    if (processSteps && processSteps.length > index) {
+      return processSteps[index];
+    }
+    return false;
+  }
+
+  // Check if any step is currently processing (to hide arrows)
+  const hasAnyProcessingStep = processSteps && processSteps.some(isProcessing => isProcessing);
   
   // Find the last completed step that isn't the last step of the workflow
   const findLastActionableCompletedStep = () => {
@@ -72,8 +95,14 @@ export default function WorkflowSteps({
   
   // Handle click on step button
   const handleStepClick = (index: number) => {
+    console.log(`🔄 WorkflowSteps: Step click attempted for index ${index}`);
+    console.log(`🔍 WorkflowSteps: isStepEnabled(${index}) = ${isStepEnabled(index)}`);
+    
     if (isStepEnabled(index)) {
+      console.log(`✅ WorkflowSteps: Calling onChange(${index})`);
       onChange(index);
+    } else {
+      console.log(`❌ WorkflowSteps: Step ${index} is not enabled, click ignored`);
     }
   }
   
@@ -86,7 +115,7 @@ export default function WorkflowSteps({
         {steps.map((step, index) => (
           <div key={step} className="flex flex-col items-center relative group">
             {/* Connector line between this step and next */}
-            {index < steps.length - 1 && (
+            {index < steps.length - 1 && !hasAnyProcessingStep && (
               <div className="absolute top-4 left-[50%] w-full h-[2px] bg-gray-200 z-0">
                 <motion.div
                   className="h-full bg-primary-500"
@@ -124,23 +153,38 @@ export default function WorkflowSteps({
               data-testid={`step-nav-${step.toLowerCase()}`}
               className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
                 isStepCompleted(index)
-                  ? "bg-primary-500 text-white"
-                  : index === currentStep
-                    ? "bg-primary-500 text-white ring-4 ring-primary-100"
-                    : isStepEnabled(index)
-                      ? "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                      : "bg-gray-100 text-gray-300 cursor-not-allowed opacity-60"
+                  ? index === currentStep
+                    ? "bg-primary-500 text-white ring-4 ring-primary-100" // Completed + current
+                    : "bg-primary-500 text-white" // Just completed
+                  : isStepProcessing(index)
+                    ? "bg-yellow-500 text-white"  // Processing: yellow with spinner
+                    : index === currentStep
+                      ? "bg-primary-500 text-white ring-4 ring-primary-100" // Current step
+                      : isStepEnabled(index)
+                        ? isStepPending(index)
+                          ? "bg-gray-200 text-gray-600 hover:bg-gray-300" // Enabled but pending
+                          : "bg-gray-100 text-gray-400 hover:bg-gray-200" // Enabled and not pending
+                        : "bg-gray-100 text-gray-300 cursor-not-allowed opacity-60" // Disabled
               }`}
               title={!isStepEnabled(index) ? "Complete previous steps first" : ""}
             >
-              {isStepCompleted(index) ? <CheckCircle2 size={16} /> : index + 1}
+              {isStepCompleted(index) ? (
+                <CheckCircle2 size={16} data-lucide="check-circle-2" />
+              ) : isStepProcessing(index) ? (
+                <Loader2 size={16} className="animate-spin" data-lucide="loader-2" />
+              ) : (
+                index + 1
+              )}
             </button>
 
             {/* Step label */}
             <span
               className={`mt-2 text-sm font-medium ${
                 index === currentStep ? "text-primary-600" : 
-                isStepCompleted(index) ? "text-primary-500" : "text-gray-500"
+                isStepCompleted(index) ? "text-primary-500" : 
+                isStepProcessing(index) ? "text-yellow-600" :  // Processing: yellow text
+                isStepPending(index) ? "text-gray-400" :       // Pending: grey text
+                "text-gray-500"
               } whitespace-nowrap`}
             >
               {step}

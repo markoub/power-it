@@ -20,12 +20,13 @@ import { toast } from "@/components/ui/use-toast"
 interface ResearchStepProps {
   presentation: Presentation
   setPresentation: (presentation: Presentation) => void
-  savePresentation: () => void
-  mode?: 'edit' | 'view'
+  savePresentation: () => Promise<void>
+  mode?: 'edit' | 'manual'
   onEditResearch?: () => void
+  refreshPresentation?: () => Promise<Presentation | null>
 }
 
-export default function ResearchStep({ presentation, setPresentation, savePresentation, mode = 'edit', onEditResearch }: ResearchStepProps) {
+export default function ResearchStep({ presentation, setPresentation, savePresentation, mode = 'edit', onEditResearch, refreshPresentation }: ResearchStepProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRedoing, setIsRedoing] = useState(false)
   const [manualResearch, setManualResearch] = useState("")
@@ -149,6 +150,11 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             // Update presentation with the new data
             setPresentation(updatedPresentation)
             
+            // Refresh main presentation data to update step status
+            if (refreshPresentation) {
+              await refreshPresentation()
+            }
+            
             toast({
               title: "Manual research saved",
               description: "Your research content has been saved successfully.",
@@ -242,6 +248,11 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             // Update presentation with the new data
             setPresentation(updatedPresentation)
             
+            // Refresh main presentation data to update step status
+            if (refreshPresentation) {
+              await refreshPresentation()
+            }
+            
             toast({
               title: "Research completed",
               description: "Research has been completed successfully.",
@@ -319,6 +330,11 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
           if (researchStep) {
             researchReady = true
             setPresentation(updatedPresentation)
+            
+            // Refresh main presentation data to update step status
+            if (refreshPresentation) {
+              await refreshPresentation()
+            }
             
             toast({
               title: "Research updated",

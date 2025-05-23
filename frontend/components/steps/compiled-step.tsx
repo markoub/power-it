@@ -13,6 +13,7 @@ interface CompiledStepProps {
   currentSlide: Slide | null;
   setCurrentSlide: (slide: Slide | null) => void;
   onContextChange: (context: "all" | "single") => void;
+  refreshPresentation?: () => Promise<Presentation | null>;
 }
 
 export default function CompiledStep({
@@ -20,6 +21,7 @@ export default function CompiledStep({
   currentSlide,
   setCurrentSlide,
   onContextChange,
+  refreshPresentation,
 }: CompiledStepProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 

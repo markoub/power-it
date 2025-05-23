@@ -19,7 +19,7 @@ from tools import (
     convert_pptx_to_png
 )
 from tools.images import _generate_image_for_slide
-from config import PRESENTATIONS_STORAGE_DIR
+from config import PRESENTATIONS_STORAGE_DIR, OFFLINE_MODE
 
 # Background task functions
 async def execute_research_task(presentation_id: int, topic: str, author: str = None):
@@ -253,42 +253,66 @@ async def execute_images_task(presentation_id: int):
             slides_obj = SlidePresentation(**slides_data)
             accumulated_images: List[Dict[str, Any]] = []
 
-            # Generate images sequentially so we can store each one as it is created
-            for index, slide in enumerate(slides_obj.slides):
-                try:
-                    result_list = await asyncio.get_event_loop().run_in_executor(
-                        image_executor,
-                        _generate_image_for_slide,
-                        slide,
-                        index,
-                        presentation_id,
-                    )
-                except Exception as gen_err:
-                    print(f"Error generating image for slide {index}: {gen_err}")
-                    result_list = []
+            # In offline mode, generate images immediately without executor
+            if OFFLINE_MODE:
+                print(f"OFFLINE MODE: Generating dummy images immediately for presentation {presentation_id}")
+                
+                for index, slide in enumerate(slides_obj.slides):
+                    try:
+                        # Call the function directly without executor in offline mode
+                        result_list = _generate_image_for_slide(slide, index, presentation_id)
+                        print(f"Generated {len(result_list)} dummy images for slide {index}")
+                    except Exception as gen_err:
+                        print(f"Error generating image for slide {index}: {gen_err}")
+                        result_list = []
 
-                for img in result_list:
-                    img_dict = img.model_dump()
-                    if 'image' in img_dict:
-                        del img_dict['image']
-                    if 'image_path' in img_dict and img_dict['image_path']:
-                        filename = os.path.basename(img_dict['image_path'])
-                        img_dict['image_url'] = f"/presentations/{presentation_id}/images/{filename}"
-                    accumulated_images.append(img_dict)
+                    for img in result_list:
+                        img_dict = img.model_dump()
+                        if 'image' in img_dict:
+                            del img_dict['image']
+                        if 'image_path' in img_dict and img_dict['image_path']:
+                            filename = os.path.basename(img_dict['image_path'])
+                            img_dict['image_url'] = f"/presentations/{presentation_id}/images/{filename}"
+                        accumulated_images.append(img_dict)
 
-                    # Store partial result after each image
-                    async with SessionLocal() as update_db:
-                        update_step_result = await update_db.execute(
-                            select(PresentationStepModel).filter(
-                                PresentationStepModel.presentation_id == presentation_id,
-                                PresentationStepModel.step == PresentationStep.IMAGES.value
-                            )
+                print(f"OFFLINE MODE: Generated {len(accumulated_images)} total dummy images")
+            else:
+                # Generate images sequentially so we can store each one as it is created
+                for index, slide in enumerate(slides_obj.slides):
+                    try:
+                        result_list = await asyncio.get_event_loop().run_in_executor(
+                            image_executor,
+                            _generate_image_for_slide,
+                            slide,
+                            index,
+                            presentation_id,
                         )
-                        update_step = update_step_result.scalars().first()
-                        if update_step:
-                            update_step.status = StepStatus.PROCESSING.value
-                            update_step.set_result(accumulated_images)
-                            await update_db.commit()
+                    except Exception as gen_err:
+                        print(f"Error generating image for slide {index}: {gen_err}")
+                        result_list = []
+
+                    for img in result_list:
+                        img_dict = img.model_dump()
+                        if 'image' in img_dict:
+                            del img_dict['image']
+                        if 'image_path' in img_dict and img_dict['image_path']:
+                            filename = os.path.basename(img_dict['image_path'])
+                            img_dict['image_url'] = f"/presentations/{presentation_id}/images/{filename}"
+                        accumulated_images.append(img_dict)
+
+                        # Store partial result after each image
+                        async with SessionLocal() as update_db:
+                            update_step_result = await update_db.execute(
+                                select(PresentationStepModel).filter(
+                                    PresentationStepModel.presentation_id == presentation_id,
+                                    PresentationStepModel.step == PresentationStep.IMAGES.value
+                                )
+                            )
+                            update_step = update_step_result.scalars().first()
+                            if update_step:
+                                update_step.status = StepStatus.PROCESSING.value
+                                update_step.set_result(accumulated_images)
+                                await update_db.commit()
 
             # Mark step completed with all images
             async with SessionLocal() as final_db:
@@ -304,7 +328,12 @@ async def execute_images_task(presentation_id: int):
                     final_step.set_result(accumulated_images)
                     await final_db.commit()
 
-            print(f"Images generated for presentation {presentation_id}: {len(accumulated_images)} images")
+            print(f"Images completed for presentation {presentation_id}: {len(accumulated_images)} images")
+            
+            # Automatically trigger the compiled step after images are complete
+            print(f"Auto-triggering compiled step for presentation {presentation_id}")
+            await execute_compiled_task(presentation_id)
+            
         except Exception as e:
             # Update the step status to error
             async with SessionLocal() as error_db:
@@ -501,18 +530,19 @@ async def execute_pptx_task(presentation_id: int):
                 print(f"Falling back to SLIDES step data for PPTX generation (without images)")
                 query = select(PresentationStepModel).where(
                     (PresentationStepModel.presentation_id == presentation_id) &
-                    (PresentationStepModel.step == PresentationStep.SLIDES.value)
+                    (PresentationStepModel.step == PresentationStep.SLIDES.value
                 )
-                result = await db.execute(query)
-                slides_step = result.scalars().first()
-                
-                if not slides_step or slides_step.status != StepStatus.COMPLETED.value:
-                    raise ValueError("Slides step not completed")
-                
-                slides_data = slides_step.get_result()
-                if not slides_data:
-                    raise ValueError("No slides data found")
+            )
+            result = await db.execute(query)
+            slides_step = result.scalars().first()
             
+            if not slides_step or slides_step.status != StepStatus.COMPLETED.value:
+                raise ValueError("Slides step not completed")
+            
+            slides_data = slides_step.get_result()
+            if not slides_data:
+                raise ValueError("No slides data found")
+        
             try:
                 # Convert to appropriate Pydantic model based on which step we're using
                 from models import SlidePresentation, CompiledPresentation

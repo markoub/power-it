@@ -20,8 +20,9 @@ interface SlidesStepProps {
   setCurrentSlide: (slide: Slide | null) => void;
   updateSlide: (slide: Slide) => void;
   addNewSlide: () => void;
-  deleteSlide: (id: string) => void;
+  deleteSlide: (slideId: string) => void;
   onContextChange: (context: "all" | "single") => void;
+  refreshPresentation?: () => Promise<Presentation | null>;
 }
 
 export default function SlidesStep({
@@ -32,6 +33,7 @@ export default function SlidesStep({
   addNewSlide,
   deleteSlide,
   onContextChange,
+  refreshPresentation,
 }: SlidesStepProps) {
   const [activeTab, setActiveTab] = useState("edit");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -87,8 +89,13 @@ export default function SlidesStep({
             if (slidesStep) {
               slidesReady = true;
 
-              // Refresh the page to show the new slides
-              window.location.reload();
+              // Refresh presentation data to update slides and step status
+              if (refreshPresentation) {
+                await refreshPresentation();
+              } else {
+                // Fallback to page reload if refresh function not available
+                window.location.reload();
+              }
             }
           }
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Save, Loader2 } from "lucide-react";
@@ -42,6 +42,60 @@ export default function EditPage({ params }: { params: { id: string } }) {
     fetchPresentation();
   }, [unwrappedParams.id]);
 
+  // Add periodic polling to keep presentation data up to date
+  useEffect(() => {
+    if (!presentation) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const updatedPresentation = await api.getPresentation(unwrappedParams.id);
+        if (updatedPresentation) {
+          // Only update if there are actual changes to steps
+          const hasStepChanges = updatedPresentation.steps?.some((newStep, index) => {
+            const currentStep = presentation.steps?.[index];
+            return !currentStep || currentStep.status !== newStep.status || 
+                   JSON.stringify(currentStep.result) !== JSON.stringify(newStep.result);
+          });
+
+          if (hasStepChanges) {
+            console.log('🔄 Presentation data updated from polling');
+            setPresentation(updatedPresentation);
+            
+            // Update current step if needed
+            const newCurrentStep = determineCurrentStep(updatedPresentation);
+            if (newCurrentStep !== currentStep) {
+              setCurrentStep(newCurrentStep);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling presentation updates:', error);
+      }
+    }, 1000); // Poll every 1 second for faster UI updates
+
+    return () => clearInterval(pollInterval);
+  }, [presentation, currentStep, unwrappedParams.id]);
+
+  // Manual refresh function that components can call
+  const refreshPresentation = async () => {
+    try {
+      const updatedPresentation = await api.getPresentation(unwrappedParams.id);
+      if (updatedPresentation) {
+        console.log('🔄 Presentation data manually refreshed');
+        setPresentation(updatedPresentation);
+        
+        // Update current step
+        const newCurrentStep = determineCurrentStep(updatedPresentation);
+        setCurrentStep(newCurrentStep);
+        
+        return updatedPresentation;
+      }
+    } catch (error) {
+      console.error('Error manually refreshing presentation:', error);
+    }
+    return null;
+  };
+
   // Get the highest step that is completed + 1 (if not the last step)
   const determineCurrentStep = (presentationData: any) => {
     if (!presentationData.steps || !Array.isArray(presentationData.steps)) {
@@ -64,8 +118,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
     // If nothing is completed, start with step 0
     if (highestCompletedStep === -1) return 0;
 
-    // Otherwise, go to the next uncompleted step (or stay at the last step)
-    return Math.min(highestCompletedStep + 1, steps.length - 1);
+    // Show the last completed step so users can see their results
+    // Only advance to next step when user manually navigates
+    return highestCompletedStep;
   };
 
   const fetchPresentation = async () => {
@@ -305,8 +360,76 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const stepName = stepApiNames[stepIndex];
     const step = presentation.steps.find((s) => s.step === stepName);
 
+    // Debug logging to understand what's happening
+    if (stepIndex === 0) { // Research step
+      console.log(`🔍 Checking step completion for ${stepName} (index ${stepIndex}):`, {
+        availableSteps: presentation.steps.map(s => ({ step: s.step, status: s.status })),
+        foundStep: step ? { step: step.step, status: step.status } : null,
+        isCompleted: step?.status === "completed"
+      });
+    }
+
     return step?.status === "completed";
   };
+
+  // Check if a step is pending/processing
+  const isStepPending = (stepIndex: number) => {
+    if (!presentation || !presentation.steps) return false;
+
+    const stepName = stepApiNames[stepIndex];
+    const step = presentation.steps.find((s) => s.step === stepName);
+
+    return step?.status === "pending";
+  };
+
+  // Check if a step is processing
+  const isStepProcessing = (stepIndex: number) => {
+    if (!presentation || !presentation.steps) return false;
+
+    const stepName = stepApiNames[stepIndex];
+    const step = presentation.steps.find((s) => s.step === stepName);
+
+    return step?.status === "running";
+  };
+
+  // Memoize the completed steps array to ensure React detects changes
+  const completedSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const completed = stepApiNames.map((name, index) => isStepCompleted(index));
+    console.log('🔄 Completed steps array updated:', completed.map((isCompleted, index) => ({
+      step: stepApiNames[index],
+      completed: isCompleted
+    })));
+    
+    return completed;
+  }, [presentation?.steps, stepApiNames]);
+
+  // Memoize the pending steps array
+  const pendingSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const pending = stepApiNames.map((name, index) => isStepPending(index));
+    console.log('🔄 Pending steps array updated:', pending.map((isPending, index) => ({
+      step: stepApiNames[index],
+      pending: isPending
+    })));
+    
+    return pending;
+  }, [presentation?.steps, stepApiNames]);
+
+  // Memoize the processing steps array
+  const processSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const processing = stepApiNames.map((name, index) => isStepProcessing(index));
+    console.log('🔄 Processing steps array updated:', processing.map((isProcessing, index) => ({
+      step: stepApiNames[index],
+      processing: isProcessing
+    })));
+    
+    return processing;
+  }, [presentation?.steps, stepApiNames]);
 
   // Continue to next step function
   const handleContinueToNextStep = async () => {
@@ -350,8 +473,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
         // Refresh the presentation to get updated step status
         await fetchPresentation();
 
-        // Move to the next step
-        setCurrentStep(nextStepIndex);
+        // Don't automatically move to the next step - let user see the results
+        // The determineCurrentStep function will now keep them on the completed step
       } else {
         throw new Error("Failed to start the next step");
       }
@@ -384,28 +507,48 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
   // Handle direct step navigation
   const handleStepChange = (stepIndex: number) => {
+    console.log(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}`);
+    console.log(`🔍 Step completion status:`, {
+      completedSteps: completedSteps,
+      isStepCompleted: (index: number) => isStepCompleted(index),
+      targetStepCompleted: isStepCompleted(stepIndex),
+      previousStepCompleted: stepIndex > 0 ? isStepCompleted(stepIndex - 1) : false
+    });
+    
     // We can always navigate to current step
     if (stepIndex === currentStep) return;
 
     // Allow navigation to completed steps
     if (isStepCompleted(stepIndex)) {
+      console.log(`✅ Navigating to completed step ${stepIndex}`);
       setCurrentStep(stepIndex);
       return;
     }
 
     // Allow navigation to the first uncompleted step (next step after completed ones)
     if (stepIndex > 0 && isStepCompleted(stepIndex - 1)) {
+      console.log(`✅ Navigating to next step ${stepIndex} after completed step ${stepIndex - 1}`);
       setCurrentStep(stepIndex);
       return;
     }
 
     // Otherwise, show error message
+    console.log(`❌ Step ${stepIndex} navigation blocked`);
     toast({
       title: "Step unavailable",
       description: "You need to complete previous steps first.",
       variant: "destructive",
     });
   };
+
+  // Expose debugging info to window for tests
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).currentStep = currentStep;
+      (window as any).completedSteps = completedSteps;
+      (window as any).presentation = presentation;
+    }
+  }, [currentStep, completedSteps, presentation]);
 
   return (
     <ClientWrapper
@@ -514,11 +657,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
                   : undefined
               }
               isProcessing={isProcessingStep}
-              completedSteps={
-                presentation?.steps
-                  ? stepApiNames.map((name, index) => isStepCompleted(index))
-                  : []
-              }
+              completedSteps={completedSteps}
+              pendingSteps={pendingSteps}
+              processSteps={processSteps}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
@@ -541,7 +682,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       presentation={presentation}
                       setPresentation={setPresentation}
                       savePresentation={savePresentation}
-                      mode="edit"
+                      mode={presentation.researchMethod === 'manual' ? 'manual' : 'edit'}
+                      onEditResearch={() => setCurrentStep(0)}
+                      refreshPresentation={refreshPresentation}
                     />
                   )}
                   {currentStep === 1 && (
@@ -553,6 +696,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       addNewSlide={addNewSlide}
                       deleteSlide={deleteSlide}
                       onContextChange={handleWizardContextChange}
+                      refreshPresentation={refreshPresentation}
                     />
                   )}
                   {currentStep === 2 && (
@@ -562,6 +706,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       setCurrentSlide={setCurrentSlide}
                       updateSlide={updateSlide}
                       onContextChange={handleWizardContextChange}
+                      refreshPresentation={refreshPresentation}
                     />
                   )}
                   {currentStep === 3 && (
@@ -570,10 +715,14 @@ export default function EditPage({ params }: { params: { id: string } }) {
                       currentSlide={currentSlide}
                       setCurrentSlide={setCurrentSlide}
                       onContextChange={handleWizardContextChange}
+                      refreshPresentation={refreshPresentation}
                     />
                   )}
                   {currentStep === 4 && (
-                    <PptxStep presentation={presentation} />
+                    <PptxStep 
+                      presentation={presentation} 
+                      refreshPresentation={refreshPresentation}
+                    />
                   )}
                 </div>
               </div>

@@ -42,3 +42,8 @@ export interface Presentation {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PaginatedPresentations {
+  items: Presentation[];
+  total: number;
+}

@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, Trash2, FileIcon as FilePresentation, Sparkles, FileText, Loader2 } from "lucide-react"
 import type { Presentation } from "@/lib/types"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { motion } from "framer-motion"
 import { AnimatedContainer, AnimatedItem } from "@/components/ui-elements"
 import { api } from "@/lib/api"
@@ -19,16 +20,26 @@ export default function PresentationList() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({})
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [total, setTotal] = useState(0)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'finished' | 'in_progress'>('all')
 
   useEffect(() => {
     // Load presentations from the API
-    loadPresentations()
-  }, [])
+    loadPresentations(page, pageSize, statusFilter)
+  }, [page, pageSize, statusFilter])
 
-  const loadPresentations = async () => {
+  const loadPresentations = async (
+    pageParam = page,
+    sizeParam = pageSize,
+    statusParam = statusFilter
+  ) => {
     setIsLoading(true)
     try {
-      const fetchedPresentations = await api.getPresentations()
+      const data = await api.getPresentations(pageParam, sizeParam, statusParam)
+      const fetchedPresentations = data.items
+      setTotal(data.total)
       
       // Show all presentations, regardless of whether they have thumbnails
       setPresentations(fetchedPresentations)
@@ -159,12 +170,42 @@ export default function PresentationList() {
   return (
     <AnimatedContainer>
       <div className="flex justify-between items-center mb-4">
-        <div className="space-x-2">
-          <Button variant={view === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setView('grid')} data-testid="view-grid-button">Grid</Button>
-          <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')} data-testid="view-list-button">List</Button>
+        <div className="space-x-2 flex items-center">
+          <Button
+            variant={view === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('grid')}
+            data-testid="view-grid-button"
+          >
+            Grid
+          </Button>
+          <Button
+            variant={view === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('list')}
+            data-testid="view-list-button"
+          >
+            List
+          </Button>
+          <label className="ml-4 text-sm flex items-center gap-1">
+            <input
+              type="checkbox"
+              onChange={(e) => selectAll(e.target.checked)}
+              checked={selected.size === presentations.length && presentations.length > 0}
+              data-testid="select-all-checkbox"
+            />
+            Select All
+          </label>
         </div>
         {selected.size > 0 && (
-          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} data-testid="delete-selected-button">Delete Selected</Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            data-testid="delete-selected-button"
+          >
+            Delete Selected
+          </Button>
         )}
       </div>
       {view === 'grid' ? (
@@ -278,6 +319,54 @@ export default function PresentationList() {
           </TableBody>
         </Table>
       )}
+      <div className="flex items-center justify-between mt-4">
+        <div className="space-x-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1)
+              setStatusFilter(e.target.value as any)
+            }}
+            className="border rounded p-1 text-sm"
+            data-testid="status-filter-select"
+          >
+            <option value="all">All</option>
+            <option value="finished">Finished</option>
+            <option value="in_progress">In Progress</option>
+          </select>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPage(1)
+              setPageSize(parseInt(e.target.value))
+            }}
+            className="border rounded p-1 text-sm"
+            data-testid="page-size-select"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+        <Pagination className="mt-2">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" onClick={(e)=>{e.preventDefault(); if(page>1) setPage(page-1)}} />
+            </PaginationItem>
+            {Array.from({length: Math.ceil(total / pageSize) || 1}, (_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink href="#" isActive={page === i+1} onClick={(e)=>{e.preventDefault(); setPage(i+1)}}>
+                  {i+1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext href="#" onClick={(e)=>{e.preventDefault(); if(page < Math.ceil(total / pageSize)) setPage(page+1)}} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </AnimatedContainer>
   )
 }

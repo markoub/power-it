@@ -1,4 +1,4 @@
-import type { Presentation } from "./types";
+import type { Presentation, PaginatedPresentations } from "./types";
 
 // Always use the direct backend URL to avoid redirect issues
 const API_URL = "http://localhost:8000";
@@ -15,22 +15,25 @@ const formatImageUrl = (url: string): string => {
 };
 
 export const api = {
-  async getPresentations(): Promise<Presentation[]> {
+  async getPresentations(
+    page = 1,
+    size = 10,
+    status: "all" | "finished" | "in_progress" = "all"
+  ): Promise<PaginatedPresentations> {
     try {
-      const response = await fetch(`${API_URL}/presentations`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
+      const params = new URLSearchParams({
+        page: String(page),
+        size: String(size),
+        status,
       });
+      const response = await fetch(`${API_URL}/presentations?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch presentations: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
       console.error("Error fetching presentations:", error);
-      return [];
+      return { items: [], total: 0 };
     }
   },
 

@@ -33,5 +33,7 @@ def test_create_and_delete_presentation():
 
         list_resp = client.get("/presentations")
         assert list_resp.status_code == 200
-        ids = [p["id"] for p in list_resp.json()]
+        data = list_resp.json()
+        items = data["items"] if isinstance(data, dict) else data
+        ids = [p["id"] for p in items]
         assert pres_id not in ids

@@ -22,7 +22,8 @@ from schemas.presentations import (
     PresentationDetailResponse,
     PresentationStepResponse,
     StepUpdateRequest,
-    TopicUpdateRequest
+    TopicUpdateRequest,
+    PaginatedPresentationsResponse
 )
 from schemas.images import SlideTypesResponse
 from services import (
@@ -43,12 +44,8 @@ router = APIRouter(
     responses={404: {"description": "Presentation not found"}},
 )
 
-# Simple time-based cache for presentation list
-_presentations_cache = {
-    "data": None,
-    "timestamp": 0,
-    "ttl": 5  # Cache TTL in seconds
-}
+# Simple time-based cache for presentation list keyed by query params
+_presentations_cache: Dict[str, Dict[str, Any]] = {}
 
 @router.post("", response_model=PresentationResponse, status_code=201,
            summary="Create a new presentation",
@@ -181,6 +178,7 @@ async def create_presentation(
             )
         # If research_type is "pending", we don't start any background tasks
         
+        _presentations_cache.clear()
         return {
             "id": db_presentation.id,
             "name": db_presentation.name,
@@ -206,38 +204,60 @@ async def create_presentation(
             }
         )
 
-@router.get("", response_model=List[PresentationResponse],
+@router.get("",
+          response_model=PaginatedPresentationsResponse,
           summary="List all presentations",
-          description="Returns a list of all presentations with caching to improve performance")
-async def list_presentations(db: AsyncSession = Depends(get_db)):
-    """
-    Get list of presentations with caching to improve performance
-    """
-    # Check if we have a valid cache
+          description="Returns a list of presentations with pagination and filtering")
+async def list_presentations(
+    page: int = 1,
+    size: int = 10,
+    status: str = "all",
+    db: AsyncSession = Depends(get_db)
+):
+    """Get list of presentations with optional pagination and status filter"""
+
+    page = max(page, 1)
+    if size not in [5, 10, 50, 100]:
+        size = 10
+
+    status = status.lower()
+
+    cache_key = f"{page}:{size}:{status}"
+    cache_entry = _presentations_cache.get(cache_key)
     current_time = time.time()
-    if _presentations_cache["data"] is not None and current_time - _presentations_cache["timestamp"] < _presentations_cache["ttl"]:
-        return _presentations_cache["data"]
-    
+    if cache_entry and current_time - cache_entry["timestamp"] < 5:
+        return cache_entry["data"]
+
     # Use a more efficient query that doesn't load relationships we don't need
-    query = (
-        select(
-            Presentation.id,
-            Presentation.name,
-            Presentation.topic,
-            Presentation.author,
-            Presentation.thumbnail_url,
-            Presentation.created_at,
-            Presentation.updated_at,
+    base_query = select(Presentation).where(Presentation.is_deleted == False)
+
+    if status == "finished":
+        subq = select(PresentationStepModel.presentation_id).where(
+            (PresentationStepModel.step == PresentationStep.PPTX.value) &
+            (PresentationStepModel.status == StepStatus.COMPLETED.value)
         )
-        .where(Presentation.is_deleted == False)
-        .order_by(Presentation.created_at.desc())
+        base_query = base_query.where(Presentation.id.in_(subq))
+    elif status == "in_progress":
+        subq = select(PresentationStepModel.presentation_id).where(
+            (PresentationStepModel.step == PresentationStep.PPTX.value) &
+            (PresentationStepModel.status == StepStatus.COMPLETED.value)
+        )
+        base_query = base_query.where(~Presentation.id.in_(subq))
+
+    total_result = await db.execute(base_query)
+    total_presentations = len(total_result.scalars().all())
+
+    query = (
+        base_query.order_by(Presentation.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
     )
-    
+
     result = await db.execute(query)
-    presentations = result.all()
-    
+    presentations = result.scalars().all()
+
     # Format the response
-    formatted_presentations = [
+    items = [
         {
             "id": p.id,
             "name": p.name,
@@ -249,12 +269,12 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
         }
         for p in presentations
     ]
-    
-    # Update the cache
-    _presentations_cache["data"] = formatted_presentations
-    _presentations_cache["timestamp"] = current_time
-    
-    return formatted_presentations
+
+    data = {"items": items, "total": total_presentations}
+
+    _presentations_cache[cache_key] = {"data": data, "timestamp": current_time}
+
+    return data
 
 @router.get("/{presentation_id}", response_model=PresentationDetailResponse,
           summary="Get presentation details",
@@ -372,7 +392,7 @@ async def delete_presentation(presentation_id: int, db: AsyncSession = Depends(g
     await db.commit()
 
     # invalidate cache so list reflects deletion
-    _presentations_cache["data"] = None
+    _presentations_cache.clear()
 
     return Response(status_code=204)
 

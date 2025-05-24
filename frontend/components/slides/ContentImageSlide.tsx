@@ -13,15 +13,27 @@ export default function ContentImageSlide({ slide, mini = false }: SlideProps) {
     imagePrompt: typeof slide.imagePrompt === 'string' ? slide.imagePrompt : ''
   };
 
+  // Calculate text size based on content length
+  const contentLength = safeSlide.content.length;
+  const isLongContent = contentLength > 500;
+  
   const titleClass = mini
     ? "text-xs font-semibold mb-1"
-    : "text-3xl font-bold mb-3 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent"
+    : isLongContent 
+      ? "text-2xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent"
+      : "text-3xl font-bold mb-3 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent"
 
   const subtitleClass = mini
     ? "text-[8px] font-medium mb-1"
-    : "text-xl font-medium mb-4 text-gray-700"
+    : isLongContent
+      ? "text-lg font-medium mb-2 text-gray-700"
+      : "text-xl font-medium mb-4 text-gray-700"
 
-  const contentClass = mini ? "text-[8px] line-clamp-3" : "text-lg"
+  const contentClass = mini 
+    ? "text-[8px] line-clamp-3" 
+    : isLongContent
+      ? "text-base leading-relaxed"
+      : "text-lg"
 
   // Parse content to potentially extract subtitle
   let subtitle = "";
@@ -38,21 +50,21 @@ export default function ContentImageSlide({ slide, mini = false }: SlideProps) {
 
   return (
     <div className={`w-full h-full flex ${mini ? "flex-col p-1" : "p-6"}`}>
-      <div className={mini ? "w-full mb-1" : "w-1/2 pr-4 flex flex-col"}>
+      <div className={mini ? "w-full mb-1" : "w-1/2 pr-4 flex flex-col h-full"}>
         <h3 className={titleClass}>{safeSlide.title}</h3>
         
         {subtitle && (
           <h4 className={subtitleClass}>{subtitle}</h4>
         )}
         
-        <div className={`${contentClass} ${mini ? "" : "flex-1 overflow-auto"}`}>
+        <div className={`${contentClass} ${mini ? "" : "flex-1 overflow-y-auto pr-2"}`}>
           {contentParagraphs.map((paragraph, index) => (
             <motion.p
               key={index}
               initial={mini ? {} : { opacity: 0, y: 10 }}
               animate={mini ? {} : { opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
-              className={mini ? "line-clamp-1" : "mb-3"}
+              className={mini ? "line-clamp-1" : isLongContent ? "mb-2" : "mb-3"}
             >
               {paragraph}
             </motion.p>

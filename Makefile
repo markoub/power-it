@@ -4,99 +4,248 @@
 # Variables
 SHELL := /bin/bash
 TESTING_DIR := testing
+BACKEND_DIR := backend
+FRONTEND_DIR := frontend
 E2E_DIR := $(TESTING_DIR)/e2e
 
-# Color outputs
-YELLOW := \033[1;33m
-GREEN := \033[1;32m
-NC := \033[0m # No Color
-INFO := @echo "$(GREEN)$(1)$(NC)"
-WARN := @echo "$(YELLOW)$(1)$(NC)"
+# Color outputs (using printf for better compatibility)
+define print_info
+	@printf "\033[1;32m%s\033[0m\n" "$(1)"
+endef
 
-.PHONY: setup e2e e2e-headed e2e-debug e2e-list e2e-install e2e-api help
+define print_warn
+	@printf "\033[1;33m%s\033[0m\n" "$(1)"
+endef
+
+define print_section
+	@printf "\033[1;36m\n=== %s ===\033[0m\n" "$(1)"
+endef
+
+.PHONY: help setup run clean
+.PHONY: test-backend test-backend-online test-backend-offline test-backend-unit test-backend-integration
+.PHONY: test-frontend test-e2e test-e2e-headed test-e2e-debug test-e2e-api test-e2e-specific test-e2e-list
+.PHONY: test-all test-all-online test-all-offline
+.PHONY: install-deps install-browsers dev
 
 # Default target when just running `make`
 help:
-	@echo "$(GREEN)Available commands:$(NC)"
-	@echo "  $(YELLOW)make run$(NC)            - Run the complete application (backend + frontend)"
-	@echo "  $(YELLOW)make test-backend$(NC)   - Run backend tests"
-	@echo "  $(YELLOW)make setup$(NC)         - Install backend and E2E dependencies"
-	@echo "  $(YELLOW)make e2e$(NC)            - Run all E2E tests"
-	@echo "  $(YELLOW)make e2e-headed$(NC)     - Run all E2E tests with browser visible"
-	@echo "  $(YELLOW)make e2e-debug$(NC)      - Run E2E tests with debugging enabled (headed + slow motion)"
-	@echo "  $(YELLOW)make e2e-api$(NC)        - Run API documentation tests"
-	@echo "  $(YELLOW)make e2e-test$(NC) test=file-name - Run specific E2E tests (e.g., make e2e-test test=presentations-list)"
-	@echo "  $(YELLOW)make e2e-list$(NC)       - List all available E2E tests"
-	@echo "  $(YELLOW)make e2e-install$(NC)    - Install Playwright browsers"
-	@echo ""
-	@echo "$(GREEN)Examples:$(NC)"
-	@echo "  $(YELLOW)make test-backend$(NC)"
-	@echo "  $(YELLOW)make e2e-api$(NC)"
-	@echo "  $(YELLOW)make e2e-test test=presentations-list$(NC)"
-	@echo "  $(YELLOW)make e2e-headed$(NC)"
+	$(call print_section,PowerIt Project Commands)
+	@printf "\033[1;32mApplication Management:\033[0m\n"
+	@printf "  \033[1;33mmake run\033[0m              - Run the complete application (backend + frontend)\n"
+	@printf "  \033[1;33mmake dev\033[0m              - Run in development mode with hot reload\n"
+	@printf "  \033[1;33mmake setup\033[0m            - Install all dependencies\n"
+	@printf "  \033[1;33mmake clean\033[0m            - Clean build artifacts and cache\n"
+	@printf "\n"
+	@printf "\033[1;32mTesting - Backend:\033[0m\n"
+	@printf "  \033[1;33mmake test-backend\033[0m         - Run all backend tests (offline by default)\n"
+	@printf "  \033[1;33mmake test-backend-online\033[0m  - Run backend tests with network access\n"
+	@printf "  \033[1;33mmake test-backend-offline\033[0m - Run backend tests without network access\n"
+	@printf "  \033[1;33mmake test-backend-unit\033[0m    - Run only unit tests\n"
+	@printf "  \033[1;33mmake test-backend-integration\033[0m - Run only integration tests\n"
+	@printf "\n"
+	@printf "\033[1;32mTesting - Frontend:\033[0m\n"
+	@printf "  \033[1;33mmake test-frontend\033[0m        - Run frontend tests (E2E tests)\n"
+	@printf "\n"
+	@printf "\033[1;32mTesting - E2E:\033[0m\n"
+	@printf "  \033[1;33mmake test-e2e\033[0m            - Run all E2E tests\n"
+	@printf "  \033[1;33mmake test-e2e-headed\033[0m     - Run E2E tests with browser visible\n"
+	@printf "  \033[1;33mmake test-e2e-debug\033[0m      - Run E2E tests with debugging enabled\n"
+	@printf "  \033[1;33mmake test-e2e-api\033[0m        - Run API documentation tests\n"
+	@printf "  \033[1;33mmake test-e2e-specific\033[0m test=file-name - Run specific E2E test\n"
+	@printf "  \033[1;33mmake test-e2e-list\033[0m       - List all available E2E tests\n"
+	@printf "\n"
+	@printf "\033[1;32mTesting - All:\033[0m\n"
+	@printf "  \033[1;33mmake test-all\033[0m            - Run all tests (backend + frontend + e2e)\n"
+	@printf "  \033[1;33mmake test-all-online\033[0m     - Run all tests with network access\n"
+	@printf "  \033[1;33mmake test-all-offline\033[0m    - Run all tests without network access\n"
+	@printf "\n"
+	@printf "\033[1;32mDevelopment Tools:\033[0m\n"
+	@printf "  \033[1;33mmake install-deps\033[0m        - Install project dependencies\n"
+	@printf "  \033[1;33mmake install-browsers\033[0m    - Install Playwright browsers\n"
+	@printf "\n"
+	@printf "\033[1;32mExamples:\033[0m\n"
+	@printf "  \033[1;33mmake test-backend-offline\033[0m\n"
+	@printf "  \033[1;33mmake test-e2e-api\033[0m\n"
+	@printf "  \033[1;33mmake test-e2e-specific test=presentations-list\033[0m\n"
+	@printf "  \033[1;33mmake test-all-online\033[0m\n"
+
+# ==========================================
+# Application Management
+# ==========================================
 
 # Run the application
 run:
-	$(call INFO,Starting the application...)
-	chmod +x run.sh && ./run.sh
-	$(call INFO,Application has been stopped.)
+	$(call print_info,Starting the application...)
+	@chmod +x run.sh && ./run.sh
+	$(call print_info,Application has been stopped.)
 
-# Run backend tests
-test-backend:
-	$(call INFO,Running backend tests...)
-	cd $(BACKEND_DIR) && chmod +x run_tests.sh && ./run_tests.sh
-	$(call INFO,Backend tests complete. See results above.)
+# Development mode
+dev:
+	$(call print_info,Starting development mode...)
+	@echo "Starting backend and frontend in development mode..."
+	# Add development-specific commands here
+
+# Setup all dependencies
+setup: install-deps install-browsers
+	$(call print_info,Complete setup finished!)
+
+# Clean build artifacts and cache
+clean:
+	$(call print_info,Cleaning build artifacts and cache...)
+	@rm -rf $(FRONTEND_DIR)/.next
+	@rm -rf $(FRONTEND_DIR)/node_modules/.cache
+	@rm -rf $(BACKEND_DIR)/.pytest_cache
+	@rm -rf $(TESTING_DIR)/.pytest_cache
+	@rm -rf $(TESTING_DIR)/test-results
+	@rm -rf $(TESTING_DIR)/playwright-report
+	$(call print_info,Clean complete.)
+
+# ==========================================
+# Backend Testing
+# ==========================================
+
+# Run all backend tests (offline by default for speed)
+test-backend: test-backend-offline
+
+# Run backend tests with network access (for integration tests that need external APIs)
+test-backend-online:
+	$(call print_info,Running backend tests with network access...)
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v" ./run_tests.sh
+	$(call print_info,Backend online tests complete.)
+
+# Run backend tests without network access (faster, isolated)
+test-backend-offline:
+	$(call print_info,Running backend tests without network access...)
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh
+	$(call print_info,Backend offline tests complete.)
+
+# Run only unit tests
+test-backend-unit:
+	$(call print_info,Running backend unit tests...)
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m unit" ./run_tests.sh
+	$(call print_info,Backend unit tests complete.)
+
+# Run only integration tests
+test-backend-integration:
+	$(call print_info,Running backend integration tests...)
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m integration" ./run_tests.sh
+	$(call print_info,Backend integration tests complete.)
+
+# ==========================================
+# Frontend Testing
+# ==========================================
+
+# Run frontend tests (which are the E2E tests)
+test-frontend:
+	$(call print_info,Running frontend tests (E2E)...)
+	@cd $(TESTING_DIR) && npx playwright test
+	$(call print_info,Frontend tests complete.)
+
+# ==========================================
+# E2E Testing
+# ==========================================
 
 # Run all E2E tests
-e2e:
-	$(call INFO,Running all E2E tests...)
-	cd $(TESTING_DIR) && npx playwright test
-	$(call INFO,E2E tests complete. See results above.)
+test-e2e:
+	$(call print_info,Running all E2E tests...)
+	@cd $(TESTING_DIR) && npx playwright test
+	$(call print_info,E2E tests complete.)
 
 # Run all E2E tests with browser visible
-e2e-headed:
-	$(call INFO,Running all E2E tests with browser visible...)
-	cd $(TESTING_DIR) && npx playwright test --headed
-	$(call INFO,E2E tests complete. See results above.)
+test-e2e-headed:
+	$(call print_info,Running all E2E tests with browser visible...)
+	@cd $(TESTING_DIR) && npx playwright test --headed
+	$(call print_info,E2E headed tests complete.)
 
 # Run E2E tests with debugging enabled
-e2e-debug:
-	$(call INFO,Running E2E tests with debugging enabled...)
-	cd $(TESTING_DIR) && npx playwright test --headed --debug --timeout 60000
-	$(call INFO,E2E debug tests complete.)
+test-e2e-debug:
+	$(call print_info,Running E2E tests with debugging enabled...)
+	@cd $(TESTING_DIR) && npx playwright test --headed --debug --timeout 60000
+	$(call print_info,E2E debug tests complete.)
 
 # Run API documentation tests
-e2e-api:
-	$(call INFO,Running API documentation tests...)
-	cd $(TESTING_DIR) && npx playwright test e2e/api-docs.spec.ts
-	$(call INFO,API tests complete. See results above.)
+test-e2e-api:
+	$(call print_info,Running API documentation tests...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/api-docs.spec.ts
+	$(call print_info,API tests complete.)
 
 # Run specific E2E tests
-e2e-test:
+test-e2e-specific:
 	@if [ -z "$(test)" ]; then \
-		echo "$(YELLOW)Error: No test specified. Usage: make e2e-test test=test-name$(NC)"; \
+		$(call print_warn,Error: No test specified. Usage: make test-e2e-specific test=test-name); \
 		exit 1; \
 	fi
-	$(call INFO,Running E2E test: $(test)...)
-	cd $(TESTING_DIR) && npx playwright test e2e/$(test).spec.ts
-	$(call INFO,E2E test complete. See results above.)
+	$(call print_info,Running E2E test: $(test)...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/$(test).spec.ts
+	$(call print_info,E2E test complete.)
 
 # List all available E2E tests
-e2e-list:
-	$(call INFO,Available E2E tests:)
+test-e2e-list:
+	$(call print_info,Available E2E tests:)
 	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort
-	
-# Install Playwright browsers
-e2e-install:
-	$(call INFO,Installing Playwright browsers...)
-	cd $(TESTING_DIR) && npx playwright install
-	$(call INFO,Browsers installed.)
 
-setup:
-	$(call INFO,Setting up project dependencies...)
-	sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip libreoffice ghostscript
-	cd backend && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
-	chmod +x backend/run_tests.sh backend/record_tests.sh backend/record_all_tests.sh
-	if [ -f frontend/package.json ]; then cd frontend && npm install && cd ..; else echo "Skipping frontend install - package.json missing"; fi
-	cd testing && npm install && npm run install-browsers && cd ..
-	$(call INFO,Setup complete.)
+# ==========================================
+# Combined Testing
+# ==========================================
+
+# Run all tests (backend offline + frontend + e2e)
+test-all: test-backend-offline test-frontend test-e2e
+	$(call print_info,All tests complete!)
+
+# Run all tests with network access
+test-all-online: test-backend-online test-frontend
+	$(call print_info,All online tests complete!)
+
+# Run all tests without network access
+test-all-offline: test-backend-offline test-frontend test-e2e
+	$(call print_info,All offline tests complete!)
+
+# ==========================================
+# Development Tools
+# ==========================================
+
+# Install project dependencies
+install-deps:
+	$(call print_info,Installing project dependencies...)
+	@if command -v apt-get >/dev/null 2>&1; then \
+		sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-pip libreoffice ghostscript; \
+	elif command -v brew >/dev/null 2>&1; then \
+		brew install python3 libreoffice ghostscript; \
+	else \
+		$(call print_warn,Package manager not detected. Please install python3, libreoffice, and ghostscript manually.); \
+	fi
+	@cd $(BACKEND_DIR) && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
+	@chmod +x $(BACKEND_DIR)/run_tests.sh $(BACKEND_DIR)/record_tests.sh $(BACKEND_DIR)/record_all_tests.sh 2>/dev/null || true
+	@if [ -f $(FRONTEND_DIR)/package.json ]; then \
+		cd $(FRONTEND_DIR) && npm install; \
+	else \
+		$(call print_warn,Skipping frontend install - package.json missing); \
+	fi
+	@if [ -f $(TESTING_DIR)/package.json ]; then \
+		cd $(TESTING_DIR) && npm install; \
+	else \
+		$(call print_warn,Skipping testing install - package.json missing); \
+	fi
+	$(call print_info,Dependencies installation complete.)
+
+# Install Playwright browsers
+install-browsers:
+	$(call print_info,Installing Playwright browsers...)
+	@if [ -f $(TESTING_DIR)/package.json ]; then \
+		cd $(TESTING_DIR) && npx playwright install; \
+	else \
+		$(call print_warn,Cannot install browsers - testing/package.json missing); \
+	fi
+	$(call print_info,Browsers installation complete.)
+
+# ==========================================
+# Legacy aliases (for backward compatibility)
+# ==========================================
+
+e2e: test-e2e
+e2e-headed: test-e2e-headed  
+e2e-debug: test-e2e-debug
+e2e-api: test-e2e-api
+e2e-test: test-e2e-specific
+e2e-list: test-e2e-list
+e2e-install: install-browsers

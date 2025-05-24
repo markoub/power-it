@@ -68,7 +68,7 @@ e2e-debug:
 # Run API documentation tests
 e2e-api:
 	$(call INFO,Running API documentation tests...)
-	cd $(TESTING_DIR) && npx playwright test e2e/api-docs.spec.ts
+	cd $(TESTING_DIR) && npx playwright test api --config api/playwright.config.ts
 	$(call INFO,API tests complete. See results above.)
 
 # Run specific E2E tests

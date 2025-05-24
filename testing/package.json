@@ -17,11 +17,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "playwright-chromium": "^1.52.0"
-  },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
-    "@types/node": "^20.11.24"
+    "@types/node": "^20.17.50"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
   }
 }

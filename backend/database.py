@@ -51,6 +51,7 @@ class Presentation(Base):
     name = Column(String, unique=True, index=True)
     topic = Column(String)
     author = Column(String, nullable=True)
+    thumbnail_url = Column(String, nullable=True)
     is_deleted = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

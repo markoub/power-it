@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, Trash2, FileIcon as FilePresentation, Sparkles, FileText, Loader2 } from "lucide-react"
 import type { Presentation } from "@/lib/types"
 import { motion } from "framer-motion"
@@ -15,6 +16,9 @@ export default function PresentationList() {
   const [presentations, setPresentations] = useState<Presentation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [previewImages, setPreviewImages] = useState<Record<string, string>>({})
 
   useEffect(() => {
     // Load presentations from the API
@@ -25,7 +29,19 @@ export default function PresentationList() {
     setIsLoading(true)
     try {
       const fetchedPresentations = await api.getPresentations()
+      
+      // Show all presentations, regardless of whether they have thumbnails
       setPresentations(fetchedPresentations)
+
+      // Create preview images map from the thumbnail URLs in the API response
+      // If a presentation doesn't have a thumbnail, it will use the placeholder
+      const previewMap: Record<string, string> = {}
+      fetchedPresentations.forEach(p => {
+        if (p.thumbnailUrl) {
+          previewMap[p.id.toString()] = p.thumbnailUrl
+        }
+      })
+      setPreviewImages(previewMap)
       setError(null)
     } catch (err) {
       setError("Failed to load presentations")
@@ -53,6 +69,33 @@ export default function PresentationList() {
     } catch (error) {
       console.error(`Error deleting presentation ${id}:`, error)
       toast.error("Failed to delete presentation")
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selected.size === 0) return
+    if (!window.confirm("Delete selected presentations?")) return
+
+    for (const id of selected) {
+      await api.deletePresentation(id)
+    }
+    setSelected(new Set())
+    await loadPresentations()
+    toast.success("Selected presentations deleted")
+  }
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selected)
+    if (newSet.has(id)) newSet.delete(id)
+    else newSet.add(id)
+    setSelected(newSet)
+  }
+
+  const selectAll = (checked: boolean) => {
+    if (checked) {
+      setSelected(new Set(presentations.map((p) => p.id.toString())))
+    } else {
+      setSelected(new Set())
     }
   }
 
@@ -115,14 +158,31 @@ export default function PresentationList() {
 
   return (
     <AnimatedContainer>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="presentations-grid">
-        {presentations.map((presentation, index) => (
-          <AnimatedItem key={presentation.id}>
-            <Card 
-              className="slide-card overflow-hidden border border-gray-100 bg-white/80 backdrop-blur-sm"
-              data-testid={`presentation-card-${presentation.id}`}
-            >
+      <div className="flex justify-between items-center mb-4">
+        <div className="space-x-2">
+          <Button variant={view === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setView('grid')} data-testid="view-grid-button">Grid</Button>
+          <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')} data-testid="view-list-button">List</Button>
+        </div>
+        {selected.size > 0 && (
+          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} data-testid="delete-selected-button">Delete Selected</Button>
+        )}
+      </div>
+      {view === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="presentations-grid">
+          {presentations.map((presentation) => (
+            <AnimatedItem key={presentation.id}>
+              <Card
+                className="slide-card overflow-hidden border border-gray-100 bg-white/80 backdrop-blur-sm"
+                data-testid={`presentation-card-${presentation.id}`}
+              >
               <CardHeader className="pb-2 relative">
+                <input
+                  type="checkbox"
+                  className="absolute left-3 top-3"
+                  checked={selected.has(presentation.id.toString())}
+                  onChange={() => toggleSelect(presentation.id.toString())}
+                  data-testid="select-presentation-checkbox"
+                />
                 <div className="absolute top-3 right-3">
                   {presentation.researchMethod === "ai" ? (
                     <div className="bg-primary-100 text-primary-600 text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-ai">
@@ -141,9 +201,9 @@ export default function PresentationList() {
                 <div className="hidden" data-testid="presentation-id">ID: {presentation.id}</div>
               </CardHeader>
               <CardContent>
-                <div className="h-40 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
+                <div className="w-full aspect-[16/9] bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
                   <img
-                    src={`/placeholder.svg?height=160&width=280&query=colorful presentation slide with abstract shapes`}
+                    src={previewImages[presentation.id.toString()] ?? `/placeholder.svg?height=180&width=320&query=colorful presentation slide with abstract shapes`}
                     alt="Presentation thumbnail"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     data-testid="presentation-thumbnail"
@@ -174,7 +234,7 @@ export default function PresentationList() {
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  onClick={() => handleDelete(presentation.id)}
+                  onClick={() => handleDelete(presentation.id.toString())}
                   data-testid="delete-presentation-button"
                 >
                   <Trash2 size={16} />
@@ -184,7 +244,40 @@ export default function PresentationList() {
             </Card>
           </AnimatedItem>
         ))}
-      </div>
+        </div>
+      ) : (
+        <Table data-testid="presentations-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <input type="checkbox" onChange={(e) => selectAll(e.target.checked)} checked={selected.size === presentations.length && presentations.length > 0} />
+              </TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Author</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Slides</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {presentations.map((p) => (
+              <TableRow key={p.id} data-testid={`presentation-row-${p.id}`}>
+                <TableCell>
+                  <input type="checkbox" checked={selected.has(p.id.toString())} onChange={() => toggleSelect(p.id.toString())} data-testid="select-presentation-checkbox" />
+                </TableCell>
+                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell>{p.author}</TableCell>
+                <TableCell>{typeof window !== 'undefined' && p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>{p.slides ? p.slides.length : 0}</TableCell>
+                <TableCell className="space-x-2">
+                  <Link href={`/edit/${p.id}`}> <Button variant="outline" size="sm" data-testid="edit-presentation-button">Edit</Button></Link>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(p.id.toString())} data-testid="delete-presentation-button">Delete</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </AnimatedContainer>
   )
 }

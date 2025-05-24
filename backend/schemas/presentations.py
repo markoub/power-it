@@ -8,6 +8,7 @@ class PresentationResponse(BaseModel):
     name: str = Field(description="Name of the presentation")
     topic: Optional[str] = Field(None, description="Main topic of the presentation")
     author: Optional[str] = Field(None, description="Author of the presentation")
+    thumbnail_url: Optional[str] = Field(None, description="URL to the first slide thumbnail image")
     created_at: str = Field(description="ISO-formatted creation timestamp")
     updated_at: str = Field(description="ISO-formatted last update timestamp")
     
@@ -60,6 +61,7 @@ class PresentationDetailResponse(BaseModel):
     name: str = Field(description="Name of the presentation")
     topic: Optional[str] = Field(None, description="Main topic of the presentation")
     author: Optional[str] = Field(None, description="Author of the presentation")
+    thumbnail_url: Optional[str] = Field(None, description="URL to the first slide thumbnail image")
     created_at: str = Field(description="ISO-formatted creation timestamp")
     updated_at: str = Field(description="ISO-formatted last update timestamp")
     steps: List[PresentationStepResponse] = Field(description="List of all steps for this presentation with their statuses and results")

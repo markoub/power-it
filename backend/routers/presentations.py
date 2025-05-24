@@ -225,6 +225,7 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
             Presentation.name,
             Presentation.topic,
             Presentation.author,
+            Presentation.thumbnail_url,
             Presentation.created_at,
             Presentation.updated_at,
         )
@@ -242,6 +243,7 @@ async def list_presentations(db: AsyncSession = Depends(get_db)):
             "name": p.name,
             "topic": p.topic,
             "author": p.author,
+            "thumbnail_url": p.thumbnail_url,
             "created_at": p.created_at.isoformat(),
             "updated_at": p.updated_at.isoformat()
         }
@@ -332,6 +334,7 @@ async def get_presentation(presentation_id: int, db: AsyncSession = Depends(get_
             "name": presentation.name,
             "topic": presentation.topic,
             "author": presentation.author,
+            "thumbnail_url": presentation.thumbnail_url,
             "created_at": presentation.created_at.isoformat() if presentation.created_at else None,
             "updated_at": presentation.updated_at.isoformat() if presentation.updated_at else None,
             "steps": processed_steps

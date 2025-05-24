@@ -38,6 +38,7 @@ export interface Presentation {
   manualResearch?: string; // This can be deprecated if research content is always in steps
   slides: Slide[];
   steps?: PresentationStep[]; // Add steps array
+  thumbnailUrl?: string; // URL to the first slide thumbnail image
   createdAt: string;
   updatedAt: string;
 }

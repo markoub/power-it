@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Sparkles, Send } from "lucide-react"
+import { Sparkles, Send, AlertCircle, CheckCircle, Clock } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import WizardMessage from "@/components/wizard/wizard-message"
@@ -19,46 +19,103 @@ interface WizardProps {
   onApplyChanges: (changes: any) => void
 }
 
+type MessageStatus = "sending" | "success" | "error" | "processing"
+
+interface Message {
+  role: "user" | "assistant"
+  content: string
+  status?: MessageStatus
+  timestamp?: Date
+}
+
 export default function Wizard({ presentation, currentSlide, context, step, onApplyChanges }: WizardProps) {
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
-    {
-      role: "assistant",
-      content: `Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation. You're currently on the ${step} step. ${
-        context === "single" && currentSlide
-          ? `I see you're working on a slide titled "${currentSlide.title}". How can I help with this slide?`
-          : "How can I help with your presentation?"
-      }`,
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [suggestion, setSuggestion] = useState<any | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   // Update welcome message when step, context, or currentSlide changes
   useEffect(() => {
-    const welcomeMessage = {
-      role: "assistant" as const,
-      content: `Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation. You're currently on the ${step} step. ${
-        context === "single" && currentSlide
-          ? `I see you're working on a slide titled "${currentSlide.title}". How can I help with this slide?`
-          : "How can I help with your presentation?"
-      }`,
+    const getWelcomeMessage = () => {
+      const baseMessage = "Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation."
+      
+      if (step === "Research") {
+        return `${baseMessage} You're currently on the Research step. I can help you understand research topics and methods, but slide modifications are available once you generate slides.`
+      } else if (step === "Slides") {
+        if (context === "single" && currentSlide) {
+          return `${baseMessage} You're working on the slide titled "${currentSlide.title}". I can help you improve the title, content, and structure of this specific slide.`
+        } else {
+          return `${baseMessage} You're on the Slides step. Select a slide to get specific help, or ask me general questions about slide creation.`
+        }
+      } else if (step === "Illustrations") {
+        return `${baseMessage} You're on the Illustrations step. I can help with image suggestions and visual improvements for your slides.`
+      } else if (step === "PPTX") {
+        return `${baseMessage} Your presentation is being finalized. If you need to make changes, please go back to the Slides step.`
+      } else {
+        return `${baseMessage} You're currently on the ${step} step. How can I help you today?`
+      }
+    }
+
+    const welcomeMessage: Message = {
+      role: "assistant",
+      content: getWelcomeMessage(),
+      status: "success",
+      timestamp: new Date()
     }
     
     setMessages([welcomeMessage])
+    setError(null)
   }, [step, context, currentSlide])
+
+  const updateMessageStatus = (messageIndex: number, status: MessageStatus) => {
+    setMessages(prev => prev.map((msg, idx) => 
+      idx === messageIndex ? { ...msg, status } : msg
+    ))
+  }
 
   const sendMessage = async () => {
     if (!input.trim()) return
 
-    const userMessage = { role: "user" as const, content: input }
-    setMessages((prev) => [...prev, userMessage])
+    const userMessage: Message = { 
+      role: "user", 
+      content: input,
+      status: "sending",
+      timestamp: new Date()
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    const userMessageIndex = messages.length
     setInput("")
     setIsLoading(true)
+    setError(null)
+
+    // Update user message status to success
+    setTimeout(() => updateMessageStatus(userMessageIndex, "success"), 500)
 
     try {
       let response = ""
       let suggestedChanges = null as any
+
+      // Add processing message
+      const processingMessage: Message = {
+        role: "assistant",
+        content: "Processing your request...",
+        status: "processing",
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, processingMessage])
+      const processingMessageIndex = userMessageIndex + 1
 
       // Only allow slide modifications if we're on the slides step and have slides data
       if (context === "single" && currentSlide && step === "Slides") {
@@ -78,8 +135,9 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             try {
               const apiResp = await api.modifyPresentation(presentation.id, input, slideIndex, "slides");
               const mod = apiResp.modified_slide;
-              response = "Here are some improvements for the slide.";
+              
               if (mod && mod.fields) {
+                response = "I've analyzed your slide and created some improvements. You can preview the changes below and choose to apply or dismiss them.";
                 suggestedChanges = {
                   slide: {
                     ...currentSlide,
@@ -87,34 +145,46 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
                     content: Array.isArray(mod.fields.content) ? mod.fields.content.join("\n") : (mod.fields.content || currentSlide.content)
                   }
                 };
+              } else {
+                response = "I've processed your request, but no specific changes were suggested. The slide might already be well-optimized, or you could try a more specific request.";
               }
             } catch (error) {
               console.error("Error modifying slide:", error);
               response = "I encountered an error while trying to modify the slide. This might be because the presentation data isn't ready yet. Please try again after ensuring all previous steps are completed.";
+              setError("Failed to process slide modification. Please try again.");
             }
           }
         }
       } else if (step === "Research") {
-        response = "I can help you with research questions, but I can't modify presentation content until you've generated slides. Please complete the research step and generate slides first.";
+        response = "I can help you with research questions and provide guidance on research methods. However, slide content modification is only available in the Slides step after you've generated slides.";
       } else if (step === "Illustrations") {
-        response = "I can help with image suggestions, but slide content modification is only available in the Slides step.";
+        response = "I can help with image suggestions and visual improvements. For slide content changes, please use the Slides step.";
       } else if (step === "PPTX") {
         response = "The presentation is being finalized. If you need to make changes, please go back to the Slides step.";
       } else {
-        response = "Wizard support for this step is coming soon. For now, you can use the step-specific controls above.";
+        response = "I'm here to help! Wizard support varies by step. For the best experience with slide modifications, please navigate to the Slides step and select a specific slide.";
       }
 
-      setMessages((prev) => [...prev, { role: "assistant", content: response }])
+      // Update processing message with actual response
+      setMessages(prev => prev.map((msg, idx) => 
+        idx === processingMessageIndex 
+          ? { ...msg, content: response, status: "success" }
+          : msg
+      ))
 
       if (suggestedChanges) {
         setSuggestion(suggestedChanges)
       }
     } catch (error) {
       console.error("Error sending message:", error)
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
-      ])
+      const errorMessage = "Sorry, I encountered an error processing your request. Please try again."
+      
+      setMessages(prev => prev.map((msg, idx) => 
+        idx === prev.length - 1 
+          ? { ...msg, content: errorMessage, status: "error" }
+          : msg
+      ))
+      setError("Failed to send message. Please check your connection and try again.")
     } finally {
       setIsLoading(false)
     }
@@ -124,58 +194,42 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     if (suggestion) {
       onApplyChanges(suggestion)
       setSuggestion(null)
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Great! I've applied the changes to your presentation." },
-      ])
+      
+      const successMessage: Message = {
+        role: "assistant",
+        content: "Perfect! I've successfully applied the changes to your slide. The improvements should now be visible in the slide editor.",
+        status: "success",
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, successMessage])
     }
   }
 
   const dismissSuggestion = () => {
     setSuggestion(null)
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: "No problem. Let me know if you need any other assistance." },
-    ])
-  }
-
-  // Helper functions to generate responses
-  const generateSlideResponse = (slide: Slide, query: string) => {
-    if (query.toLowerCase().includes("improve") || query.toLowerCase().includes("better")) {
-      return `I've analyzed your slide "${slide.title}" and have some suggestions to make it more engaging. Would you like me to enhance the title and content?`
-    } else if (query.toLowerCase().includes("example") || query.toLowerCase().includes("sample")) {
-      return `Here's an example of how you could structure this slide:\n\n**Title: ${slide.title}**\n\n- Key point 1: Important information about the topic\n- Key point 2: Supporting evidence or examples\n- Key point 3: Conclusion or takeaway\n\nWould you like me to apply a structure like this to your slide?`
-    } else {
-      return `I can help improve your slide "${slide.title}". I suggest making the title more engaging and structuring the content with clear bullet points for better readability. Would you like me to suggest specific improvements?`
+    
+    const dismissMessage: Message = {
+      role: "assistant", 
+      content: "No problem! The suggestions have been dismissed. Feel free to ask for different improvements or try a more specific request.",
+      status: "success",
+      timestamp: new Date()
     }
+    setMessages(prev => [...prev, dismissMessage])
   }
 
-  const generateIllustrationResponse = (slide: Slide, query: string) => {
-    return `For your slide "${slide.title}", I recommend an image that visually represents the key concepts. I can suggest a better image prompt that will generate a more relevant illustration. Would you like me to create a better prompt?`
-  }
-
-  const enhanceSlideContent = (content: string) => {
-    if (!content.trim()) {
-      return "• This is an important point about the topic\n• Here's supporting evidence or an example\n• This is a conclusion or key takeaway"
+  const getStatusIcon = (status?: MessageStatus) => {
+    switch (status) {
+      case "sending":
+        return <Clock className="h-3 w-3 text-yellow-500 animate-pulse" />
+      case "success":
+        return <CheckCircle className="h-3 w-3 text-green-500" />
+      case "error":
+        return <AlertCircle className="h-3 w-3 text-red-500" />
+      case "processing":
+        return <Clock className="h-3 w-3 text-blue-500 animate-spin" />
+      default:
+        return null
     }
-
-    // Add bullet points if there aren't any
-    if (!content.includes("•") && !content.includes("-")) {
-      return content
-        .split("\n")
-        .filter((line) => line.trim())
-        .map((line) => `• ${line}`)
-        .join("\n")
-    }
-
-    return content
-  }
-
-  const generateBetterImagePrompt = (slide: Slide) => {
-    return `Professional illustration for presentation slide about ${slide.title}. Modern, clean design with abstract elements representing ${slide.content
-      .split(" ")
-      .slice(0, 10)
-      .join(" ")}...`
   }
 
   return (
@@ -185,10 +239,20 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
           <Sparkles className="h-5 w-5" />
           AI Presentation Wizard
         </CardTitle>
-        <CardDescription className="text-white/90 text-sm">
+        <CardDescription className="text-white/90 text-sm" data-testid="wizard-header">
           Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
         </CardDescription>
       </CardHeader>
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-3 mx-4 mt-2 rounded">
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 text-red-400 mr-2" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
+      
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence>
           {messages.map((message, index) => (
@@ -197,31 +261,16 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
+              className="flex items-start gap-2"
             >
-              <WizardMessage role={message.role} content={message.content} />
+              <div className="flex-1">
+                <WizardMessage role={message.role} content={message.content} />
+              </div>
+              <div className="mt-2">
+                {getStatusIcon(message.status)}
+              </div>
             </motion.div>
           ))}
-
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center space-x-2 text-gray-500"
-            >
-              <div className="flex space-x-1">
-                <div className="h-2 w-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div
-                  className="h-2 w-2 bg-primary-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <div
-                  className="h-2 w-2 bg-primary-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
-              </div>
-              <span className="text-sm">AI is thinking...</span>
-            </motion.div>
-          )}
 
           {suggestion && (
             <motion.div
@@ -239,7 +288,9 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             </motion.div>
           )}
         </AnimatePresence>
+        <div ref={messagesEndRef} />
       </CardContent>
+      
       <CardFooter className="border-t p-4">
         <div className="flex w-full gap-2">
           <Textarea
@@ -248,6 +299,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             placeholder="Ask the AI wizard for help..."
             className="min-h-[60px] resize-none"
             data-testid="wizard-input"
+            disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault()
@@ -262,7 +314,11 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             disabled={isLoading || !input.trim()}
             data-testid="wizard-send-button"
           >
-            <Send size={18} />
+            {isLoading ? (
+              <Clock className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
           </Button>
         </div>
       </CardFooter>

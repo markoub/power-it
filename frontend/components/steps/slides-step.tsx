@@ -279,6 +279,7 @@ export default function SlidesStep({
                           }
                           placeholder="Enter slide title"
                           className="text-xl font-semibold border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                          data-testid="slide-title-input"
                         />
                       </div>
                       <div className="space-y-2">

@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, Trash2, FileIcon as FilePresentation, Sparkles, FileText, Loader2 } from "lucide-react"
 import type { Presentation } from "@/lib/types"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination"
 import { motion } from "framer-motion"
 import { AnimatedContainer, AnimatedItem } from "@/components/ui-elements"
 import { api } from "@/lib/api"
@@ -19,16 +20,26 @@ export default function PresentationList() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({})
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [total, setTotal] = useState(0)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'finished' | 'in_progress'>('all')
 
   useEffect(() => {
     // Load presentations from the API
-    loadPresentations()
-  }, [])
+    loadPresentations(page, pageSize, statusFilter)
+  }, [page, pageSize, statusFilter])
 
-  const loadPresentations = async () => {
+  const loadPresentations = async (
+    pageParam = page,
+    sizeParam = pageSize,
+    statusParam = statusFilter
+  ) => {
     setIsLoading(true)
     try {
-      const fetchedPresentations = await api.getPresentations()
+      const data = await api.getPresentations(pageParam, sizeParam, statusParam)
+      const fetchedPresentations = data.items
+      setTotal(data.total)
       
       // Show all presentations, regardless of whether they have thumbnails
       setPresentations(fetchedPresentations)
@@ -99,6 +110,108 @@ export default function PresentationList() {
     }
   }
 
+  // Helper function to generate pagination items with ellipsis
+  const generatePaginationItems = () => {
+    const totalPages = Math.ceil(total / pageSize) || 1;
+    const items = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is less than or equal to max visible
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink 
+              href="#" 
+              isActive={page === i} 
+              onClick={(e) => {
+                e.preventDefault();
+                setPage(i);
+              }}
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    } else {
+      // Always show first page
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink 
+            href="#" 
+            isActive={page === 1} 
+            onClick={(e) => {
+              e.preventDefault();
+              setPage(1);
+            }}
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      // Show ellipsis and middle pages
+      if (page > 3) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      // Show current page and surrounding pages
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      
+      for (let i = start; i <= end; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink 
+              href="#" 
+              isActive={page === i} 
+              onClick={(e) => {
+                e.preventDefault();
+                setPage(i);
+              }}
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      // Show ellipsis before last page if needed
+      if (page < totalPages - 2) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      // Always show last page if more than one page
+      if (totalPages > 1) {
+        items.push(
+          <PaginationItem key={totalPages}>
+            <PaginationLink 
+              href="#" 
+              isActive={page === totalPages} 
+              onClick={(e) => {
+                e.preventDefault();
+                setPage(totalPages);
+              }}
+            >
+              {totalPages}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    }
+    
+    return items;
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12" data-testid="presentations-loading">
@@ -121,7 +234,7 @@ export default function PresentationList() {
           <p className="text-gray-600 mb-6">{error}</p>
           <Button 
             className="bg-primary hover:bg-primary-600 text-white font-medium px-6 py-2 rounded-full"
-            onClick={loadPresentations}
+            onClick={() => loadPresentations()}
             data-testid="retry-button"
           >
             Try Again
@@ -159,12 +272,42 @@ export default function PresentationList() {
   return (
     <AnimatedContainer>
       <div className="flex justify-between items-center mb-4">
-        <div className="space-x-2">
-          <Button variant={view === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setView('grid')} data-testid="view-grid-button">Grid</Button>
-          <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')} data-testid="view-list-button">List</Button>
+        <div className="space-x-2 flex items-center">
+          <Button
+            variant={view === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('grid')}
+            data-testid="view-grid-button"
+          >
+            Grid
+          </Button>
+          <Button
+            variant={view === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('list')}
+            data-testid="view-list-button"
+          >
+            List
+          </Button>
+          <label className="ml-4 text-sm flex items-center gap-1">
+            <input
+              type="checkbox"
+              onChange={(e) => selectAll(e.target.checked)}
+              checked={selected.size === presentations.length && presentations.length > 0}
+              data-testid="select-all-checkbox"
+            />
+            Select All
+          </label>
         </div>
         {selected.size > 0 && (
-          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} data-testid="delete-selected-button">Delete Selected</Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            data-testid="delete-selected-button"
+          >
+            Delete Selected
+          </Button>
         )}
       </div>
       {view === 'grid' ? (
@@ -278,6 +421,78 @@ export default function PresentationList() {
           </TableBody>
         </Table>
       )}
+      <div className="flex items-center justify-between mt-6">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Status:</label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => {
+                setPage(1)
+                setStatusFilter(e.target.value as any)
+              }}
+              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              data-testid="status-filter-select"
+            >
+              <option value="all">All</option>
+              <option value="finished">Finished</option>
+              <option value="in_progress">In Progress</option>
+            </select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <label htmlFor="page-size" className="text-sm font-medium text-gray-700">Per page:</label>
+            <select
+              id="page-size"
+              value={pageSize}
+              onChange={(e) => {
+                setPage(1)
+                setPageSize(parseInt(e.target.value))
+              }}
+              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              data-testid="page-size-select"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <div className="text-sm text-gray-600">
+            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} presentations
+          </div>
+        </div>
+        
+        {Math.ceil(total / pageSize) > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage(page - 1);
+                  }}
+                  className={page === 1 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+                  data-disabled={page === 1}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < Math.ceil(total / pageSize)) setPage(page + 1);
+                  }}
+                  className={page === Math.ceil(total / pageSize) ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+                  data-disabled={page === Math.ceil(total / pageSize)}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
     </AnimatedContainer>
   )
 }

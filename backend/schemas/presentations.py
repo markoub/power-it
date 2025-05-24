@@ -178,4 +178,9 @@ class TopicUpdateRequest(BaseModel):
     """Request schema for updating presentation topic"""
     topic: str = Field(
         description="The new topic for the presentation"
-    ) 
+    )
+
+class PaginatedPresentationsResponse(BaseModel):
+    """Paginated response for presentations list"""
+    items: List[PresentationResponse] = Field(description="Presentations on the current page")
+    total: int = Field(description="Total number of presentations matching the query")

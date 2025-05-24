@@ -52,16 +52,16 @@ export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPrevie
 
   if (isLoading) {
     return (
-      <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
-        <p className="text-gray-500">Loading PPTX preview...</p>
+      <div className="text-center py-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-100 dark:border-gray-700">
+        <p className="text-gray-500 dark:text-gray-400">Loading PPTX preview...</p>
       </div>
     );
   }
 
   if (images.length === 0) {
     return (
-      <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
-        <p className="text-gray-500">PPTX not generated yet.</p>
+      <div className="text-center py-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-100 dark:border-gray-700">
+        <p className="text-gray-500 dark:text-gray-400">PPTX not generated yet.</p>
       </div>
     );
   }
@@ -86,13 +86,13 @@ export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPrevie
               />
             </AnimatePresence>
             <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
-              <Button variant="outline" size="icon" onClick={prev} disabled={current === 0} className="bg-white/80 backdrop-blur-sm hover:bg-white">
+              <Button variant="outline" size="icon" onClick={prev} disabled={current === 0} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800">
                 <ChevronLeft size={18} />
               </Button>
               <span className="text-sm font-medium">
                 {current + 1} / {images.length}
               </span>
-              <Button variant="outline" size="icon" onClick={next} disabled={current === images.length - 1} className="bg-white/80 backdrop-blur-sm hover:bg-white">
+              <Button variant="outline" size="icon" onClick={next} disabled={current === images.length - 1} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800">
                 <ChevronRight size={18} />
               </Button>
             </div>

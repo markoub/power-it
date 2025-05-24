@@ -79,11 +79,18 @@
   background-image: radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+.dark .pattern-dots {
+  background-image: radial-gradient(rgba(99, 102, 241, 0.3) 1px, transparent 1px);
+}
 
 .pattern-grid {
   background-image: linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
     linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
+}
+.dark .pattern-grid {
+  background-image: linear-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px),
+    linear-gradient(to right, rgba(99, 102, 241, 0.15) 1px, transparent 1px);
 }
 
 .pattern-diagonal {
@@ -95,15 +102,30 @@
     rgba(99, 102, 241, 0.03) 20px
   );
 }
+.dark .pattern-diagonal {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(236, 72, 153, 0.1),
+    rgba(236, 72, 153, 0.1) 10px,
+    rgba(99, 102, 241, 0.1) 10px,
+    rgba(99, 102, 241, 0.1) 20px
+  );
+}
 
 .gradient-bg {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+}
+.dark .gradient-bg {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%);
 }
 
 .glass-effect {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+.dark .glass-effect {
+  background: rgba(30, 41, 59, 0.6);
 }
 
 .slide-card {

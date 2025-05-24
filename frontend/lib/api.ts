@@ -30,7 +30,26 @@ export const api = {
       if (!response.ok) {
         throw new Error(`Failed to fetch presentations: ${response.status}`);
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // Transform the response to match frontend expectations
+      const transformedItems = data.items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        topic: item.topic,
+        author: item.author,
+        thumbnailUrl: item.thumbnail_url ? formatImageUrl(item.thumbnail_url) : undefined,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        slides: [], // Will be populated when individual presentation is loaded
+        researchMethod: "ai" as const,
+        manualResearch: ""
+      }));
+      
+      return {
+        items: transformedItems,
+        total: data.total
+      };
     } catch (error) {
       console.error("Error fetching presentations:", error);
       return { items: [], total: 0 };

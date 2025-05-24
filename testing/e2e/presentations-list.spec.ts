@@ -127,4 +127,17 @@ test.describe('Presentations List Page', () => {
     // Verify we're on the create page
     await expect(page.url()).toContain('/create');
   });
+
+  test('should switch between grid and list views', async ({ page }) => {
+    await goToPresentationsPage(page);
+    await waitForNetworkIdle(page);
+
+    // Switch to list view and expect table
+    await page.getByTestId('view-list-button').click();
+    await expect(page.getByTestId('presentations-table')).toBeVisible();
+
+    // Switch back to grid view and expect grid
+    await page.getByTestId('view-grid-button').click();
+    await expect(page.getByTestId('presentations-grid')).toBeVisible();
+  });
 }); 

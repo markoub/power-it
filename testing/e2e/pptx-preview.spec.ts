@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createPresentation } from "./utils";
+import { createPresentation, goToPresentationsPage, waitForNetworkIdle } from "./utils";
 
 test.setTimeout(120000);
 
@@ -117,6 +117,14 @@ test.describe("PPTX Preview", () => {
         await expect(slideImage).toBeVisible();
 
         console.log('✅ PPTX preview test completed successfully!');
+
+        // Navigate back to presentations list and verify thumbnail uses pptx slide
+        await goToPresentationsPage(page);
+        await waitForNetworkIdle(page);
+        const card = page.getByTestId(`presentation-card-${presentationId}`);
+        const thumb = card.getByTestId('presentation-thumbnail');
+        await expect(thumb).toBeVisible();
+        await expect(thumb).toHaveAttribute('src', /pptx-slides/, { timeout: 10000 });
       } else {
         console.log('⚠️ PPTX button was disabled, skipping PPTX generation');
       }

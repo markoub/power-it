@@ -181,6 +181,7 @@ export const api = {
         manualResearch: responseData.research_content || "",
         slides: slides,
         steps: responseData.steps,
+        thumbnailUrl: responseData.thumbnail_url,
         createdAt: responseData.created_at,
         updatedAt: responseData.updated_at,
       };
@@ -248,6 +249,7 @@ export const api = {
         topic: "",
         manualResearch: "",
         slides: [],
+        thumbnailUrl: responseData.thumbnail_url,
         createdAt: responseData.created_at,
         updatedAt: responseData.updated_at,
       };
@@ -381,9 +383,17 @@ export const api = {
         method: "GET",
         mode: "cors",
       });
+      
+      // If presentation doesn't exist or PPTX isn't ready, return empty array quietly
+      if (resp.status === 404 || resp.status === 500) {
+        console.log(`PPTX slides not available for presentation ${id} (status: ${resp.status})`);
+        return [];
+      }
+      
       if (!resp.ok) {
         throw new Error(`Failed to fetch PPTX slides: ${resp.status}`);
       }
+      
       const data = await resp.json();
       console.log(`PPTX slides response:`, data);
       
@@ -394,15 +404,20 @@ export const api = {
       }
       return [];
     } catch (error) {
-      console.error(`Error fetching PPTX slides for ${id}:`, error);
+      console.warn(`Error fetching PPTX slides for ${id}:`, error);
       return [];
     }
   },
 
   // Get only the first PPTX slide image URL
   async getFirstPptxSlide(id: string): Promise<string | null> {
-    const slides = await this.getPptxSlides(id);
-    return slides.length > 0 ? slides[0] : null;
+    try {
+      const slides = await this.getPptxSlides(id);
+      return slides.length > 0 ? slides[0] : null;
+    } catch (error) {
+      console.warn(`Error fetching first PPTX slide for ${id}:`, error);
+      return null;
+    }
   },
 
   // Delete a presentation

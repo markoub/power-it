@@ -574,6 +574,19 @@ async def execute_pptx_task(presentation_id: int):
                     result=json.dumps(result)
                 )
                 await db.execute(query)
+                
+                # Update presentation with thumbnail URL (first PNG slide)
+                if pptx_result.png_paths and len(pptx_result.png_paths) > 0:
+                    first_png_path = pptx_result.png_paths[0]
+                    filename = os.path.basename(first_png_path)
+                    thumbnail_url = f"/presentations/{presentation_id}/pptx-slides/{filename}"
+                    
+                    update_presentation_query = update(Presentation).where(
+                        Presentation.id == presentation_id
+                    ).values(thumbnail_url=thumbnail_url)
+                    await db.execute(update_presentation_query)
+                    print(f"Updated presentation {presentation_id} with thumbnail URL: {thumbnail_url}")
+                
                 await db.commit()
                 
                 print(f"PPTX generation completed for presentation {presentation_id}")

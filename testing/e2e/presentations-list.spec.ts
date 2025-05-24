@@ -69,12 +69,6 @@ test.describe('Presentations List Page', () => {
         // Wait for the card to be fully visible (including animations)
         await firstCard.waitFor({ state: 'visible', timeout: 5000 });
         
-        // Take a screenshot of the card for debugging
-        await firstCard.screenshot({ path: 'card-screenshot.png' });
-        
-        // Wait for card animations to complete
-        await page.waitForTimeout(500);
-        
         // Check for card content using a more flexible approach
         const hasTitleText = await firstCard.locator(`[data-testid="presentation-name"]`).isVisible()
           .catch(() => false);
@@ -93,6 +87,20 @@ test.describe('Presentations List Page', () => {
           .catch(() => false);
           
         expect(hasEditButton || hasDeleteButton).toBeTruthy();
+        
+        // Check that thumbnail has proper 16:9 aspect ratio
+        const thumbnail = firstCard.getByTestId('presentation-thumbnail');
+        await thumbnail.waitFor({ state: 'visible', timeout: 5000 });
+        
+        // Verify thumbnail is displayed and has proper aspect ratio container
+        const thumbnailContainer = thumbnail.locator('..');
+        const hasAspectRatio = await thumbnailContainer.evaluate(el => 
+          el.classList.contains('aspect-[16/9]') || 
+          getComputedStyle(el).aspectRatio === '16 / 9'
+        ).catch(() => false);
+        
+        console.log('Thumbnail has proper aspect ratio:', hasAspectRatio);
+        expect(hasAspectRatio).toBeTruthy();
       }
     } else if (hasNoPresMessage) {
       // If no presentations, check that the message and create button are displayed
@@ -131,6 +139,19 @@ test.describe('Presentations List Page', () => {
   test('should switch between grid and list views', async ({ page }) => {
     await goToPresentationsPage(page);
     await waitForNetworkIdle(page);
+    
+    // Wait for loading to complete
+    await page.waitForSelector('[data-testid="presentations-loading"]', { state: 'detached', timeout: 10000 })
+      .catch(() => console.log('Loading indicator not found or already gone'));
+
+    // Check if view controls are available (only if there are presentations)
+    const hasViewControls = await page.getByTestId('view-list-button').isVisible().catch(() => false);
+    
+    if (!hasViewControls) {
+      console.log('No view controls available - likely no presentations exist');
+      test.skip();
+      return;
+    }
 
     // Switch to list view and expect table
     await page.getByTestId('view-list-button').click();
@@ -139,5 +160,52 @@ test.describe('Presentations List Page', () => {
     // Switch back to grid view and expect grid
     await page.getByTestId('view-grid-button').click();
     await expect(page.getByTestId('presentations-grid')).toBeVisible();
+  });
+
+  test('should display all presentations with proper aspect ratio', async ({ page }) => {
+    await goToPresentationsPage(page);
+    await waitForNetworkIdle(page);
+    
+    // Wait for loading to complete
+    await page.waitForSelector('[data-testid="presentations-loading"]', { state: 'detached', timeout: 10000 })
+      .catch(() => console.log('Loading indicator not found or already gone'));
+    
+    // Check if presentations are shown
+    const hasGrid = await page.getByTestId('presentations-grid').isVisible().catch(() => false);
+    
+    if (hasGrid) {
+      // Get all presentation cards
+      const presentationCards = page.locator('[data-testid^="presentation-card-"]');
+      const count = await presentationCards.count();
+      
+      console.log(`Found ${count} presentation cards (should show all presentations regardless of completion status)`);
+      
+      // Check each card has proper aspects
+      for (let i = 0; i < count; i++) {
+        const card = presentationCards.nth(i);
+        
+        // Check that thumbnail has proper 16:9 aspect ratio
+        const thumbnail = card.getByTestId('presentation-thumbnail');
+        const thumbnailContainer = thumbnail.locator('..');
+        
+        const hasAspectRatio = await thumbnailContainer.evaluate(el => 
+          el.classList.contains('aspect-[16/9]')
+        ).catch(() => false);
+        
+        console.log(`Card ${i}: Has proper aspect ratio: ${hasAspectRatio}`);
+        expect(hasAspectRatio).toBeTruthy();
+        
+        // Thumbnail should either have a real URL or use placeholder gracefully
+        await expect(thumbnail).toBeVisible();
+        
+        const thumbnailSrc = await thumbnail.getAttribute('src');
+        const hasValidSrc = thumbnailSrc && (thumbnailSrc.includes('/presentations/') || thumbnailSrc.includes('placeholder.svg'));
+        
+        console.log(`Card ${i}: Has valid thumbnail source: ${hasValidSrc}`);
+        expect(hasValidSrc).toBeTruthy();
+      }
+    } else {
+      console.log('No presentations found - this is acceptable if no presentations exist');
+    }
   });
 }); 

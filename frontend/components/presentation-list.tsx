@@ -29,18 +29,17 @@ export default function PresentationList() {
     setIsLoading(true)
     try {
       const fetchedPresentations = await api.getPresentations()
+      
+      // Show all presentations, regardless of whether they have thumbnails
       setPresentations(fetchedPresentations)
 
-      // Load preview images for first PPTX slide
-      const entries = await Promise.all(
-        fetchedPresentations.map(async (p) => {
-          const url = await api.getFirstPptxSlide(p.id.toString())
-          return [p.id.toString(), url] as const
-        })
-      )
+      // Create preview images map from the thumbnail URLs in the API response
+      // If a presentation doesn't have a thumbnail, it will use the placeholder
       const previewMap: Record<string, string> = {}
-      entries.forEach(([id, url]) => {
-        if (url) previewMap[id] = url
+      fetchedPresentations.forEach(p => {
+        if (p.thumbnailUrl) {
+          previewMap[p.id.toString()] = p.thumbnailUrl
+        }
       })
       setPreviewImages(previewMap)
       setError(null)
@@ -202,9 +201,9 @@ export default function PresentationList() {
                 <div className="hidden" data-testid="presentation-id">ID: {presentation.id}</div>
               </CardHeader>
               <CardContent>
-                <div className="h-40 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
+                <div className="w-full aspect-[16/9] bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
                   <img
-                    src={previewImages[presentation.id.toString()] ?? `/placeholder.svg?height=160&width=280&query=colorful presentation slide with abstract shapes`}
+                    src={previewImages[presentation.id.toString()] ?? `/placeholder.svg?height=180&width=320&query=colorful presentation slide with abstract shapes`}
                     alt="Presentation thumbnail"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     data-testid="presentation-thumbnail"
@@ -235,7 +234,7 @@ export default function PresentationList() {
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  onClick={() => handleDelete(presentation.id)}
+                  onClick={() => handleDelete(presentation.id.toString())}
                   data-testid="delete-presentation-button"
                 >
                   <Trash2 size={16} />

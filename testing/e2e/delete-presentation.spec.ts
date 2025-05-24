@@ -11,6 +11,7 @@ test.describe('Delete Presentation', () => {
     await goToPresentationsPage(page);
     await waitForNetworkIdle(page);
 
+    // All presentations should be visible on the homepage now
     const card = page.getByTestId(`presentation-card-${id}`);
     await expect(card).toBeVisible();
 
@@ -32,6 +33,8 @@ test.describe('Delete Presentation', () => {
     await goToPresentationsPage(page);
     await waitForNetworkIdle(page);
 
+    // All presentations should be visible and view controls should be available
+    await expect(page.getByTestId('view-list-button')).toBeVisible();
     await page.getByTestId('view-list-button').click();
 
     const row1 = page.getByTestId(`presentation-row-${id1}`);

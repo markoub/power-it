@@ -178,6 +178,114 @@ The frontend communicates with the backend through the API. The integration work
 - `POST /presentations/{id}/steps/{step_name}/run` - Run a presentation step
 - `PUT /presentations/{id}/steps/{step_name}` - Update step results
 
+## Troubleshooting
+
+### Common Setup Issues
+
+#### Playwright System Dependencies (Linux)
+
+If you encounter an error about missing system libraries when running `make setup` on Linux, such as:
+
+```
+Host system is missing dependencies to run browsers.
+Missing libraries:
+    libgtk-4.so.1
+    libwoff2dec.so.1.0.2
+    libvpx.so.9
+    ...
+```
+
+This is a common issue on Linux systems where Playwright needs additional system dependencies to run browsers.
+
+**Quick Fix:**
+
+1. Run the provided dependency fix script:
+   ```bash
+   ./check_playwright_deps.sh
+   ```
+
+2. Or manually install the dependencies:
+   ```bash
+   cd testing
+   npx playwright install-deps
+   ```
+
+3. Then continue with normal setup:
+   ```bash
+   make setup
+   ```
+
+**Alternative Solutions:**
+
+- Use the Make target: `make install-browser-deps`
+- On Ubuntu/Debian systems, you can also install system dependencies directly:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y libgtk-3-0 libgtk-4-1 libasound2 libxss1 libgconf-2-4 libxtst6 libxrandr2 libnss3 libgbm1
+  ```
+
+#### Python Virtual Environment Issues
+
+If you have issues with Python dependencies:
+
+1. Ensure you're using Python 3.8 or higher:
+   ```bash
+   python3 --version
+   ```
+
+2. Recreate the virtual environment:
+   ```bash
+   cd backend
+   rm -rf venv
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+#### Node.js/NPM Issues
+
+If you encounter Node.js or npm-related errors:
+
+1. Ensure you're using Node.js 16 or higher:
+   ```bash
+   node --version
+   npm --version
+   ```
+
+2. Clear npm cache and reinstall:
+   ```bash
+   cd frontend  # or testing
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+#### Port Already in Use
+
+If you get "port already in use" errors:
+
+1. Check what's using the ports:
+   ```bash
+   lsof -i :3000  # Frontend
+   lsof -i :8000  # Backend
+   ```
+
+2. Kill the processes or use different ports:
+   ```bash
+   kill -9 <PID>
+   ```
+
+#### Database Issues
+
+If you encounter database-related errors:
+
+1. Remove the database file and let it recreate:
+   ```bash
+   rm presentations.db
+   ```
+
+2. The database will be automatically recreated on the next backend startup.
+
 ## Testing
 
 The project uses pytest for testing with a VCR (Virtual Cassette Recorder) pattern to mock API calls to Gemini and OpenAI. This ensures tests are fast, reliable, and don't incur costs from repeated API calls.

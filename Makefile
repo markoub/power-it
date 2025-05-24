@@ -62,6 +62,7 @@ help:
 	@printf "\033[1;32mDevelopment Tools:\033[0m\n"
 	@printf "  \033[1;33mmake install-deps\033[0m        - Install project dependencies\n"
 	@printf "  \033[1;33mmake install-browsers\033[0m    - Install Playwright browsers\n"
+	@printf "  \033[1;33mmake install-browser-deps\033[0m - Install system dependencies for Playwright (Linux only)\n"
 	@printf "\n"
 	@printf "\033[1;32mExamples:\033[0m\n"
 	@printf "  \033[1;33mmake test-backend-offline\033[0m\n"
@@ -232,11 +233,58 @@ install-deps:
 install-browsers:
 	$(call print_info,Installing Playwright browsers...)
 	@if [ -f $(TESTING_DIR)/package.json ]; then \
-		cd $(TESTING_DIR) && npx playwright install; \
+		cd $(TESTING_DIR); \
+		if command -v apt-get >/dev/null 2>&1; then \
+			$(call print_info,Installing system dependencies for Playwright browsers...); \
+			if ! npx playwright install-deps 2>/dev/null; then \
+				$(call print_warn,System dependencies installation failed. Trying with sudo...); \
+				if command -v sudo >/dev/null 2>&1; then \
+					sudo npx playwright install-deps || { \
+						$(call print_warn,Failed to install system dependencies. Some E2E tests may not work.); \
+					}; \
+				else \
+					$(call print_warn,sudo not available. Some E2E tests may not work without system dependencies.); \
+				fi; \
+			fi; \
+		fi; \
+		$(call print_info,Installing Playwright browser binaries...); \
+		npx playwright install; \
 	else \
 		$(call print_warn,Cannot install browsers - testing/package.json missing); \
 	fi
 	$(call print_info,Browsers installation complete.)
+
+# Install system dependencies for Playwright browsers (Linux only)
+install-browser-deps:
+	$(call print_info,Installing system dependencies for Playwright browsers...)
+	@if command -v apt-get >/dev/null 2>&1; then \
+		if [ -f $(TESTING_DIR)/package.json ]; then \
+			cd $(TESTING_DIR); \
+			if ! npx playwright install-deps 2>/dev/null; then \
+				$(call print_warn,System dependencies installation failed. Trying with sudo...); \
+				if command -v sudo >/dev/null 2>&1; then \
+					sudo npx playwright install-deps || { \
+						echo ""; \
+						$(call print_warn,Failed to install system dependencies.); \
+						$(call print_warn,You may need to install them manually:); \
+						echo "  sudo apt-get update"; \
+						echo "  sudo apt-get install -y libgtk-3-0 libgtk-4-1 libasound2 libxss1 libgconf-2-4 libxtst6 libxrandr2 libnss3 libgbm1"; \
+						exit 1; \
+					}; \
+				else \
+					$(call print_warn,sudo not available. Please run with root privileges or install dependencies manually.); \
+					exit 1; \
+				fi; \
+			fi; \
+		else \
+			$(call print_warn,Cannot install browser dependencies - testing/package.json missing); \
+			exit 1; \
+		fi; \
+	else \
+		$(call print_warn,System dependency installation only supported on apt-based Linux distributions); \
+		$(call print_warn,For other systems, please install Playwright dependencies according to your package manager); \
+	fi
+	$(call print_info,System dependencies installation complete.)
 
 # ==========================================
 # Legacy aliases (for backward compatibility)
@@ -249,3 +297,4 @@ e2e-api: test-e2e-api
 e2e-test: test-e2e-specific
 e2e-list: test-e2e-list
 e2e-install: install-browsers
+browser-deps: install-browser-deps

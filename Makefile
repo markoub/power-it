@@ -166,8 +166,8 @@ test-e2e-debug:
 # Run API documentation tests
 test-e2e-api:
 	$(call print_info,Running API documentation tests...)
-	@cd $(TESTING_DIR) && npx playwright test e2e/api-docs.spec.ts
-	$(call print_info,API tests complete.)
+	cd $(TESTING_DIR) && npx playwright test api --config api/playwright.config.ts
+	$(call print_info,API tests complete. See results above.)
 
 # Run specific E2E tests
 test-e2e-specific:
@@ -188,8 +188,8 @@ test-e2e-list:
 # Combined Testing
 # ==========================================
 
-# Run all tests (backend offline + frontend + e2e)
-test-all: test-backend-offline test-frontend test-e2e
+# Run all tests (backend offline + frontend)
+test-all: test-backend-offline test-frontend
 	$(call print_info,All tests complete!)
 
 # Run all tests with network access

@@ -14,6 +14,6 @@ cd backend
 Then execute the tests using the Playwright binary from the `testing` directory:
 
 ```bash
-NODE_PATH=testing/node_modules npx playwright test tests/api
+NODE_PATH=testing/node_modules npx playwright test testing/api
 ```
 

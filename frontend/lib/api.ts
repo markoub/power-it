@@ -399,6 +399,12 @@ export const api = {
     }
   },
 
+  // Get only the first PPTX slide image URL
+  async getFirstPptxSlide(id: string): Promise<string | null> {
+    const slides = await this.getPptxSlides(id);
+    return slides.length > 0 ? slides[0] : null;
+  },
+
   // Delete a presentation
   async deletePresentation(id: string): Promise<boolean> {
     try {

@@ -216,14 +216,14 @@ export default function PresentationList() {
     return (
       <div className="flex justify-center items-center py-12" data-testid="presentations-loading">
         <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-        <span className="ml-2 text-gray-600">Loading presentations...</span>
+        <span className="ml-2 text-gray-600 dark:text-gray-300">Loading presentations...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-12 bg-red-50/50 rounded-xl border border-dashed border-red-200" data-testid="presentations-error">
+      <div className="text-center py-12 bg-red-50/50 dark:bg-red-900/20 rounded-xl border border-dashed border-red-200 dark:border-red-700" data-testid="presentations-error">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -231,7 +231,7 @@ export default function PresentationList() {
           className="max-w-md mx-auto"
         >
           <h2 className="text-xl font-semibold mb-3 text-red-700">Failed to Load Presentations</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
           <Button 
             className="bg-primary hover:bg-primary-600 text-white font-medium px-6 py-2 rounded-full"
             onClick={() => loadPresentations()}
@@ -246,7 +246,7 @@ export default function PresentationList() {
 
   if (presentations.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50/50 rounded-xl border border-dashed border-gray-200" data-testid="no-presentations-message">
+      <div className="text-center py-12 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700" data-testid="no-presentations-message">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -254,8 +254,8 @@ export default function PresentationList() {
           className="max-w-md mx-auto"
         >
           <FilePresentation className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-          <h2 className="text-2xl font-semibold mb-3 text-gray-700">No presentations yet</h2>
-          <p className="text-gray-500 mb-6">Create your first presentation to get started with AI-powered slides</p>
+          <h2 className="text-2xl font-semibold mb-3 text-gray-700 dark:text-gray-200">No presentations yet</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Create your first presentation to get started with AI-powered slides</p>
           <Link href="/create">
             <Button 
               className="bg-primary hover:bg-primary-600 text-white font-medium px-6 py-2 rounded-full transition-all duration-300 shadow-lg hover:shadow-primary-500/25"
@@ -315,7 +315,7 @@ export default function PresentationList() {
           {presentations.map((presentation) => (
             <AnimatedItem key={presentation.id}>
               <Card
-                className="slide-card overflow-hidden border border-gray-100 bg-white/80 backdrop-blur-sm"
+                className="slide-card overflow-hidden border border-gray-100 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
                 data-testid={`presentation-card-${presentation.id}`}
               >
               <CardHeader className="pb-2 relative">
@@ -333,14 +333,14 @@ export default function PresentationList() {
                       AI Research
                     </div>
                   ) : (
-                    <div className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-manual">
+                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-manual">
                       <FileText size={12} />
                       Manual
                     </div>
                   )}
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800" data-testid="presentation-name">{presentation.name}</CardTitle>
-                <p className="text-sm text-gray-500" data-testid="presentation-author">By {presentation.author}</p>
+                <CardTitle className="text-xl font-bold text-gray-800 dark:text-gray-100" data-testid="presentation-name">{presentation.name}</CardTitle>
+                <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="presentation-author">By {presentation.author}</p>
                 <div className="hidden" data-testid="presentation-id">ID: {presentation.id}</div>
               </CardHeader>
               <CardContent>
@@ -355,7 +355,7 @@ export default function PresentationList() {
                     <p className="text-white text-sm font-medium" data-testid="presentation-slide-count">{presentation.slides && presentation.slides.length ? presentation.slides.length : 0} slides</p>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600 dark:text-gray-300">
                   <p data-testid="presentation-created-date">Created: {typeof window !== 'undefined' && presentation.createdAt ? 
                     new Date(presentation.createdAt).toLocaleDateString() : 'N/A'}</p>
                   {presentation.topic && <p className="truncate" data-testid="presentation-topic">Topic: {presentation.topic}</p>}
@@ -424,7 +424,7 @@ export default function PresentationList() {
       <div className="flex items-center justify-between mt-6">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Status:</label>
+            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
             <select
               id="status-filter"
               value={statusFilter}
@@ -441,7 +441,7 @@ export default function PresentationList() {
             </select>
           </div>
           <div className="flex items-center space-x-2">
-            <label htmlFor="page-size" className="text-sm font-medium text-gray-700">Per page:</label>
+            <label htmlFor="page-size" className="text-sm font-medium text-gray-700 dark:text-gray-300">Per page:</label>
             <select
               id="page-size"
               value={pageSize}
@@ -458,7 +458,7 @@ export default function PresentationList() {
               <option value={100}>100</option>
             </select>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
             Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} presentations
           </div>
         </div>

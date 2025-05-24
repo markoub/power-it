@@ -630,7 +630,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         <div className="min-h-screen flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <div className="h-10 w-10 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
-            <p className="text-gray-600">Loading presentation...</p>
+            <p className="text-gray-600 dark:text-gray-300">Loading presentation...</p>
           </div>
         </div>
       }
@@ -639,14 +639,14 @@ export default function EditPage({ params }: { params: { id: string } }) {
         <div className="min-h-screen flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
-            <p className="text-gray-600">Loading presentation...</p>
+            <p className="text-gray-600 dark:text-gray-300">Loading presentation...</p>
           </div>
         </div>
       ) : error ? (
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center p-8 bg-red-50 rounded-xl border border-red-200 max-w-md">
+          <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700 max-w-md">
             <h2 className="text-xl font-semibold text-red-600 mb-4">{error}</h2>
-            <p className="text-gray-600 mb-6">Redirecting to home page...</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">Redirecting to home page...</p>
             <Link href="/">
               <Button className="bg-primary hover:bg-primary-600 text-white">
                 Go to Home
@@ -656,11 +656,11 @@ export default function EditPage({ params }: { params: { id: string } }) {
         </div>
       ) : !presentation ? (
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center p-8 bg-red-50 rounded-xl border border-red-200 max-w-md">
+          <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700 max-w-md">
             <h2 className="text-xl font-semibold text-red-600 mb-4">
               Presentation not found
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               Unable to load the requested presentation.
             </p>
             <Link href="/">
@@ -675,7 +675,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
           <PatternBackground pattern="grid" />
 
           <div className="container mx-auto p-4">
-            <header className="flex justify-between items-center mb-6 bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-gray-100">
+            <header className="flex justify-between items-center mb-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-4">
                 <Link href="/">
                   <Button
@@ -750,7 +750,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
               {/* Main Content Area */}
               <div className="lg:col-span-3">
-                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                   {currentStep === 0 && (
                     <ResearchStep
                       presentation={presentation}

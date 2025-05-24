@@ -25,7 +25,7 @@ export default function HomePage() {
           </AnimatedItem>
 
           <AnimatedItem>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
               Create stunning presentations with the power of AI. Transform your ideas into professional slides in
               minutes.
             </p>
@@ -46,15 +46,15 @@ export default function HomePage() {
 
         <div className="relative">
           <PatternBackground pattern="dots" className="rounded-3xl" />
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 animate-fade-in" data-testid="presentations-container">
+          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 animate-fade-in" data-testid="presentations-container">
             <div className="flex items-center gap-3 mb-6">
               <Presentation className="h-6 w-6 text-primary-500" />
-              <h2 className="text-2xl font-bold text-gray-800" data-testid="presentations-section-title">Your Presentations</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100" data-testid="presentations-section-title">Your Presentations</h2>
             </div>
             <ClientWrapper fallback={
               <div className="flex justify-center items-center py-12" data-testid="presentations-loading-fallback">
                 <div className="h-8 w-8 rounded-full border-2 border-primary-500 border-t-transparent animate-spin"></div>
-                <span className="ml-2 text-gray-600">Loading presentations...</span>
+                <span className="ml-2 text-gray-600 dark:text-gray-300">Loading presentations...</span>
               </div>
             }>
               <PresentationList />

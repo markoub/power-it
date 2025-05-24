@@ -113,13 +113,13 @@ export default function CreatePage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <GradientHeading className="mb-6" data-testid="page-title">Create New Presentation</GradientHeading>
 
-            <Card className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm border border-gray-100 shadow-xl">
+            <Card className="max-w-2xl mx-auto bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-100 dark:border-gray-700 shadow-xl">
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <PlusCircle className="h-6 w-6 text-primary-500" />
                   Presentation Details
                 </CardTitle>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-300">
                   Get started by giving your presentation a name and adding your details.
                   You'll choose your research method on the next step.
                 </p>
@@ -128,7 +128,7 @@ export default function CreatePage() {
                 <form onSubmit={handleSubmit} className="space-y-6" data-testid="create-presentation-form">
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="title" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Presentation Title *
                       </Label>
                       <Input
@@ -144,7 +144,7 @@ export default function CreatePage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="author" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="author" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Author *
                       </Label>
                       <Input
@@ -165,10 +165,10 @@ export default function CreatePage() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                        className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg"
                         data-testid="error-message"
                       >
-                        <p className="text-red-600 text-sm">{error}</p>
+                        <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
                       </motion.div>
                     )}
                   </div>

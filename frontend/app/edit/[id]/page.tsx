@@ -20,10 +20,15 @@ import { api } from "@/lib/api";
 import { v4 as uuidv4 } from "uuid";
 import ClientWrapper from "@/components/client-wrapper";
 import { use } from "react";
+import React from "react";
 
 export default function EditPage({ params }: { params: { id: string } }) {
   // Properly unwrap params to get the id
-  const unwrappedParams = use(params);
+  const unwrappedParams = React.use(params);
+  
+  // Development flag for verbose logging - set to false to reduce console spam
+  const VERBOSE_LOGGING = process.env.NODE_ENV === 'development' && false;
+  
   const router = useRouter();
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
@@ -37,6 +42,17 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const steps = ["Research", "Slides", "Illustration", "Compiled", "PPTX"];
   const stepApiNames = ["research", "slides", "images", "compiled", "pptx"];
 
+  // Helper for structured logging
+  const logInfo = (message: string, data?: any) => {
+    if (VERBOSE_LOGGING) {
+      console.log(`[PowerIT] ${message}`, data || '');
+    }
+  };
+
+  const logError = (message: string, error?: any) => {
+    console.error(`[PowerIT Error] ${message}`, error || '');
+  };
+
   useEffect(() => {
     // Load presentation from API
     fetchPresentation();
@@ -46,32 +62,90 @@ export default function EditPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!presentation) return;
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const updatedPresentation = await api.getPresentation(unwrappedParams.id);
-        if (updatedPresentation) {
-          // Only update if there are actual changes to steps
-          const hasStepChanges = updatedPresentation.steps?.some((newStep, index) => {
-            const currentStep = presentation.steps?.[index];
-            return !currentStep || currentStep.status !== newStep.status || 
-                   JSON.stringify(currentStep.result) !== JSON.stringify(newStep.result);
-          });
+    // Use adaptive polling - faster when things are processing, slower when stable
+    const getCurrentPollingInterval = () => {
+      if (!presentation.steps) return 5000; // Default 5 seconds if no steps
+      
+      const hasRunningSteps = presentation.steps.some(step => step.status === "running");
+      const hasPendingSteps = presentation.steps.some(step => step.status === "pending");
+      
+      if (hasRunningSteps) return 2000; // 2 seconds when processing
+      if (hasPendingSteps) return 3000; // 3 seconds when pending
+      return 10000; // 10 seconds when everything is stable
+    };
 
-          if (hasStepChanges) {
-            console.log('🔄 Presentation data updated from polling');
-            setPresentation(updatedPresentation);
-            
-            // Update current step if needed
-            const newCurrentStep = determineCurrentStep(updatedPresentation);
-            if (newCurrentStep !== currentStep) {
-              setCurrentStep(newCurrentStep);
+    let pollInterval: NodeJS.Timeout;
+    let consecutiveUnchangedPolls = 0;
+    const MAX_UNCHANGED_POLLS = 3;
+
+    const startPolling = () => {
+      const intervalMs = getCurrentPollingInterval();
+      
+      pollInterval = setInterval(async () => {
+        try {
+          const updatedPresentation = await api.getPresentation(unwrappedParams.id);
+          if (updatedPresentation) {
+            // Only update if there are actual changes to steps
+            const hasStepChanges = updatedPresentation.steps?.some((newStep, index) => {
+              const currentStep = presentation.steps?.[index];
+              return !currentStep || 
+                     currentStep.status !== newStep.status || 
+                     JSON.stringify(currentStep.result) !== JSON.stringify(newStep.result);
+            });
+
+            if (hasStepChanges) {
+              logInfo('🔄 Presentation data updated from polling');
+              setPresentation(updatedPresentation);
+              
+              // Update current step if needed
+              const newCurrentStep = determineCurrentStep(updatedPresentation);
+              if (newCurrentStep !== currentStep) {
+                setCurrentStep(newCurrentStep);
+              }
+              
+              // Reset consecutive unchanged counter
+              consecutiveUnchangedPolls = 0;
+              
+              // Restart polling with new interval based on updated state
+              clearInterval(pollInterval);
+              startPolling();
+            } else {
+              consecutiveUnchangedPolls++;
+              
+              // If we've had several polls with no changes and nothing is running,
+              // slow down polling significantly
+              if (consecutiveUnchangedPolls >= MAX_UNCHANGED_POLLS) {
+                const hasActiveProcessing = updatedPresentation.steps?.some(
+                  step => step.status === "running" || step.status === "pending"
+                );
+                if (!hasActiveProcessing) {
+                  clearInterval(pollInterval);
+                  // Switch to very slow polling for completed presentations
+                  pollInterval = setInterval(async () => {
+                    // Just check once every 30 seconds for completed presentations
+                    try {
+                      const check = await api.getPresentation(unwrappedParams.id);
+                      if (check && JSON.stringify(check) !== JSON.stringify(updatedPresentation)) {
+                        setPresentation(check);
+                        consecutiveUnchangedPolls = 0;
+                        clearInterval(pollInterval);
+                        startPolling(); // Resume normal polling if something changed
+                      }
+                                         } catch (error) {
+                       logError('Error in slow polling:', error);
+                     }
+                  }, 30000);
+                }
+              }
             }
           }
+        } catch (error) {
+          logError('Error polling presentation updates:', error);
         }
-      } catch (error) {
-        console.error('Error polling presentation updates:', error);
-      }
-    }, 1000); // Poll every 1 second for faster UI updates
+      }, intervalMs);
+    };
+
+    startPolling();
 
     return () => clearInterval(pollInterval);
   }, [presentation, currentStep, unwrappedParams.id]);
@@ -81,7 +155,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     try {
       const updatedPresentation = await api.getPresentation(unwrappedParams.id);
       if (updatedPresentation) {
-        console.log('🔄 Presentation data manually refreshed');
+        logInfo('🔄 Presentation data manually refreshed');
         setPresentation(updatedPresentation);
         
         // Update current step
@@ -91,7 +165,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         return updatedPresentation;
       }
     } catch (error) {
-      console.error('Error manually refreshing presentation:', error);
+      logError('Error manually refreshing presentation:', error);
     }
     return null;
   };
@@ -146,7 +220,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         setTimeout(() => router.push("/"), 3000);
       }
     } catch (err) {
-      console.error("Error fetching presentation:", err);
+      logError("Error fetching presentation:", err);
       setError("Failed to load presentation");
     } finally {
       setIsLoading(false);
@@ -175,7 +249,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         throw new Error("Failed to update presentation");
       }
     } catch (error) {
-      console.error("Error saving presentation:", error);
+      logError("Error saving presentation:", error);
       toast({
         title: "Error",
         description: "Failed to save changes. Please try again.",
@@ -303,7 +377,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         action: <ToastAction altText="OK">OK</ToastAction>,
       });
     } catch (error) {
-      console.error("Error during PPTX export:", error);
+      logError("Error during PPTX export:", error);
       toast({
         title: "Export Error",
         description:
@@ -361,8 +435,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const step = presentation.steps.find((s) => s.step === stepName);
 
     // Debug logging to understand what's happening
-    if (stepIndex === 0) { // Research step
-      console.log(`🔍 Checking step completion for ${stepName} (index ${stepIndex}):`, {
+    if (stepIndex === 0 && VERBOSE_LOGGING) { // Research step
+      logInfo(`🔍 Checking step completion for ${stepName} (index ${stepIndex}):`, {
         availableSteps: presentation.steps.map(s => ({ step: s.step, status: s.status })),
         foundStep: step ? { step: step.step, status: step.status } : null,
         isCompleted: step?.status === "completed"
@@ -397,7 +471,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (!presentation?.steps) return [];
     
     const completed = stepApiNames.map((name, index) => isStepCompleted(index));
-    console.log('🔄 Completed steps array updated:', completed.map((isCompleted, index) => ({
+    logInfo('🔄 Completed steps array updated:', completed.map((isCompleted, index) => ({
       step: stepApiNames[index],
       completed: isCompleted
     })));
@@ -410,7 +484,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (!presentation?.steps) return [];
     
     const pending = stepApiNames.map((name, index) => isStepPending(index));
-    console.log('🔄 Pending steps array updated:', pending.map((isPending, index) => ({
+    logInfo('🔄 Pending steps array updated:', pending.map((isPending, index) => ({
       step: stepApiNames[index],
       pending: isPending
     })));
@@ -423,7 +497,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (!presentation?.steps) return [];
     
     const processing = stepApiNames.map((name, index) => isStepProcessing(index));
-    console.log('🔄 Processing steps array updated:', processing.map((isProcessing, index) => ({
+    logInfo('🔄 Processing steps array updated:', processing.map((isProcessing, index) => ({
       step: stepApiNames[index],
       processing: isProcessing
     })));
@@ -479,7 +553,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
         throw new Error("Failed to start the next step");
       }
     } catch (error) {
-      console.error("Error continuing to next step:", error);
+      logError("Error continuing to next step:", error);
       toast({
         title: "Error",
         description: "Failed to continue to the next step. Please try again.",
@@ -507,8 +581,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
   // Handle direct step navigation
   const handleStepChange = (stepIndex: number) => {
-    console.log(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}`);
-    console.log(`🔍 Step completion status:`, {
+    logInfo(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}`);
+    logInfo(`🔍 Step completion status:`, {
       completedSteps: completedSteps,
       isStepCompleted: (index: number) => isStepCompleted(index),
       targetStepCompleted: isStepCompleted(stepIndex),
@@ -520,20 +594,20 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
     // Allow navigation to completed steps
     if (isStepCompleted(stepIndex)) {
-      console.log(`✅ Navigating to completed step ${stepIndex}`);
+      logInfo(`✅ Navigating to completed step ${stepIndex}`);
       setCurrentStep(stepIndex);
       return;
     }
 
     // Allow navigation to the first uncompleted step (next step after completed ones)
     if (stepIndex > 0 && isStepCompleted(stepIndex - 1)) {
-      console.log(`✅ Navigating to next step ${stepIndex} after completed step ${stepIndex - 1}`);
+      logInfo(`✅ Navigating to next step ${stepIndex} after completed step ${stepIndex - 1}`);
       setCurrentStep(stepIndex);
       return;
     }
 
     // Otherwise, show error message
-    console.log(`❌ Step ${stepIndex} navigation blocked`);
+    logInfo(`❌ Step ${stepIndex} navigation blocked`);
     toast({
       title: "Step unavailable",
       description: "You need to complete previous steps first.",

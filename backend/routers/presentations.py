@@ -612,7 +612,7 @@ async def modify_presentation_endpoint(
             if not research_step or research_step.status != StepStatus.COMPLETED.value:
                 return JSONResponse(
                     status_code=400,
-                    content={"detail": "Research step not completed"},
+                    content={"detail": "Research step not completed. Cannot modify presentation before research is done."},
                 )
             
             # Get the data from the current step if provided, otherwise fallback to default logic
@@ -658,10 +658,17 @@ async def modify_presentation_endpoint(
                 if not slides_step or slides_step.status != StepStatus.COMPLETED.value:
                     return JSONResponse(
                         status_code=400,
-                        content={"detail": "Neither compiled nor slides step is completed"},
+                        content={"detail": "Neither compiled nor slides step is completed. Cannot modify presentation before slides are generated."},
                     )
                 
                 compiled_data = slides_step.get_result()
+            
+            # Additional validation to ensure compiled_data contains slides
+            if not compiled_data or not isinstance(compiled_data, dict) or "slides" not in compiled_data or not compiled_data["slides"]:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "No slide data available for modification. Please generate slides first."},
+                )
             
             # Get the research data for context
             research_data = research_step.get_result()
@@ -669,28 +676,10 @@ async def modify_presentation_endpoint(
             # Validate slide_index if provided
             if slide_index is not None:
                 # Check if slide index exists in the compiled data
-                if compiled_data and "slides" in compiled_data and len(compiled_data["slides"]) <= slide_index:
-                    # Try to get from slides step if compiled step doesn't have enough slides
-                    slides_step_result = await db.execute(
-                        select(PresentationStepModel).filter(
-                            PresentationStepModel.presentation_id == presentation_id,
-                            PresentationStepModel.step == PresentationStep.SLIDES.value
-                        )
-                    )
-                    slides_step = slides_step_result.scalars().first()
-                    
-                    if slides_step and slides_step.status == StepStatus.COMPLETED.value:
-                        slides_data = slides_step.get_result()
-                        
-                        # Use the slides data if it has enough slides
-                        if "slides" in slides_data and slide_index < len(slides_data["slides"]):
-                            compiled_data = slides_data
-                
-                # Final validation after potentially switching to slides data
                 if slide_index < 0 or slide_index >= len(compiled_data.get("slides", [])):
                     return JSONResponse(
                         status_code=400,
-                        content={"detail": f"Invalid slide index: {slide_index}"},
+                        content={"detail": f"Invalid slide index: {slide_index}. Available slides: 0-{len(compiled_data.get('slides', [])) - 1}"},
                     )
                 
                 # Log the request details for debugging
@@ -970,4 +959,72 @@ async def options_presentation_image(presentation_id: int, filename: str):
             "Access-Control-Allow-Headers": "Content-Type, Accept"
         }
     )
+
+@router.put("/{presentation_id}",
+           summary="Update presentation metadata",
+           description="Updates basic presentation metadata like name, author, topic")
+async def update_presentation_metadata(
+    presentation_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update basic presentation metadata without triggering AI modification.
+    This is for updating fields like name, author, topic, research method, etc.
+    """
+    try:
+        data = await request.json()
+        
+        # Get the presentation
+        result = await db.execute(
+            select(Presentation).filter(
+                (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+            )
+        )
+        presentation = result.scalar_one_or_none()
+        
+        if not presentation:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Presentation not found"},
+            )
+        
+        # Update allowed metadata fields
+        if "name" in data:
+            presentation.name = data["name"]
+        if "author" in data:
+            presentation.author = data["author"]
+        if "topic" in data:
+            presentation.topic = data["topic"]
+        if "researchMethod" in data:
+            # Map frontend research method to backend research type
+            if data["researchMethod"] == "ai":
+                presentation.research_type = "ai"
+            elif data["researchMethod"] == "manual":
+                presentation.research_type = "manual"
+        
+        await db.commit()
+        await db.refresh(presentation)
+        
+        # Return the updated presentation in the expected format
+        return {
+            "id": presentation.id,
+            "name": presentation.name,
+            "author": presentation.author,
+            "topic": presentation.topic,
+            "research_type": presentation.research_type,
+            "created_at": presentation.created_at.isoformat() if presentation.created_at else None,
+            "updated_at": presentation.updated_at.isoformat() if presentation.updated_at else None,
+        }
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error updating presentation metadata: {str(e)}")
+        print(f"Traceback: {error_details}")
+        
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error updating presentation metadata: {str(e)}"},
+        )
 

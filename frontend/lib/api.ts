@@ -264,8 +264,9 @@ export const api = {
     presentation: Partial<Presentation>
   ): Promise<Presentation | null> {
     try {
-      const response = await fetch(`${API_URL}/presentations/${id}/modify`, {
-        method: "POST",
+      // Use the metadata endpoint for basic presentation updates
+      const response = await fetch(`${API_URL}/presentations/${id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -277,7 +278,22 @@ export const api = {
         throw new Error(`Failed to update presentation: ${response.status}`);
       }
 
-      return await response.json();
+      const updatedData = await response.json();
+      
+      // Convert backend format to frontend format
+      return {
+        id: updatedData.id.toString(),
+        name: updatedData.name,
+        author: updatedData.author || "",
+        topic: updatedData.topic || "",
+        researchMethod: updatedData.research_type === "manual" ? "manual" : "ai",
+        manualResearch: "",
+        slides: presentation.slides || [],
+        steps: presentation.steps || [],
+        thumbnailUrl: presentation.thumbnailUrl || "",
+        createdAt: updatedData.created_at || "",
+        updatedAt: updatedData.updated_at || "",
+      };
     } catch (error) {
       console.error(`Error updating presentation ${id}:`, error);
       return null;

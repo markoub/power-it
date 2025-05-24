@@ -22,6 +22,7 @@ export default function WizardMessage({ role, content }: WizardMessageProps) {
         className={`rounded-lg p-3 max-w-[85%] ${
           isAssistant ? "bg-primary-50 text-gray-800" : "bg-gray-100 text-gray-800 ml-auto"
         }`}
+        data-testid={`wizard-message-${role}`}
       >
         <div className="whitespace-pre-wrap">{content}</div>
       </div>

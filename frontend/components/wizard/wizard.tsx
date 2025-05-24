@@ -60,22 +60,48 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
       let response = ""
       let suggestedChanges = null as any
 
+      // Only allow slide modifications if we're on the slides step and have slides data
       if (context === "single" && currentSlide && step === "Slides") {
-        const slideIndex = presentation.slides.findIndex(s => s.id === currentSlide.id)
-        const apiResp = await api.modifyPresentation(presentation.id, input, slideIndex, "slides")
-        const mod = apiResp.modified_slide
-        response = "Here are some improvements for the slide.";
-        if (mod && mod.fields) {
-          suggestedChanges = {
-            slide: {
-              ...currentSlide,
-              title: mod.fields.title || currentSlide.title,
-              content: Array.isArray(mod.fields.content) ? mod.fields.content.join("\n") : (mod.fields.content || currentSlide.content)
+        // Check if slides are actually available before attempting modification
+        const hasSlidesData = presentation.slides && presentation.slides.length > 0;
+        const slidesStep = presentation.steps?.find(s => s.step === "slides");
+        const isSlidesCompleted = slidesStep?.status === "completed";
+        
+        if (!hasSlidesData || !isSlidesCompleted) {
+          response = "I can't modify slides yet because they haven't been generated. Please generate slides first by going to the Slides step.";
+        } else {
+          const slideIndex = presentation.slides.findIndex(s => s.id === currentSlide.id);
+          
+          if (slideIndex === -1) {
+            response = "I couldn't find the selected slide. Please try selecting a different slide.";
+          } else {
+            try {
+              const apiResp = await api.modifyPresentation(presentation.id, input, slideIndex, "slides");
+              const mod = apiResp.modified_slide;
+              response = "Here are some improvements for the slide.";
+              if (mod && mod.fields) {
+                suggestedChanges = {
+                  slide: {
+                    ...currentSlide,
+                    title: mod.fields.title || currentSlide.title,
+                    content: Array.isArray(mod.fields.content) ? mod.fields.content.join("\n") : (mod.fields.content || currentSlide.content)
+                  }
+                };
+              }
+            } catch (error) {
+              console.error("Error modifying slide:", error);
+              response = "I encountered an error while trying to modify the slide. This might be because the presentation data isn't ready yet. Please try again after ensuring all previous steps are completed.";
             }
           }
         }
+      } else if (step === "Research") {
+        response = "I can help you with research questions, but I can't modify presentation content until you've generated slides. Please complete the research step and generate slides first.";
+      } else if (step === "Illustrations") {
+        response = "I can help with image suggestions, but slide content modification is only available in the Slides step.";
+      } else if (step === "PPTX") {
+        response = "The presentation is being finalized. If you need to make changes, please go back to the Slides step.";
       } else {
-        response = "Wizard support for this step is coming soon.";
+        response = "Wizard support for this step is coming soon. For now, you can use the step-specific controls above.";
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: response }])
@@ -221,6 +247,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask the AI wizard for help..."
             className="min-h-[60px] resize-none"
+            data-testid="wizard-input"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault()
@@ -233,6 +260,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             size="icon"
             onClick={sendMessage}
             disabled={isLoading || !input.trim()}
+            data-testid="wizard-send-button"
           >
             <Send size={18} />
           </Button>

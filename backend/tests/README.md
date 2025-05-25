@@ -142,6 +142,13 @@ To run all tests using pre-recorded fixtures:
 ./run_tests.sh
 ```
 
+### Offline Mode
+
+By default the test runner sets `POWERIT_OFFLINE=1` so all external
+calls to Gemini and OpenAI are mocked. If you want to run tests with
+real network access, unset this variable and enable the appropriate
+`*_VCR_MODE=record` flags.
+
 To run a specific test:
 
 ```bash

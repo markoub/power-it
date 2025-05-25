@@ -345,7 +345,7 @@ async def execute_images_task(presentation_id: int):
                 )
                 error_step = error_step_result.scalars().first()
                 if error_step:
-                    error_step.status = StepStatus.ERROR.value
+                    error_step.status = StepStatus.FAILED.value
                     error_step.error_message = str(e)
                     await error_db.commit()
             
@@ -458,7 +458,7 @@ async def execute_compiled_task(presentation_id: int):
                 )
                 error_step = error_step_result.scalars().first()
                 if error_step:
-                    error_step.status = StepStatus.ERROR.value
+                    error_step.status = StepStatus.FAILED.value
                     error_step.error_message = str(e)
                     await error_db.commit()
             
@@ -603,7 +603,7 @@ async def execute_pptx_task(presentation_id: int):
                 (PresentationStepModel.presentation_id == presentation_id) &
                 (PresentationStepModel.step == PresentationStep.PPTX.value)
             ).values(
-                status=StepStatus.ERROR.value,
+                status=StepStatus.FAILED.value,
                 error_message=str(e)
             )
             await db.execute(query)

@@ -11,7 +11,7 @@ import os
 from config import MODIFY_MODEL, MODIFY_CONFIG
 from utils import extract_json_from_text
 import google.generativeai as genai
-from models import CompiledPresentation, CompiledSlide
+from models import CompiledPresentation, CompiledSlide, ResearchData
 
 # Offline mode check
 OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
@@ -276,7 +276,54 @@ async def modify_presentation(
         print(f"Successfully modified presentation with prompt: {prompt}")
         # Convert to Pydantic model and return
         return CompiledPresentation(**modified_data)
-        
+
     except Exception as e:
         print(f"Error in modify_presentation: {str(e)}")
-        raise e 
+        raise e
+
+
+async def modify_research(
+    research_data: Dict[str, Any],
+    prompt: str
+) -> ResearchData:
+    """Modify research content based on user instructions."""
+
+    if OFFLINE_MODE:
+        modified_content = research_data.get("content", "") + f"\n\nOffline modification: {prompt}"
+        return ResearchData(content=modified_content, links=research_data.get("links", []))
+
+    model = genai.GenerativeModel(
+        model_name=MODIFY_MODEL,
+        generation_config=MODIFY_CONFIG
+    )
+
+    try:
+        research_json = json.dumps(research_data, indent=2)
+        input_prompt = f"""
+        # Current Research Content
+        ```json
+        {research_json}
+        ```
+
+        # User Instructions
+        {prompt}
+
+        Update the research according to the instructions and return only JSON with 'content' and 'links'.
+        """
+
+        response = await model.generate_content_async(
+            contents=[
+                {"role": "user", "parts": [{"text": "You improve existing research for presentations."}]},
+                {"role": "user", "parts": [{"text": input_prompt}]},
+            ]
+        )
+
+        text_response = response.text
+        json_str = extract_json_from_text(text_response)
+        modified = json.loads(json_str)
+
+        return ResearchData(**modified)
+
+    except Exception as e:
+        print(f"Error in modify_research: {str(e)}")
+        raise e

@@ -23,6 +23,7 @@ export default function WizardSuggestion({
   const [showPreview, setShowPreview] = useState(false)
   const isSingleSlide = context === "single" && suggestion.slide
   const isAllSlides = context === "all" && suggestion.slides
+  const isResearch = !!suggestion.research
 
   const hasChanges = () => {
     if (isSingleSlide && currentSlide) {
@@ -157,6 +158,15 @@ export default function WizardSuggestion({
                   ...and {suggestion.slides.length - 5} more slides
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {isResearch && (
+          <div>
+            <p className="text-gray-700 mb-2 font-medium">Updated Research:</p>
+            <div className="bg-gray-50 rounded p-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {suggestion.research.content}
             </div>
           </div>
         )}

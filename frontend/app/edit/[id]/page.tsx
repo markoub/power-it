@@ -415,6 +415,16 @@ export default function EditPage({ params }: { params: { id: string } }) {
           ...changes.presentation,
         });
       }
+      if (changes.research) {
+        const updatedSteps = presentation.steps?.map(s =>
+          s.step === "research" || s.step === "manual_research"
+            ? { ...s, result: changes.research, status: "completed" }
+            : s
+        ) || [];
+
+        setPresentation({ ...presentation, steps: updatedSteps });
+        await api.saveModifiedResearch(presentation.id, changes.research);
+      }
     }
 
     await savePresentation();

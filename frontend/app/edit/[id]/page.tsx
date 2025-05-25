@@ -31,7 +31,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const unwrappedParams = React.use(params);
   
   // Development flag for verbose logging - set to false to reduce console spam
-  const VERBOSE_LOGGING = process.env.NODE_ENV === 'development' && false;
+  const VERBOSE_LOGGING = process.env.NODE_ENV === 'development' && true;
   
   const router = useRouter();
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -42,6 +42,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [wizardContext, setWizardContext] = useState<"all" | "single">("all");
   const [isProcessingStep, setIsProcessingStep] = useState(false);
+  const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
 
   // Helper for structured logging
   const logInfo = (message: string, data?: any) => {
@@ -67,10 +68,10 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const getCurrentPollingInterval = () => {
       if (!presentation.steps) return 5000; // Default 5 seconds if no steps
       
-      const hasRunningSteps = presentation.steps.some(step => step.status === "running");
+      const hasProcessingSteps = presentation.steps.some(step => step.status === "processing");
       const hasPendingSteps = presentation.steps.some(step => step.status === "pending");
       
-      if (hasRunningSteps) return 2000; // 2 seconds when processing
+      if (hasProcessingSteps) return 2000; // 2 seconds when processing
       if (hasPendingSteps) return 3000; // 3 seconds when pending
       return 10000; // 10 seconds when everything is stable
     };
@@ -98,10 +99,15 @@ export default function EditPage({ params }: { params: { id: string } }) {
               logInfo('🔄 Presentation data updated from polling');
               setPresentation(updatedPresentation);
               
-              // Update current step if needed
-              const newCurrentStep = determineCurrentStep(updatedPresentation);
-              if (newCurrentStep !== currentStep) {
-                setCurrentStep(newCurrentStep);
+              // Only update current step automatically if user hasn't manually navigated
+              if (!hasManuallyNavigated) {
+                const newCurrentStep = determineCurrentStep(updatedPresentation);
+                if (newCurrentStep !== currentStep) {
+                  logInfo(`🔄 Polling: Auto-updating current step from ${currentStep} to ${newCurrentStep}`);
+                  setCurrentStep(newCurrentStep);
+                }
+              } else {
+                logInfo(`🚫 Polling: Skipping auto step update because user manually navigated (hasManuallyNavigated=${hasManuallyNavigated})`);
               }
               
               // Reset consecutive unchanged counter
@@ -117,7 +123,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
               // slow down polling significantly
               if (consecutiveUnchangedPolls >= MAX_UNCHANGED_POLLS) {
                 const hasActiveProcessing = updatedPresentation.steps?.some(
-                  step => step.status === "running" || step.status === "pending"
+                  step => step.status === "processing" || step.status === "pending"
                 );
                 if (!hasActiveProcessing) {
                   clearInterval(pollInterval);
@@ -159,9 +165,11 @@ export default function EditPage({ params }: { params: { id: string } }) {
         logInfo('🔄 Presentation data manually refreshed');
         setPresentation(updatedPresentation);
         
-        // Update current step
-        const newCurrentStep = determineCurrentStep(updatedPresentation);
-        setCurrentStep(newCurrentStep);
+        // Only update current step automatically if user hasn't manually navigated
+        if (!hasManuallyNavigated) {
+          const newCurrentStep = determineCurrentStep(updatedPresentation);
+          setCurrentStep(newCurrentStep);
+        }
         
         return updatedPresentation;
       }
@@ -208,6 +216,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
         // Determine the current step based on completion status
         const newCurrentStep = determineCurrentStep(fetchedPresentation);
         setCurrentStep(newCurrentStep);
+        // Reset manual navigation flag on initial load
+        setHasManuallyNavigated(false);
 
         if (
           fetchedPresentation.slides &&
@@ -486,7 +496,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const stepName = STEP_API_NAMES[stepIndex];
     const step = presentation.steps.find((s) => s.step === stepName);
 
-    return step?.status === "running";
+    return step?.status === "processing";
   };
 
   // Memoize the completed steps array to ensure React detects changes
@@ -526,6 +536,29 @@ export default function EditPage({ params }: { params: { id: string } }) {
     })));
     
     return processing;
+  }, [presentation?.steps]);
+
+  // Check if a step has failed
+  const isStepFailed = (stepIndex: number) => {
+    if (!presentation || !presentation.steps) return false;
+
+    const stepName = STEP_API_NAMES[stepIndex];
+    const step = presentation.steps.find((s) => s.step === stepName);
+
+    return step?.status === "failed";
+  };
+
+  // Memoize the failed steps array
+  const failedSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const failed = STEP_API_NAMES.map((name, index) => isStepFailed(index));
+    logInfo('🔄 Failed steps array updated:', failed.map((isFailed, index) => ({
+      step: STEP_API_NAMES[index],
+      failed: isFailed
+    })));
+    
+    return failed;
   }, [presentation?.steps]);
 
   // Continue to next step function
@@ -604,7 +637,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
   // Handle direct step navigation
   const handleStepChange = (stepIndex: number) => {
-    logInfo(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}`);
+    logInfo(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}, hasManuallyNavigated: ${hasManuallyNavigated}`);
     logInfo(`🔍 Step completion status:`, {
       completedSteps: completedSteps,
       isStepCompleted: (index: number) => isStepCompleted(index),
@@ -619,6 +652,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (isStepCompleted(stepIndex)) {
       logInfo(`✅ Navigating to completed step ${stepIndex}`);
       setCurrentStep(stepIndex);
+      setHasManuallyNavigated(true);
       return;
     }
 
@@ -626,6 +660,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     if (stepIndex > 0 && isStepCompleted(stepIndex - 1)) {
       logInfo(`✅ Navigating to next step ${stepIndex} after completed step ${stepIndex - 1}`);
       setCurrentStep(stepIndex);
+      setHasManuallyNavigated(true);
       return;
     }
 
@@ -636,6 +671,48 @@ export default function EditPage({ params }: { params: { id: string } }) {
       description: "You need to complete previous steps first.",
       variant: "destructive",
     });
+  };
+
+  // Handle rerunning a step
+  const handleRerunStep = async (stepIndex: number) => {
+    if (!presentation) return;
+
+    try {
+      setIsProcessingStep(true);
+      
+      const stepName = STEP_API_NAMES[stepIndex];
+      logInfo(`🔄 Rerunning step: ${stepName} (index: ${stepIndex})`);
+
+      // Call the API to rerun the step
+      const result = await api.runPresentationStep(
+        typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id,
+        stepName,
+      );
+
+      if (result) {
+        toast({
+          title: "Step rerun initiated",
+          description: `${STEPS[stepIndex]} is being regenerated...`,
+        });
+
+        // Wait a bit for the step to be processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // Refresh the presentation to get updated step status
+        await fetchPresentation();
+      } else {
+        throw new Error("Failed to rerun the step");
+      }
+    } catch (error) {
+      logError("Error rerunning step:", error);
+      toast({
+        title: "Error",
+        description: `Failed to rerun ${STEPS[stepIndex]}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingStep(false);
+    }
   };
 
   // Expose debugging info to window for tests
@@ -757,6 +834,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
               completedSteps={completedSteps}
               pendingSteps={pendingSteps}
               processSteps={processSteps}
+              failedSteps={failedSteps}
+              presentationId={presentation.id}
+              onRerunStep={handleRerunStep}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">

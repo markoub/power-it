@@ -1,8 +1,9 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react"
+import { CheckCircle2, ArrowRight, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import RerunButton from "@/components/ui/rerun-button"
 
 interface WorkflowStepsProps {
   steps: string[]
@@ -13,6 +14,9 @@ interface WorkflowStepsProps {
   completedSteps?: boolean[] // Array of booleans indicating which steps are completed
   pendingSteps?: boolean[] // Array of booleans indicating which steps are pending
   processSteps?: boolean[] // Array of booleans indicating which steps are processing
+  failedSteps?: boolean[] // Array of booleans indicating which steps have failed
+  presentationId?: string | number // Add presentation ID for rerun functionality
+  onRerunStep?: (stepIndex: number) => Promise<void> // Callback for rerunning steps
 }
 
 export default function WorkflowSteps({ 
@@ -23,8 +27,17 @@ export default function WorkflowSteps({
   isProcessing = false,
   completedSteps = [],
   pendingSteps = [],
-  processSteps = []
+  processSteps = [],
+  failedSteps = [],
+  presentationId,
+  onRerunStep
 }: WorkflowStepsProps) {
+  
+  // Map step index to API step name
+  const getStepApiName = (index: number): string => {
+    const stepApiNames = ["research", "slides", "images", "compiled", "pptx"];
+    return stepApiNames[index] || "unknown";
+  }
   
   // Function to check if a step is enabled for navigation
   const isStepEnabled = (index: number) => {
@@ -36,7 +49,7 @@ export default function WorkflowSteps({
       // Allow any completed step
       if (index < completedSteps.length && completedSteps[index]) return true;
       
-      // Allow next step after a completed step
+      // Allow next step after a completed step (this is the "available" step)
       if (index > 0 && index - 1 < completedSteps.length && completedSteps[index - 1]) return true;
     } else {
       // Fallback to basic navigation: only allow current or previous steps,
@@ -74,6 +87,31 @@ export default function WorkflowSteps({
     return false;
   }
 
+  // Check if a step has failed (red)
+  const isStepFailed = (index: number) => {
+    if (failedSteps && failedSteps.length > index) {
+      return failedSteps[index];
+    }
+    return false;
+  }
+
+  // Check if a step is the next available step (blue)
+  const isStepAvailable = (index: number) => {
+    // A step is available if it's not completed, not processing, not failed, 
+    // and the previous step is completed
+    if (isStepCompleted(index) || isStepProcessing(index) || isStepFailed(index)) {
+      return false;
+    }
+    
+    // First step is available if it's pending
+    if (index === 0) {
+      return isStepPending(index);
+    }
+    
+    // Other steps are available if the previous step is completed
+    return index > 0 && isStepCompleted(index - 1) && isStepPending(index);
+  }
+
   // Check if any step is currently processing (to hide arrows)
   const hasAnyProcessingStep = processSteps && processSteps.some(isProcessing => isProcessing);
   
@@ -109,16 +147,62 @@ export default function WorkflowSteps({
   // The step after which we should show the continue button
   const continueButtonStep = findLastActionableCompletedStep();
 
+  // Get step styling based on status
+  const getStepStyling = (index: number) => {
+    if (isStepCompleted(index)) {
+      return index === currentStep
+        ? "bg-green-500 text-white ring-4 ring-green-100" // Completed + current
+        : "bg-green-500 text-white"; // Just completed (green)
+    } else if (isStepProcessing(index)) {
+      return "bg-yellow-500 text-white"; // Processing: yellow with spinner
+    } else if (isStepFailed(index)) {
+      return "bg-red-500 text-white"; // Failed: red
+    } else if (isStepAvailable(index)) {
+      return "bg-blue-500 text-white"; // Available: blue
+    } else if (isStepPending(index)) {
+      return "bg-gray-300 text-gray-600"; // Pending: grey
+    } else if (index === currentStep) {
+      return "bg-blue-500 text-white ring-4 ring-blue-100"; // Current step (blue)
+    } else if (isStepEnabled(index)) {
+      return "bg-gray-100 text-gray-400 hover:bg-gray-200"; // Enabled
+    } else {
+      return "bg-gray-100 text-gray-300 cursor-not-allowed opacity-60"; // Disabled
+    }
+  };
+
+  // Get step text color
+  const getStepTextColor = (index: number) => {
+    if (index === currentStep) return "text-blue-600";
+    if (isStepCompleted(index)) return "text-green-600";
+    if (isStepProcessing(index)) return "text-yellow-600";
+    if (isStepFailed(index)) return "text-red-600";
+    if (isStepAvailable(index)) return "text-blue-600";
+    if (isStepPending(index)) return "text-gray-400";
+    return "text-gray-500";
+  };
+
   return (
-    <div className="w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4">
-      <div className="flex justify-between items-center">
+    <div className="w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="relative flex justify-between items-center">
         {steps.map((step, index) => (
-          <div key={step} className="flex flex-col items-center relative group">
-            {/* Connector line between this step and next */}
-            {index < steps.length - 1 && !hasAnyProcessingStep && (
-              <div className="absolute top-4 left-[50%] w-full h-[2px] bg-gray-200 z-0">
+          <div key={step} className="flex flex-col items-center relative group flex-1">
+            {/* Full-width dotted connector line between this step and next */}
+            {index < steps.length - 1 && (
+              <div className="absolute top-4 left-1/2 w-full h-[2px] z-0">
+                {/* Base dotted line */}
+                <div 
+                  className="h-full w-full border-t-2 border-dotted border-gray-300"
+                  style={{ 
+                    borderImage: 'repeating-linear-gradient(to right, #d1d5db 0, #d1d5db 8px, transparent 8px, transparent 16px) 1'
+                  }}
+                />
+                
+                {/* Progress overlay */}
                 <motion.div
-                  className="h-full bg-primary-500"
+                  className="absolute top-0 left-0 h-full border-t-2 border-dotted border-green-500"
+                  style={{ 
+                    borderImage: 'repeating-linear-gradient(to right, #10b981 0, #10b981 8px, transparent 8px, transparent 16px) 1'
+                  }}
                   initial={{ width: "0%" }}
                   animate={{ width: isStepCompleted(index) ? "100%" : "0%" }}
                   transition={{ duration: 0.5 }}
@@ -130,7 +214,7 @@ export default function WorkflowSteps({
                     <Button
                       onClick={onContinue}
                       disabled={isProcessing}
-                      className="w-8 h-8 p-0 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg"
+                      className="w-8 h-8 p-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
                       size="icon"
                       title="Continue to next step"
                       data-testid="continue-button"
@@ -151,27 +235,15 @@ export default function WorkflowSteps({
               onClick={() => handleStepClick(index)}
               disabled={!isStepEnabled(index)}
               data-testid={`step-nav-${step.toLowerCase()}`}
-              className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
-                isStepCompleted(index)
-                  ? index === currentStep
-                    ? "bg-primary-500 text-white ring-4 ring-primary-100" // Completed + current
-                    : "bg-primary-500 text-white" // Just completed
-                  : isStepProcessing(index)
-                    ? "bg-yellow-500 text-white"  // Processing: yellow with spinner
-                    : index === currentStep
-                      ? "bg-primary-500 text-white ring-4 ring-primary-100" // Current step
-                      : isStepEnabled(index)
-                        ? isStepPending(index)
-                          ? "bg-gray-200 text-gray-600 hover:bg-gray-300" // Enabled but pending
-                          : "bg-gray-100 text-gray-400 hover:bg-gray-200" // Enabled and not pending
-                        : "bg-gray-100 text-gray-300 cursor-not-allowed opacity-60" // Disabled
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${getStepStyling(index)}`}
               title={!isStepEnabled(index) ? "Complete previous steps first" : ""}
             >
               {isStepCompleted(index) ? (
-                <CheckCircle2 size={16} data-lucide="check-circle-2" />
+                <CheckCircle2 size={18} data-lucide="check-circle-2" />
               ) : isStepProcessing(index) ? (
-                <Loader2 size={16} className="animate-spin" data-lucide="loader-2" />
+                <Loader2 size={18} className="animate-spin" data-lucide="loader-2" />
+              ) : isStepFailed(index) ? (
+                <AlertCircle size={18} data-lucide="alert-circle" />
               ) : (
                 index + 1
               )}
@@ -179,16 +251,25 @@ export default function WorkflowSteps({
 
             {/* Step label */}
             <span
-              className={`mt-2 text-sm font-medium ${
-                index === currentStep ? "text-primary-600" : 
-                isStepCompleted(index) ? "text-primary-500" : 
-                isStepProcessing(index) ? "text-yellow-600" :  // Processing: yellow text
-                isStepPending(index) ? "text-gray-400" :       // Pending: grey text
-                "text-gray-500"
-              } whitespace-nowrap`}
+              className={`mt-3 text-sm font-medium ${getStepTextColor(index)} whitespace-nowrap`}
             >
               {step}
             </span>
+
+            {/* Rerun button for completed steps */}
+            {isStepCompleted(index) && presentationId && onRerunStep && (
+              <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <RerunButton
+                  presentationId={presentationId}
+                  stepName={getStepApiName(index)}
+                  stepDisplayName={step}
+                  onRerunComplete={() => onRerunStep(index)}
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs px-2 py-1 h-6"
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -18,7 +18,7 @@ from tools import (
     generate_pptx_from_slides, 
     convert_pptx_to_png
 )
-from tools.images import _generate_image_for_slide
+from tools.images import _generate_image_for_slide, image_executor
 from config import PRESENTATIONS_STORAGE_DIR, OFFLINE_MODE
 
 # Background task functions

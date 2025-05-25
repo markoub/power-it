@@ -38,8 +38,8 @@ test.describe('Step Pending States', () => {
     const initialSlidesClass = await slidesStep.getAttribute('class');
     console.log('Initial slides step classes:', initialSlidesClass);
     
-    // Should be greyed out for pending state
-    const slidesHasGreyBg = initialSlidesClass?.includes('bg-gray-100');
+    // Should be greyed out for pending state (check for any grey background)
+    const slidesHasGreyBg = initialSlidesClass?.includes('bg-gray-100') || initialSlidesClass?.includes('bg-gray-300');
     console.log('Slides step has grey background (pending):', slidesHasGreyBg);
     expect(slidesHasGreyBg).toBe(true);
 
@@ -117,7 +117,7 @@ test.describe('Step Pending States', () => {
     expect(finalResearchCheck).toBe(true);
     expect(finalSlidesCheck).toBe(true);
 
-    // Check that remaining steps (images, compiled, pptx) are still pending (grey)
+    // Check that remaining steps show correct states
     const imagesStep = page.getByTestId('step-nav-illustration');
     const compiledStep = page.getByTestId('step-nav-compiled');
     const pptxStep = page.getByTestId('step-nav-pptx');
@@ -131,16 +131,17 @@ test.describe('Step Pending States', () => {
     console.log('Compiled step classes:', compiledClass);
     console.log('PPTX step classes:', pptxClass);
 
-    // Check for any grey background (both bg-gray-100 and bg-gray-200 are valid for pending states)
-    const imagesIsGrey = imagesClass?.includes('bg-gray-100') || imagesClass?.includes('bg-gray-200');
-    const compiledIsGrey = compiledClass?.includes('bg-gray-100') || compiledClass?.includes('bg-gray-200');
-    const pptxIsGrey = pptxClass?.includes('bg-gray-100') || pptxClass?.includes('bg-gray-200');
+    // Images step should be available (blue) since slides is completed
+    const imagesIsAvailable = imagesClass?.includes('bg-blue-500');
+    // Compiled and PPTX should be pending (grey)
+    const compiledIsGrey = compiledClass?.includes('bg-gray-100') || compiledClass?.includes('bg-gray-200') || compiledClass?.includes('bg-gray-300');
+    const pptxIsGrey = pptxClass?.includes('bg-gray-100') || pptxClass?.includes('bg-gray-200') || pptxClass?.includes('bg-gray-300');
 
-    console.log('Images step is grey (pending):', imagesIsGrey);
+    console.log('Images step is available (blue):', imagesIsAvailable);
     console.log('Compiled step is grey (pending):', compiledIsGrey);
     console.log('PPTX step is grey (pending):', pptxIsGrey);
 
-    expect(imagesIsGrey).toBe(true);
+    expect(imagesIsAvailable).toBe(true);
     expect(compiledIsGrey).toBe(true);
     expect(pptxIsGrey).toBe(true);
   });

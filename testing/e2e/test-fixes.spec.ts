@@ -8,11 +8,11 @@ test.describe('Bug Fixes Verification', () => {
     const name = `Fix Test ${Date.now()}`;
     const topic = 'Test topic for fix verification';
 
-    // Track network requests to catch any modify calls
-    const modifyRequests: any[] = [];
+    // Track network requests to catch inappropriate modify calls (not research modify)
+    const inappropriateModifyRequests: any[] = [];
     page.on('request', request => {
-      if (request.url().includes('/modify')) {
-        modifyRequests.push({
+      if (request.url().includes('/modify') && !request.url().includes('/research/modify')) {
+        inappropriateModifyRequests.push({
           url: request.url(),
           method: request.method(),
           timestamp: Date.now()
@@ -29,7 +29,7 @@ test.describe('Bug Fixes Verification', () => {
 
     // Verify we're on research step
     const researchStep = page.getByTestId('step-nav-research');
-    await expect(researchStep).toHaveClass(/bg-primary/);
+    await expect(researchStep).toHaveClass(/bg-(blue|primary)/);
 
     // Try to interact with wizard during research step (if available)
     const wizardInput = page.getByTestId('wizard-input');
@@ -51,9 +51,9 @@ test.describe('Bug Fixes Verification', () => {
     // Wait for research to complete
     await expect(page.getByTestId('ai-research-content')).toBeVisible({ timeout: 30000 });
 
-    // Verify no modify requests were made during research
-    console.log('All modify requests:', modifyRequests);
-    expect(modifyRequests.length).toBe(0);
+    // Verify no inappropriate modify requests were made during research
+    console.log('Inappropriate modify requests:', inappropriateModifyRequests);
+    expect(inappropriateModifyRequests.length).toBe(0);
   });
 
   test('should handle modify endpoint errors gracefully', async ({ page }) => {

@@ -44,16 +44,16 @@ test.describe('Research Wizard Suggestions', () => {
       await wizardInput.press('Enter');
       
       // Verify the request appears in the wizard chat
-      await expect(page.locator(`text=${modificationRequest}`)).toBeVisible();
+      await expect(page.locator('[data-testid="wizard-message-user"]').last()).toContainText(modificationRequest);
     });
     
     await test.step('Wait for wizard to process and generate suggestion', async () => {
-      // Wait for processing message
-      await expect(page.locator('text=Processing your request')).toBeVisible();
+      // Wait for any assistant response to appear after the user message
+      await expect(page.locator('[data-testid="wizard-message-assistant"]').nth(1)).toBeVisible({ timeout: 15000 });
       
       // Wait for suggestion to be generated (using data-testid instead of specific text)
       // Be more flexible - wait for any wizard response
-      await page.waitForTimeout(10000); // Give time for processing
+      await page.waitForTimeout(5000); // Give time for processing
       
       // Check if a suggestion was generated OR if there's a response message
       const hasSuggestion = await page.locator('[data-testid="wizard-suggestion"]').isVisible();

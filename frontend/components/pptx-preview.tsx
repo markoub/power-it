@@ -18,6 +18,7 @@ export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPrevie
   const [images, setImages] = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSlideDetails, setShowSlideDetails] = useState(false);
 
   useEffect(() => {
     async function fetchSlides() {
@@ -97,6 +98,34 @@ export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPrevie
               </Button>
             </div>
           </div>
+          
+          {/* Slide Details Section - appears when thumbnail is clicked */}
+          {showSlideDetails && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="slide-details bg-white rounded-xl shadow-lg p-6 border border-gray-200"
+            >
+              <h3 className="text-lg font-semibold mb-4">Slide {current + 1} Details</h3>
+              <div className="aspect-video bg-gray-50 rounded-lg overflow-hidden">
+                <img 
+                  src={images[current]} 
+                  alt={`Slide ${current + 1} detail view`}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowSlideDetails(false)}
+                >
+                  Close Details
+                </Button>
+              </div>
+            </motion.div>
+          )}
+          
           <div className="overflow-x-auto pb-4">
             <div className="flex gap-4">
               {images.map((img, index) => (
@@ -104,7 +133,10 @@ export default function PptxPreview({ presentation, onSlidesLoaded }: PptxPrevie
                   key={index}
                   data-testid={`pptx-thumb-${index}`}
                   className={`flex-shrink-0 w-40 cursor-pointer transition-all ${index === current ? "ring-2 ring-primary-500 scale-105" : "opacity-70 hover:opacity-100"}`}
-                  onClick={() => setCurrent(index)}
+                  onClick={() => {
+                    setCurrent(index);
+                    setShowSlideDetails(true);
+                  }}
                 >
                   <CardContent className="p-2">
                     <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden">

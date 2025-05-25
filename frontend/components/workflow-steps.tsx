@@ -182,97 +182,103 @@ export default function WorkflowSteps({
   };
 
   return (
-    <div className="w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6">
-      <div className="relative flex justify-between items-center">
-        {steps.map((step, index) => (
-          <div key={step} className="flex flex-col items-center relative group flex-1">
-            {/* Full-width dotted connector line between this step and next */}
-            {index < steps.length - 1 && (
-              <div className="absolute top-4 left-1/2 w-full h-[2px] z-0">
-                {/* Base dotted line */}
-                <div 
-                  className="h-full w-full border-t-2 border-dotted border-gray-300"
-                  style={{ 
-                    borderImage: 'repeating-linear-gradient(to right, #d1d5db 0, #d1d5db 8px, transparent 8px, transparent 16px) 1'
-                  }}
-                />
-                
-                {/* Progress overlay */}
-                <motion.div
-                  className="absolute top-0 left-0 h-full border-t-2 border-dotted border-green-500"
-                  style={{ 
-                    borderImage: 'repeating-linear-gradient(to right, #10b981 0, #10b981 8px, transparent 8px, transparent 16px) 1'
-                  }}
-                  initial={{ width: "0%" }}
-                  animate={{ width: isStepCompleted(index) ? "100%" : "0%" }}
-                  transition={{ duration: 0.5 }}
-                />
-                
-                {/* Continue button - show if this is the last completed step before a non-completed step */}
-                {onContinue && index === continueButtonStep && (
-                  <div className="absolute top-[-16px] right-0 transform translate-x-[50%] z-20">
-                    <Button
-                      onClick={onContinue}
-                      disabled={isProcessing}
-                      className="w-8 h-8 p-0 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
-                      size="icon"
-                      title="Continue to next step"
-                      data-testid="continue-button"
-                    >
-                      {isProcessing ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <ArrowRight size={14} />
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step circle */}
-            <button
-              onClick={() => handleStepClick(index)}
-              disabled={!isStepEnabled(index)}
-              data-testid={`step-nav-${step.toLowerCase()}`}
-              className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${getStepStyling(index)}`}
-              title={!isStepEnabled(index) ? "Complete previous steps first" : ""}
-            >
-              {isStepCompleted(index) ? (
-                <CheckCircle2 size={18} data-lucide="check-circle-2" />
-              ) : isStepProcessing(index) ? (
-                <Loader2 size={18} className="animate-spin" data-lucide="loader-2" />
-              ) : isStepFailed(index) ? (
-                <AlertCircle size={18} data-lucide="alert-circle" />
-              ) : (
-                index + 1
+    <>
+      <div className="w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="relative flex justify-between items-start">
+          {steps.map((step, index) => (
+            <div key={step} className="flex flex-col items-center relative group flex-1">
+              {/* Full-width dotted connector line between this step and next */}
+              {index < steps.length - 1 && (
+                <div className="absolute top-4 left-1/2 w-full h-[2px] z-0">
+                  {/* Base dotted line */}
+                  <div 
+                    className="h-full w-full border-t-2 border-dotted border-gray-300"
+                    style={{ 
+                      borderImage: 'repeating-linear-gradient(to right, #d1d5db 0, #d1d5db 8px, transparent 8px, transparent 16px) 1'
+                    }}
+                  />
+                  
+                  {/* Progress overlay */}
+                  <motion.div
+                    className="absolute top-0 left-0 h-full border-t-2 border-dotted border-green-500"
+                    style={{ 
+                      borderImage: 'repeating-linear-gradient(to right, #10b981 0, #10b981 8px, transparent 8px, transparent 16px) 1'
+                    }}
+                    initial={{ width: "0%" }}
+                    animate={{ width: isStepCompleted(index) ? "100%" : "0%" }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
               )}
-            </button>
 
-            {/* Step label */}
-            <span
-              className={`mt-3 text-sm font-medium ${getStepTextColor(index)} whitespace-nowrap`}
-            >
-              {step}
-            </span>
+              {/* Step circle */}
+              <button
+                onClick={() => handleStepClick(index)}
+                disabled={!isStepEnabled(index)}
+                data-testid={`step-nav-${step.toLowerCase()}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${getStepStyling(index)}`}
+                title={!isStepEnabled(index) ? "Complete previous steps first" : ""}
+              >
+                {isStepCompleted(index) ? (
+                  <CheckCircle2 size={18} data-lucide="check-circle-2" />
+                ) : isStepProcessing(index) ? (
+                  <Loader2 size={18} className="animate-spin" data-lucide="loader-2" />
+                ) : isStepFailed(index) ? (
+                  <AlertCircle size={18} data-lucide="alert-circle" />
+                ) : (
+                  index + 1
+                )}
+              </button>
 
-            {/* Rerun button for completed steps */}
-            {isStepCompleted(index) && presentationId && onRerunStep && (
-              <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <RerunButton
-                  presentationId={presentationId}
-                  stepName={getStepApiName(index)}
-                  stepDisplayName={step}
-                  onRerunComplete={() => onRerunStep(index)}
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs px-2 py-1 h-6"
-                />
-              </div>
-            )}
-          </div>
-        ))}
+              {/* Step label */}
+              <span
+                className={`mt-3 text-sm font-medium ${getStepTextColor(index)} whitespace-nowrap`}
+              >
+                {step}
+              </span>
+
+              {/* Rerun button for completed steps */}
+              {isStepCompleted(index) && presentationId && onRerunStep && (
+                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <RerunButton
+                    presentationId={presentationId}
+                    stepName={getStepApiName(index)}
+                    stepDisplayName={step}
+                    onRerunComplete={() => onRerunStep(index)}
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs px-2 py-1 h-6"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      
+      {/* Continue button - completely separate from the workflow steps container */}
+      {onContinue && continueButtonStep >= 0 && (
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={onContinue}
+            disabled={isProcessing}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg shadow-lg flex items-center gap-2"
+            data-testid="continue-button"
+          >
+            {isProcessing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Processing...
+              </>
+            ) : (
+              <>
+                Continue to Next Step
+                <ArrowRight size={16} />
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </>
   )
 }

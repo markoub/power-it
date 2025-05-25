@@ -20,7 +20,9 @@ interface CompiledStepProps {
 // Slide type detection logic (matching SlideRenderer)
 const detectSlideType = (slide: Slide): string => {
   const title = typeof slide.title === 'string' ? slide.title.toLowerCase() : '';
-  const content = typeof slide.content === 'string' ? slide.content.toLowerCase() : '';
+  const contentForDetection = Array.isArray(slide.content) 
+    ? slide.content.join(' ').toLowerCase() 
+    : (typeof slide.content === 'string' ? slide.content.toLowerCase() : '');
   
   if (title.includes("welcome") || title.includes("introduction") || title.match(/^\s*presentation|overview/i)) {
     return "Welcome";
@@ -30,21 +32,21 @@ const detectSlideType = (slide: Slide): string => {
     return "TableOfContents";
   }
   
-  if (title.match(/^\s*section|part|chapter/i) || (title.length < 20 && content.length < 20)) {
+  if (title.match(/^\s*section|part|chapter/i) || (title.length < 20 && contentForDetection.length < 20)) {
     return "Section";
   }
   
   if (slide.imageUrl) {
-    if (content.length < 100) {
+    if (contentForDetection.length < 100) {
       return "ImageFull";
     }
     
-    if (content.match(/image\s*1.*image\s*2.*image\s*3/i) || 
-        content.match(/figure\s*1.*figure\s*2.*figure\s*3/i)) {
+    if (contentForDetection.match(/image\s*1.*image\s*2.*image\s*3/i) || 
+        contentForDetection.match(/figure\s*1.*figure\s*2.*figure\s*3/i)) {
       return "3Images";
     }
     
-    if (content.match(/logo|brand|company|partner/i)) {
+    if (contentForDetection.match(/logo|brand|company|partner/i)) {
       return "ContentWithLogos";
     }
     

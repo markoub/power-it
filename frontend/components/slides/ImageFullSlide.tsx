@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { SlideProps } from "./SlideBase"
+import MarkdownRenderer from "@/components/ui/markdown-renderer"
 
 export default function ImageFullSlide({ slide, mini = false }: SlideProps) {
   // Ensure we always have valid strings for title and content
@@ -18,8 +19,8 @@ export default function ImageFullSlide({ slide, mini = false }: SlideProps) {
     : "text-3xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent"
 
   const explanationClass = mini
-    ? "text-[8px] line-clamp-2 mt-1"
-    : "text-sm mt-3 bg-white/80 backdrop-blur-sm p-3 rounded-md shadow-sm"
+    ? "mt-1"
+    : "mt-3 bg-white/80 backdrop-blur-sm p-3 rounded-md shadow-sm"
 
   return (
     <div className={`w-full h-full flex flex-col ${mini ? "p-1" : "p-4"}`}>
@@ -40,14 +41,19 @@ export default function ImageFullSlide({ slide, mini = false }: SlideProps) {
           )}
         </div>
         
-        {safeSlide.content && (
+        {safeSlide.content.trim() && (
           <motion.div
             initial={mini ? {} : { opacity: 0, y: 10 }}
             animate={mini ? {} : { opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
             className={explanationClass}
           >
-            {mini ? safeSlide.content.substring(0, 50) : safeSlide.content}
+            <MarkdownRenderer 
+              content={safeSlide.content}
+              mini={mini}
+              animated={!mini}
+              className={mini ? "line-clamp-2 prose-xs" : "prose-sm"}
+            />
           </motion.div>
         )}
       </div>

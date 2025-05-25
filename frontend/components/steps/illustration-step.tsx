@@ -43,9 +43,12 @@ export default function IllustrationStep({
     }
   }, [currentSlide, onContextChange])
 
-  const generateImagePrompt = (slide: Slide) => {
-    // In a real app, this might use AI to generate a better prompt
-    return `Illustration for presentation slide about: ${slide.title}. ${slide.content.substring(0, 100)}`
+  const generatePromptForSlide = (slide: Slide) => {
+    const contentForPrompt = Array.isArray(slide.content) 
+      ? slide.content.join(' ') 
+      : (typeof slide.content === 'string' ? slide.content : '');
+    
+    return `Illustration for presentation slide about: ${slide.title}. ${contentForPrompt.substring(0, 100)}`
   }
 
   const generateImage = async (slide: Slide) => {
@@ -54,7 +57,7 @@ export default function IllustrationStep({
 
     try {
       // Generate a prompt if one doesn't exist
-      const imagePrompt = slide.imagePrompt || generateImagePrompt(slide)
+      const imagePrompt = slide.imagePrompt || generatePromptForSlide(slide)
 
       // Update the slide with the prompt first
       updateSlide({
@@ -222,7 +225,7 @@ export default function IllustrationStep({
     if (index === -1) return;
     setIsGenerating(true);
     setGeneratingSlideId(slide.id);
-    const prompt = slide.imagePrompt || generateImagePrompt(slide);
+    const prompt = slide.imagePrompt || generatePromptForSlide(slide);
 
     try {
       const data = await api.regenerateImage(presentation.id, index, prompt);

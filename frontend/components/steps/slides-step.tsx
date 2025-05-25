@@ -29,7 +29,9 @@ interface SlidesStepProps {
 // Slide type detection logic (matching SlideRenderer)
 const detectSlideType = (slide: Slide): string => {
   const title = typeof slide.title === 'string' ? slide.title.toLowerCase() : '';
-  const content = typeof slide.content === 'string' ? slide.content.toLowerCase() : '';
+  const contentForDetection = Array.isArray(slide.content) 
+    ? slide.content.join(' ').toLowerCase() 
+    : (typeof slide.content === 'string' ? slide.content.toLowerCase() : '');
   
   if (title.includes("welcome") || title.includes("introduction") || title.match(/^\s*presentation|overview/i)) {
     return "Welcome";
@@ -39,21 +41,21 @@ const detectSlideType = (slide: Slide): string => {
     return "TableOfContents";
   }
   
-  if (title.match(/^\s*section|part|chapter/i) || (title.length < 20 && content.length < 20)) {
+  if (title.match(/^\s*section|part|chapter/i) || (title.length < 20 && contentForDetection.length < 20)) {
     return "Section";
   }
   
   if (slide.imageUrl) {
-    if (content.length < 100) {
+    if (contentForDetection.length < 100) {
       return "ImageFull";
     }
     
-    if (content.match(/image\s*1.*image\s*2.*image\s*3/i) || 
-        content.match(/figure\s*1.*figure\s*2.*figure\s*3/i)) {
+    if (contentForDetection.match(/image\s*1.*image\s*2.*image\s*3/i) || 
+        contentForDetection.match(/figure\s*1.*figure\s*2.*figure\s*3/i)) {
       return "3Images";
     }
     
-    if (content.match(/logo|brand|company|partner/i)) {
+    if (contentForDetection.match(/logo|brand|company|partner/i)) {
       return "ContentWithLogos";
     }
     
@@ -404,28 +406,40 @@ export default function SlidesStep({
                         
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">
-                            Slide Content
+                            Slide Content (Markdown supported)
                           </label>
                           <Textarea
                             value={
-                              typeof currentSlide.content === "string"
-                                ? currentSlide.content
-                                : ""
+                              Array.isArray(currentSlide.content)
+                                ? currentSlide.content.join('\n')
+                                : (typeof currentSlide.content === "string" ? currentSlide.content : "")
                             }
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const newContent = e.target.value;
                               updateSlide({
                                 ...currentSlide,
-                                content: e.target.value,
+                                content: newContent, // Keep as string for user editing
                                 fields: {
                                   ...currentSlide.fields,
-                                  content: e.target.value,
+                                  content: newContent,
                                 },
                               })
-                            }
-                            placeholder="Enter slide content"
+                            }}
+                            placeholder="Enter slide content using Markdown:
+
+# Heading
+## Subheading
+- Bullet point
+**Bold text**
+*Italic text*
+
+Or let each line become a bullet point automatically!"
                             rows={12}
-                            className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                            className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
                           />
+                          <p className="text-xs text-gray-500">
+                            You can use Markdown formatting (headings, lists, bold, italic, etc.) or just type lines of text that will automatically become bullet points.
+                          </p>
                         </div>
 
                         {/* Live Preview in Edit Mode */}

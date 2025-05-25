@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { SlideProps } from "./SlideBase"
+import MarkdownRenderer from "@/components/ui/markdown-renderer"
 
 export default function ThreeImagesSlide({ slide, mini = false }: SlideProps) {
   // Ensure we always have valid strings for title and content
@@ -30,6 +31,9 @@ export default function ThreeImagesSlide({ slide, mini = false }: SlideProps) {
     image2: contentLines.length > 1 ? contentLines[1] : "Image 2",
     image3: contentLines.length > 2 ? contentLines[2] : "Image 3",
   };
+  
+  // Get additional content after the image subtitles for markdown rendering
+  const additionalContent = contentLines.length > 3 ? contentLines.slice(3).join("\n") : "";
   
   // Assumption: The image URLs would be stored in some specific way
   // Since the current slide type doesn't account for multiple images directly,
@@ -125,14 +129,19 @@ export default function ThreeImagesSlide({ slide, mini = false }: SlideProps) {
       </div>
       
       {/* Additional content if any */}
-      {contentLines.length > 3 && !mini && (
+      {additionalContent && !mini && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.4 }}
-          className="mt-4 text-sm text-gray-700"
+          className="mt-4"
         >
-          {contentLines.slice(3).join("\n")}
+          <MarkdownRenderer 
+            content={additionalContent}
+            mini={mini}
+            animated={!mini}
+            className="prose-sm"
+          />
         </motion.div>
       )}
     </div>

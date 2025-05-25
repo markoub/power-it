@@ -23,6 +23,7 @@ export default function WizardSuggestion({
   const [showPreview, setShowPreview] = useState(false)
   const isSingleSlide = context === "single" && suggestion.slide
   const isAllSlides = context === "all" && suggestion.slides
+  const isPresentationLevel = suggestion.presentation
 
   const hasChanges = () => {
     if (isSingleSlide && currentSlide) {
@@ -31,6 +32,9 @@ export default function WizardSuggestion({
         suggestedSlide.title !== currentSlide.title ||
         suggestedSlide.content !== currentSlide.content
       )
+    }
+    if (isPresentationLevel) {
+      return true // Presentation-level changes always have changes
     }
     return true
   }
@@ -49,6 +53,9 @@ export default function WizardSuggestion({
       
       if (changes.length === 0) return "No changes detected"
       return `Updated: ${changes.join(", ")}`
+    }
+    if (isPresentationLevel) {
+      return `Presentation modified with ${suggestion.presentation.slides.length} slides`
     }
     return "Multiple slide changes"
   }
@@ -74,7 +81,9 @@ export default function WizardSuggestion({
             ? `I've created improvements for this slide. ${getChangesSummary()}`
             : isAllSlides
               ? `I've created improvements for ${suggestion.slides.length} slides.`
-              : "I've suggested some changes to your presentation."}
+              : isPresentationLevel
+                ? `I've modified your presentation. ${getChangesSummary()}`
+                : "I've suggested some changes to your presentation."}
         </p>
       </div>
 
@@ -155,6 +164,29 @@ export default function WizardSuggestion({
               {suggestion.slides.length > 5 && (
                 <div className="text-xs text-gray-500 text-center py-1">
                   ...and {suggestion.slides.length - 5} more slides
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isPresentationLevel && (
+          <div>
+            <p className="text-gray-700 mb-2 font-medium">Modified presentation with {suggestion.presentation.slides.length} slides:</p>
+            <div className="space-y-2">
+              {suggestion.presentation.slides.slice(0, 5).map((slide: any, index: number) => (
+                <div key={index} className="bg-gray-50 rounded p-2">
+                  <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
+                  {showPreview && slide.content && (
+                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                      {typeof slide.content === 'string' ? slide.content.substring(0, 100) + '...' : ''}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {suggestion.presentation.slides.length > 5 && (
+                <div className="text-xs text-gray-500 text-center py-1">
+                  ...and {suggestion.presentation.slides.length - 5} more slides
                 </div>
               )}
             </div>

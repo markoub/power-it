@@ -77,7 +77,7 @@ test.describe('Bug Fixes Verification', () => {
       await page.getByTestId('wizard-send-button').click();
       
       // Should get a helpful error message instead of a 400 error
-      await expect(page.getByTestId('wizard-message-assistant').last()).toContainText('Wizard support for this step is coming soon');
+      await expect(page.getByTestId('wizard-message-assistant').last()).toContainText("I can't modify slides yet because they haven't been generated");
     }
   });
 

@@ -225,7 +225,10 @@ export async function waitForStepCompletion(page: Page, stepType: StepType, time
       const startTime = Date.now();
       while (Date.now() - startTime < timeout) {
         try {
-          const response = await page.request.get(`${apiUrl}/presentations/${presentationId}`);
+          // Increase timeout for individual API requests to 30 seconds
+          const response = await page.request.get(`${apiUrl}/presentations/${presentationId}`, {
+            timeout: 30000
+          });
           if (response.ok()) {
             const data = await response.json();
             const step = data.steps?.find((s: any) => s.step === stepType && s.status === 'completed');
@@ -265,13 +268,15 @@ export async function waitForStepCompletion(page: Page, stepType: StepType, time
           }
         } catch (apiError) {
           console.log(`API poll error: ${apiError}`);
+          // Continue polling even if individual requests fail
         }
         
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait 3 seconds between polls instead of 2 to reduce load
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
     
-    // Fallback to original UI-only approach
+    // Fallback to original UI-only approach with increased timeout
     await page.waitForFunction((stepName) => {
       const stepButton = document.querySelector(`[data-testid="step-nav-${stepName}"]`);
       if (!stepButton) return false;
@@ -291,12 +296,12 @@ export async function waitForStepCompletion(page: Page, stepType: StepType, time
       }
       
       return false;
-    }, stepType, { timeout: 60000 }); // Longer timeout for completion
+    }, stepType, { timeout: Math.max(timeout, 60000) }); // Use the larger of provided timeout or 60 seconds
     
     console.log(`✅ ${stepType} step marked as completed`);
     return true;
   } catch (error) {
-    console.log(`⚠️ ${stepType} step completion wait timed out`);
+    console.log(`⚠️ ${stepType} step completion wait timed out: ${error}`);
     return false;
   }
 }

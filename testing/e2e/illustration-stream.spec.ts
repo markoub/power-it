@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { createPresentation, waitForStepCompletion } from './utils';
 
 // Increase timeout for slower environments
 test.setTimeout(120000);
@@ -15,13 +15,19 @@ test('images appear while generation is in progress', async ({ page }) => {
   // 1. Run research using the working pattern
   console.log('🔍 Running research...');
   await page.getByTestId('start-ai-research-button').click();
-  await page.waitForTimeout(3000); // Same timing as working test
-  console.log('✅ Research completed');
+  
+  // Wait for research step to be properly completed
+  const researchCompleted = await waitForStepCompletion(page, 'research', 60000);
+  if (!researchCompleted) {
+    console.log('⚠️ Research step did not complete within timeout, continuing anyway');
+  } else {
+    console.log('✅ Research completed');
+  }
 
   // 2. Navigate to slides and run using the exact working pattern
   console.log('🔍 Running slides...');
   await page.getByTestId('step-nav-slides').click();
-  await page.waitForTimeout(1000); // Same timing as working test
+  await page.waitForTimeout(1000); // Small delay for UI update
   
   const runSlidesButton = page.getByTestId('run-slides-button');
   const slidesButtonExists = await runSlidesButton.count() > 0;
@@ -29,8 +35,14 @@ test('images appear while generation is in progress', async ({ page }) => {
   
   if (slidesButtonExists) {
     await runSlidesButton.click();
-    await page.waitForTimeout(3000); // Same timing as working test
-    console.log('✅ Slides clicked');
+    
+    // Wait for slides step to complete
+    const slidesCompleted = await waitForStepCompletion(page, 'slides', 60000);
+    if (!slidesCompleted) {
+      console.log('⚠️ Slides step did not complete within timeout, continuing anyway');
+    } else {
+      console.log('✅ Slides completed');
+    }
   } else {
     throw new Error("❌ Slides button not found");
   }
@@ -38,7 +50,7 @@ test('images appear while generation is in progress', async ({ page }) => {
   // 3. Navigate to illustration and check using the exact working pattern
   console.log('🔍 Checking illustration step...');
   await page.getByTestId('step-nav-illustration').click({ force: true });
-  await page.waitForTimeout(1000); // Same timing as working test
+  await page.waitForTimeout(1000); // Small delay for UI update
   
   const runIllustrationButton = page.getByTestId('run-images-button-center');
   const illustrationButtonExists = await runIllustrationButton.count() > 0;

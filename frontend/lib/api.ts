@@ -94,8 +94,10 @@ export const api = {
             const title = fields.title || `Slide ${index + 1}`;
             let content: any = fields.content || "";
 
+            // Preserve original content structure but ensure it's valid
             if (Array.isArray(content)) {
-              content = content.join("\n");
+              // Keep as array for proper markdown rendering
+              content = content.filter(item => item && typeof item === 'string');
             } else if (typeof content !== "string") {
               content = String(content || "");
             }
@@ -107,7 +109,7 @@ export const api = {
               type: slide.type || "Content",
               fields,
               title,
-              content,
+              content, // Now preserves array structure
               order: index,
               imagePrompt: "",
               imageUrl: imageUrl ? formatImageUrl(imageUrl) : "",

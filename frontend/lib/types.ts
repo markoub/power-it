@@ -6,8 +6,8 @@ export interface Slide {
   fields: Record<string, any>;
   /** Convenience title extracted from fields */
   title: string;
-  /** Convenience content (joined if array) */
-  content: string;
+  /** Convenience content (can be string or array of strings) */
+  content: string | string[];
   order: number;
   imagePrompt?: string;
   imageUrl?: string;

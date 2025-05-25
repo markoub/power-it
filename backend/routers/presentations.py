@@ -585,7 +585,7 @@ async def modify_presentation_endpoint(
     """
     Context-aware endpoint to modify a presentation or single slide using Gemini.
     - If slide_index is provided, only that slide is modified and only the modified slide is returned
-    - If slide_index is not provided, the entire presentation is modified
+    - If slide_index is not provided, the entire presentation is modified (can add/remove slides)
     - Works with either slides or compiled step (whichever is available)
     """
     # Parse request body
@@ -694,9 +694,9 @@ async def modify_presentation_endpoint(
             # Get the research data for context
             research_data = research_step.get_result()
             
-            # Validate slide_index if provided
+            # Handle single slide modification
             if slide_index is not None:
-                # Check if slide index exists in the compiled data
+                # Validate slide_index if provided
                 if slide_index < 0 or slide_index >= len(compiled_data.get("slides", [])):
                     return JSONResponse(
                         status_code=400,
@@ -719,22 +719,6 @@ async def modify_presentation_endpoint(
                         slide_index
                     )
                     
-                    # Save the modification back to the original step
-                    if current_step and current_step in [step.value for step in PresentationStep]:
-                        # Get the step again
-                        original_step_result = await db.execute(
-                            select(PresentationStepModel).filter(
-                                PresentationStepModel.presentation_id == presentation_id,
-                                PresentationStepModel.step == current_step
-                            )
-                        )
-                        original_step = original_step_result.scalars().first()
-                        
-                        if original_step and original_step.status == StepStatus.COMPLETED.value:
-                            # Log that we're not saving directly to the database anymore
-                            print(f"Modification for slide {slide_index} in step {current_step} for presentation {presentation_id} generated but not automatically saved")
-                            # Changes will only be saved when the client calls save_modified_presentation endpoint
-                    
                     return JSONResponse(
                         status_code=200,
                         content=result,
@@ -750,23 +734,31 @@ async def modify_presentation_endpoint(
                         status_code=500,
                         content={"detail": f"Error modifying slide: {str(e)}"},
                     )
+            
+            # Handle full presentation modification (add/remove slides, etc.)
             else:
-                # Modifying the entire presentation
                 print(f"Modifying entire presentation {presentation_id} with prompt: {prompt}")
                 
                 try:
                     # Import here to avoid circular dependencies
-                    from server import modify_presentation_with_gemini
+                    from tools.modify import modify_presentation
                     
-                    modified_data = await modify_presentation_with_gemini(
+                    # Use the full presentation modification function
+                    result = await modify_presentation(
                         compiled_data,
                         research_data,
                         prompt
                     )
                     
+                    # Convert the result back to dict format for JSON response
+                    result_dict = result.model_dump() if hasattr(result, 'model_dump') else result.dict()
+                    
                     return JSONResponse(
                         status_code=200,
-                        content=modified_data,
+                        content={
+                            "modified_presentation": result_dict,
+                            "message": "Presentation modified successfully"
+                        },
                     )
                     
                 except Exception as e:
@@ -779,16 +771,16 @@ async def modify_presentation_endpoint(
                         status_code=500,
                         content={"detail": f"Error modifying presentation: {str(e)}"},
                     )
-                
+                    
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print(f"Error processing request: {str(e)}")
+        print(f"Error in modify_presentation_endpoint: {str(e)}")
         print(f"Traceback: {error_details}")
         
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Error processing request: {str(e)}"},
+            content={"detail": f"Internal server error: {str(e)}"},
         )
 
 

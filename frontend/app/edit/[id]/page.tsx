@@ -397,23 +397,34 @@ export default function EditPage({ params }: { params: { id: string } }) {
   const applyWizardChanges = async (changes: any) => {
     if (!presentation) return;
 
-    if (wizardContext === "single" && currentSlide) {
+    if (changes.slide && wizardContext === "single" && currentSlide) {
       // Apply changes to current slide
       const updatedSlide = { ...currentSlide, ...changes.slide };
       updateSlide(updatedSlide);
-    } else if (wizardContext === "all") {
-      // Apply changes to all slides or presentation
-      if (changes.slides) {
-        setPresentation({
-          ...presentation,
-          slides: changes.slides,
-        });
-      }
-      if (changes.presentation) {
-        setPresentation({
-          ...presentation,
-          ...changes.presentation,
-        });
+    } else if (changes.slides && wizardContext === "all") {
+      // Apply changes to all slides
+      setPresentation({
+        ...presentation,
+        slides: changes.slides,
+      });
+    } else if (changes.presentation) {
+      // Apply presentation-level changes (add/remove slides, etc.)
+      setPresentation({
+        ...presentation,
+        ...changes.presentation,
+      });
+      
+      // If slides were modified and we had a current slide, try to maintain selection
+      if (changes.presentation.slides && currentSlide) {
+        const updatedSlide = changes.presentation.slides.find((slide: Slide) => slide.id === currentSlide.id);
+        if (updatedSlide) {
+          setCurrentSlide(updatedSlide);
+        } else if (changes.presentation.slides.length > 0) {
+          // If current slide was removed, select the first slide
+          setCurrentSlide(changes.presentation.slides[0]);
+        } else {
+          setCurrentSlide(null);
+        }
       }
       if (changes.research) {
         const updatedSteps = presentation.steps?.map(s =>
@@ -431,8 +442,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
     toast({
       title: "Changes applied",
-      description:
-        "The suggested changes have been applied to your presentation.",
+      description: changes.presentation 
+        ? "The presentation has been modified successfully."
+        : "The suggested changes have been applied to your presentation.",
       action: <ToastAction altText="OK">OK</ToastAction>,
     });
   };

@@ -68,6 +68,7 @@ RESEARCH_CONFIG = {
     "top_p": 0.95,
     "top_k": 40,
     "max_output_tokens": 108192,
+    "response_mime_type": "application/json",
 }
 
 SLIDES_CONFIG = {

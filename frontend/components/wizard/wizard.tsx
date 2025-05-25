@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -45,6 +45,10 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     scrollToBottom()
   }, [messages])
 
+  // Memoize currentSlide properties to prevent unnecessary re-renders
+  const currentSlideId = useMemo(() => currentSlide?.id, [currentSlide?.id])
+  const currentSlideTitle = useMemo(() => currentSlide?.title, [currentSlide?.title])
+
   // Update welcome message when step, context, or currentSlide changes
   useEffect(() => {
     const getWelcomeMessage = () => {
@@ -76,7 +80,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     
     setMessages([welcomeMessage])
     setError(null)
-  }, [step, context, currentSlide])
+  }, [step, context, currentSlideId, currentSlideTitle])
 
   const updateMessageStatus = (messageIndex: number, status: MessageStatus) => {
     setMessages(prev => prev.map((msg, idx) => 
@@ -283,20 +287,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
       setMessages(prev => [...prev, successMessage])
     }
   }
-          
-          
-const successMessage: Message = {
-  role: "assistant",
-  content: step === "Research"
-    ? "Great! The research has been updated with the suggested changes."
-    : suggestion.presentation
-      ? "Perfect! I've successfully applied the changes to your presentation. The modifications should now be visible in the slide editor."
-      : "Perfect! I've successfully applied the changes to your slide. The improvements should now be visible in the slide editor.",
-  status: "success",
-  timestamp: new Date()
-};
 
-setMessages(prev => [...prev, successMessage]);
 
   const dismissSuggestion = () => {
     setSuggestion(null)

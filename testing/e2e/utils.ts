@@ -81,33 +81,33 @@ export async function createPresentation(page: Page, name: string, topic: string
     }
   }
   
-  // Wait for the edit page to load completely
-  // The edit page should show either research method selection OR the research interface
-  // Let's wait for either to appear
-  try {
-    // Try to wait for research method selection first (for new presentations)
-    await expect(page.getByTestId('research-method-selection')).toBeVisible({ timeout: 10000 });
-    console.log('Research method selection is visible - new presentation');
+  // Handle method selection if it appears
+  const methodSelection = page.getByTestId('research-method-selection');
+  if (await methodSelection.isVisible()) {
+    console.log('Method selection is visible, proceeding with AI research selection...');
     
     // Select AI research method
     await page.getByTestId('ai-research-option').click();
-    await page.getByTestId('continue-with-method-button').click();
     
-    // Now wait for AI research interface
+    // Wait for continue button and click it
+    const continueButton = page.getByTestId('continue-with-method-button');
+    await expect(continueButton).toBeEnabled();
+    await continueButton.click();
+    
+    // Wait for method selection to disappear
+    await expect(methodSelection).not.toBeVisible({ timeout: 10000 });
+    
+    // Wait for AI research interface
     await expect(page.getByTestId('ai-research-interface')).toBeVisible({ timeout: 10000 });
     
-    // Fill in the topic
+    // Fill in topic
     await page.getByTestId('topic-input').fill(topic);
     
-  } catch (error) {
-    console.log('Research method selection not found, checking for existing research interface...');
-    
-    // Maybe the presentation already has a research method selected
-    // Check if we're already in the research interface
-    const hasAiInterface = await page.getByTestId('ai-research-interface').isVisible().catch(() => false);
-    const hasManualInterface = await page.getByTestId('manual-research-interface').isVisible().catch(() => false);
-    
-    if (hasAiInterface) {
+    console.log('✅ Successfully set up AI research interface');
+  } else {
+    // Check if AI interface is already visible
+    const aiInterface = page.getByTestId('ai-research-interface');
+    if (await aiInterface.isVisible()) {
       console.log('AI research interface already visible');
       // Fill in the topic if it's not already filled
       const topicInput = page.getByTestId('topic-input');
@@ -115,13 +115,8 @@ export async function createPresentation(page: Page, name: string, topic: string
       if (!currentTopic) {
         await topicInput.fill(topic);
       }
-    } else if (hasManualInterface) {
-      console.log('Manual research interface visible - unexpected for test');
-      throw new Error('Unexpected manual research interface found');
     } else {
-      // Take a screenshot for debugging
-      await page.screenshot({ path: `createPresentation-error-${Date.now()}.png` });
-      throw new Error('Could not find research method selection or research interface');
+      throw new Error('Neither method selection nor AI research interface is visible');
     }
   }
   
@@ -573,4 +568,64 @@ export async function login(page: Page): Promise<void> {
   
   // No login needed for now
   return;
+}
+
+/**
+ * Navigate to the edit page for a specific presentation
+ */
+export async function navigateToEditPage(page: Page, presentationId: number): Promise<void> {
+  await page.goto(`http://localhost:3000/edit/${presentationId}`);
+  
+  // Wait for the edit page to load by checking for the save button or workflow steps
+  await expect(page.locator('[data-testid="save-button"]')).toBeVisible({ timeout: 15000 });
+}
+
+/**
+ * Fill in the research topic in the AI research interface
+ */
+export async function fillResearchTopic(page: Page, topic: string): Promise<void> {
+  // Wait for the research topic input to be visible
+  const topicInput = page.locator('[data-testid="topic-input"]');
+  await expect(topicInput).toBeVisible({ timeout: 10000 });
+  
+  // Clear any existing content and fill with new topic
+  await topicInput.clear();
+  await topicInput.fill(topic);
+}
+
+/**
+ * Start the AI research process
+ */
+export async function startAIResearch(page: Page): Promise<void> {
+  // Check if research is already completed - if so, use update button instead
+  const updateButton = page.locator('[data-testid="update-research-button"]');
+  const startButton = page.locator('[data-testid="start-ai-research-button"]');
+  
+  // Wait a moment for the page to load and determine which button is available
+  await page.waitForTimeout(2000);
+  
+  if (await updateButton.isVisible()) {
+    // Research already exists, use update button
+    await expect(updateButton).toBeEnabled();
+    await updateButton.click();
+  } else {
+    // No research yet, use start button
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await startButton.click();
+  }
+}
+
+/**
+ * Wait for research completion by checking for generated content
+ */
+export async function waitForResearchCompletion(page: Page, timeout: number = 60000): Promise<void> {
+  // Wait for the research content label to appear (using data-testid)
+  await expect(page.locator('[data-testid="ai-research-content-label"]')).toBeVisible({ timeout });
+  
+  // Also wait for the actual research content to be visible
+  await expect(page.locator('[data-testid="ai-research-content"]')).toBeVisible({ timeout });
+  
+  // Also wait for the research step to be marked as completed
+  await waitForStepCompletion(page, 'research', timeout);
 }

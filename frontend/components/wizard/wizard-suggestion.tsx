@@ -62,7 +62,7 @@ export default function WizardSuggestion({
   }
 
   return (
-    <div className="border border-primary-200 rounded-lg p-4 bg-primary-50">
+    <div className="border border-primary-200 rounded-lg p-4 bg-primary-50" data-testid="wizard-suggestion">
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-medium text-primary-700">Suggested Changes</h4>
@@ -255,6 +255,7 @@ export default function WizardSuggestion({
             size="sm"
             className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
             onClick={onDismiss}
+            data-testid="wizard-dismiss-button"
           >
             <X size={14} />
             Dismiss
@@ -264,6 +265,7 @@ export default function WizardSuggestion({
             className="bg-primary hover:bg-primary-600 text-white flex items-center gap-1 disabled:opacity-50"
             onClick={onApply}
             disabled={!hasChanges()}
+            data-testid="wizard-apply-button"
           >
             <Check size={14} />
             Apply Changes

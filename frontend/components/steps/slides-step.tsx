@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Presentation, Slide } from "@/lib/types";
@@ -367,12 +368,24 @@ export default function SlidesStep({
                               maxHeight: '600px'
                             }}
                           >
-                            <div className="w-full h-full overflow-y-auto">
-                              <SlideRenderer slide={currentSlide} mini={false} />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
+                      <div className="w-full h-full overflow-y-auto">
+                        <SlideRenderer slide={currentSlide} mini={false} />
+                      </div>
+                    </div>
+                  </div>
+                  {currentSlide.notes && (
+                    <div className="p-4">
+                      <Accordion type="single" collapsible>
+                        <AccordionItem value="notes">
+                          <AccordionTrigger>Speaker Notes</AccordionTrigger>
+                          <AccordionContent>
+                            <p className="whitespace-pre-line">{currentSlide.notes}</p>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
+                  )}
+                </motion.div>
                     ) : (
                       <motion.div
                         key="edit"
@@ -403,7 +416,7 @@ export default function SlidesStep({
                             data-testid="slide-title-input"
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">
                             Slide Content (Markdown supported)
@@ -440,6 +453,28 @@ Or let each line become a bullet point automatically!"
                           <p className="text-xs text-gray-500">
                             You can use Markdown formatting (headings, lists, bold, italic, etc.) or just type lines of text that will automatically become bullet points.
                           </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">
+                            Speaker Notes
+                          </label>
+                          <Textarea
+                            value={currentSlide.notes || ""}
+                            onChange={(e) =>
+                              updateSlide({
+                                ...currentSlide,
+                                notes: e.target.value,
+                                fields: {
+                                  ...currentSlide.fields,
+                                  notes: e.target.value,
+                                },
+                              })
+                            }
+                            placeholder="Enter short script for presenter"
+                            rows={4}
+                            className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
+                          />
                         </div>
 
                         {/* Live Preview in Edit Mode */}

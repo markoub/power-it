@@ -267,9 +267,10 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const newSlide: Slide = {
       id: uuidv4(),
       type: "Content",
-      fields: { title: "New Slide", content: "" },
+      fields: { title: "New Slide", content: "", notes: "" },
       title: "New Slide",
       content: "",
+      notes: "",
       order: presentation.slides.length,
       imagePrompt: "",
       imageUrl: "",

@@ -129,7 +129,8 @@ class TestOfflineMode(unittest.TestCase):
         """Test that research_topic returns mock data in offline mode."""
         # Import after setting environment
         import offline
-        from tools.research import research_topic, OFFLINE_RESEARCH_RESPONSE
+        from tools.research import research_topic
+        from offline_responses.research import OFFLINE_RESEARCH_RESPONSE
         import asyncio
         
         # Call research_topic and get result

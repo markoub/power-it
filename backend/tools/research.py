@@ -7,44 +7,9 @@ from config import RESEARCH_MODEL, RESEARCH_CONFIG, OFFLINE_MODE
 import logging
 from models import ResearchData
 from utils import process_gemini_response
-
-# Fixed offline response for research
-OFFLINE_RESEARCH_RESPONSE = {
-    "title": "Artificial Intelligence in Modern Business",
-    "summary": "This presentation explores how AI is transforming business operations, improving efficiency, and creating new opportunities for innovation across multiple industries.",
-    "sections": [
-        {
-            "title": "Introduction to AI in Business",
-            "content": ["AI is revolutionizing how businesses operate", "Companies are using AI to automate tasks, gain insights, and create new products", "85% of executives believe AI will significantly change their business model"]
-        },
-        {
-            "title": "Key AI Technologies",
-            "content": ["Machine Learning algorithms for prediction and pattern recognition", "Natural Language Processing for communication and text analysis", "Computer Vision for image and video understanding", "Robotics and automation for physical tasks"]
-        },
-        {
-            "title": "Business Applications",
-            "content": ["Customer service: Chatbots and virtual assistants", "Marketing: Personalization and targeting", "Operations: Predictive maintenance and supply chain optimization", "HR: Candidate screening and employee engagement", "Finance: Fraud detection and algorithmic trading"]
-        },
-        {
-            "title": "Implementation Challenges",
-            "content": ["Data quality and availability issues", "Integration with legacy systems", "Skills gap and training requirements", "Ethical considerations and bias", "Regulatory compliance"]
-        },
-        {
-            "title": "Success Stories",
-            "content": ["Amazon: Recommendation engines and logistics optimization", "JPMorgan Chase: Contract analysis with AI", "Unilever: AI-driven hiring reducing time-to-hire by 90%", "Walmart: Inventory management and demand forecasting"]
-        },
-        {
-            "title": "Future Trends",
-            "content": ["AI democratization through no-code tools", "Increased focus on explainable AI", "Edge AI for real-time processing", "Human-AI collaboration models", "Specialized AI for industry-specific applications"]
-        },
-        {
-            "title": "Getting Started",
-            "content": ["Identify high-value use cases", "Start with small, measurable pilot projects", "Build cross-functional teams with business and technical expertise", "Focus on data strategy and governance", "Measure ROI and scale successful initiatives"]
-        }
-    ],
-    "keywords": ["Artificial Intelligence", "Machine Learning", "Business Transformation", "Automation", "Digital Innovation"],
-    "companies": ["Google", "Microsoft", "Amazon", "IBM", "Tesla"]
-}
+from offline_responses.research import get_offline_research
+from default_prompts import DEFAULT_RESEARCH_PROMPT
+from prompts import get_prompt
 
 # Define the structured output schema for research results
 RESEARCH_SCHEMA = {
@@ -92,23 +57,9 @@ async def research_topic(query: str, mode: str = "ai") -> ResearchData:
         content = f"# {query}\n\n## Introduction\n\nThis is a template for a presentation about {query}.\n\n## Key Points\n\nAdd your key points here.\n\n## Details\n\nAdd details here.\n\n## Examples\n\nAdd examples here.\n\n## Conclusion\n\nAdd your conclusion here."
         return ResearchData(content=content, links=[])
 
-    # For AI mode in offline mode, return the fixed response
+    # For AI mode in offline mode, use the dedicated offline response
     if OFFLINE_MODE:
-        print(f"OFFLINE MODE: Returning fixed research response for query: {query}")
-        # Convert the fixed response to markdown content
-        sections_md = ""
-        for section in OFFLINE_RESEARCH_RESPONSE["sections"]:
-            sections_md += f"## {section['title']}\n\n"
-            for content_item in section['content']:
-                sections_md += f"- {content_item}\n"
-            sections_md += "\n"
-        
-        # Create title and overall content
-        title = OFFLINE_RESEARCH_RESPONSE["title"]
-        content = f"# {title}\n\n{OFFLINE_RESEARCH_RESPONSE['summary']}\n\n{sections_md}"
-        
-        # Return as ResearchData
-        return ResearchData(content=content, links=[])
+        return await get_offline_research(query)
 
     # Rest of the original function for online mode with structured output
     # Create a copy of the research config and add structured output schema
@@ -121,20 +72,9 @@ async def research_topic(query: str, mode: str = "ai") -> ResearchData:
         generation_config=structured_config
     )
     
-    # Create a focused prompt for research
-    prompt = f"""You are a professional researcher creating detailed content for presentations.
-Research the following topic thoroughly and create comprehensive markdown content: {query}
-
-Make sure to include:
-1. Introduction to the topic
-2. Key facts, theories, or concepts
-3. Historical background if relevant
-4. Current state or applications
-5. Future directions or trends
-6. Organize with proper markdown headings, lists, and emphasis
-
-For any source links, provide actual destination URLs, not redirect or tracking URLs.
-Focus on creating substantial, informative content that would be valuable for a presentation."""
+    # Load the prompt template from the database
+    prompt_template = await get_prompt("research_prompt", DEFAULT_RESEARCH_PROMPT)
+    prompt = prompt_template.format(query=query)
     
     # Get response from Gemini with structured output
     try:

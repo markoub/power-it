@@ -29,6 +29,14 @@ SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()
 
+class PromptModel(Base):
+    """Model storing customizable prompts."""
+    __tablename__ = "prompts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    text = Column(Text)
+
 class StepStatus(enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"

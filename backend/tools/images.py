@@ -15,9 +15,17 @@ import shutil
 from config import OPENAI_IMAGE_CONFIG, PRESENTATIONS_STORAGE_DIR, STORAGE_DIR
 from models import ImageGeneration, SlidePresentation
 from tools.slide_config import SLIDE_TYPES, IMAGE_FORMATS
+from offline_responses.images import (
+    DUMMY_IMAGE_PATH,
+    ensure_dummy_image_exists,
+    load_dummy_image_b64,
+)
 
 # Check for offline mode
 OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+
+if OFFLINE_MODE:
+    ensure_dummy_image_exists()
 
 # Create a thread pool executor with limited workers
 image_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
@@ -25,29 +33,6 @@ image_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 # Global timeout settings
 REQUEST_TIMEOUT = 60  # seconds
 MAX_RETRIES = 2
-
-# Create the dummy image file for offline mode if it doesn't exist
-DUMMY_IMAGE_DIR = os.path.join(STORAGE_DIR, "offline_assets")
-DUMMY_IMAGE_PATH = os.path.join(DUMMY_IMAGE_DIR, "dummy_image.png")
-
-def ensure_dummy_image_exists():
-    """Ensure the dummy image file exists for offline mode"""
-    if OFFLINE_MODE and not os.path.exists(DUMMY_IMAGE_PATH):
-        os.makedirs(DUMMY_IMAGE_DIR, exist_ok=True)
-        # Create a better looking placeholder image and save it
-        try:
-            with open(DUMMY_IMAGE_PATH, 'wb') as f:
-                # This is a more visually appealing placeholder image (64x64 pixel with "OFFLINE" text)
-                # A blue-gray placeholder with text indicating offline mode
-                f.write(base64.b64decode(
-                    "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"))
-            print(f"Created dummy image file at {DUMMY_IMAGE_PATH}")
-        except Exception as e:
-            print(f"Error creating dummy image: {str(e)}")
-
-# Make sure we have the dummy image available
-if OFFLINE_MODE:
-    ensure_dummy_image_exists()
 
 def save_image_to_file(presentation_id: int, slide_index: int, image_field_name: str, image_data: str = None) -> str:
     """
@@ -158,7 +143,7 @@ def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGenera
                 file_path = save_image_to_file(presentation_id, index, image_field)
                 
             # Get the base64 encoded dummy image
-            dummy_image_b64 = load_image_from_file(DUMMY_IMAGE_PATH)
+            dummy_image_b64 = load_dummy_image_b64()
                 
             # Add the generated image to the list
             generated_images.append(ImageGeneration(
@@ -331,7 +316,7 @@ async def generate_image_from_prompt(prompt: str, size: str = "1024x1024", prese
             file_path = save_image_to_file(presentation_id, -1, "image")
             
         # Get the base64 encoded dummy image
-        dummy_image_b64 = load_image_from_file(DUMMY_IMAGE_PATH)
+        dummy_image_b64 = load_dummy_image_b64()
             
         # Return a mock ImageGeneration object
         return ImageGeneration(

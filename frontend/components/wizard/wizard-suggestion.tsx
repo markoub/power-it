@@ -23,6 +23,7 @@ export default function WizardSuggestion({
   const [showPreview, setShowPreview] = useState(false)
   const isSingleSlide = context === "single" && suggestion.slide
   const isAllSlides = context === "all" && suggestion.slides
+  const isResearch = !!suggestion.research
   const isPresentationLevel = suggestion.presentation
 
   const hasChanges = () => {
@@ -61,7 +62,7 @@ export default function WizardSuggestion({
   }
 
   return (
-    <div className="border border-primary-200 rounded-lg p-4 bg-primary-50">
+    <div className="border border-primary-200 rounded-lg p-4 bg-primary-50" data-testid="wizard-suggestion">
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-medium text-primary-700">Suggested Changes</h4>
@@ -169,24 +170,74 @@ export default function WizardSuggestion({
             </div>
           </div>
         )}
+        
+              <div>
+        {isResearch && (
+          <div>
+            <p className="text-gray-700 mb-2 font-medium">Updated Research:</p>
+            <div className="bg-gray-50 rounded p-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {suggestion.research.content}
+            </div>
+          </div>
+        )}
 
         {isPresentationLevel && (
           <div>
-            <p className="text-gray-700 mb-2 font-medium">Modified presentation with {suggestion.presentation.slides.length} slides:</p>
+            <p className="text-gray-700 mb-2 font-medium">
+              Modified presentation with {suggestion.presentation.slides.length} slides:
+            </p>
             <div className="space-y-2">
               {suggestion.presentation.slides.slice(0, 5).map((slide: any, index: number) => (
                 <div key={index} className="bg-gray-50 rounded p-2">
                   <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
                   {showPreview && slide.content && (
                     <div className="text-xs text-gray-600 mt-1 line-clamp-2">
-                      {typeof slide.content === 'string' ? slide.content.substring(0, 100) + '...' : ''}
+                      {typeof slide.content === 'string'
+                        ? slide.content.substring(0, 100) + '...'
+                        : ''}
                     </div>
                   )}
                 </div>
               ))}
               {suggestion.presentation.slides.length > 5 && (
                 <div className="text-xs text-gray-500 text-center py-1">
-                  ...and {suggestion.presentation.slides.length - 5} more slides
+                  …and {suggestion.presentation.slides.length - 5} more slides
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+        {isResearch && (
+          <div>
+            <p className="text-gray-700 mb-2 font-medium">Updated Research:</p>
+            <div className="bg-gray-50 rounded p-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {suggestion.research.content}
+            </div>
+          </div>
+        )}
+
+        {isPresentationLevel && (
+          <div>
+            <p className="text-gray-700 mb-2 font-medium">
+              Modified presentation with {suggestion.presentation.slides.length} slides:
+            </p>
+            <div className="space-y-2">
+              {suggestion.presentation.slides.slice(0, 5).map((slide: any, index: number) => (
+                <div key={index} className="bg-gray-50 rounded p-2">
+                  <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
+                  {showPreview && slide.content && (
+                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                      {typeof slide.content === 'string'
+                        ? slide.content.substring(0, 100) + '...'
+                        : ''}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {suggestion.presentation.slides.length > 5 && (
+                <div className="text-xs text-gray-500 text-center py-1">
+                  …and {suggestion.presentation.slides.length - 5} more slides
                 </div>
               )}
             </div>
@@ -204,6 +255,7 @@ export default function WizardSuggestion({
             size="sm"
             className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
             onClick={onDismiss}
+            data-testid="wizard-dismiss-button"
           >
             <X size={14} />
             Dismiss
@@ -213,6 +265,7 @@ export default function WizardSuggestion({
             className="bg-primary hover:bg-primary-600 text-white flex items-center gap-1 disabled:opacity-50"
             onClick={onApply}
             disabled={!hasChanges()}
+            data-testid="wizard-apply-button"
           >
             <Check size={14} />
             Apply Changes

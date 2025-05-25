@@ -46,6 +46,36 @@ OFFLINE_RESEARCH_RESPONSE = {
     "companies": ["Google", "Microsoft", "Amazon", "IBM", "Tesla"]
 }
 
+# Define the structured output schema for research results
+RESEARCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "content": {
+            "type": "string",
+            "description": "Comprehensive markdown content for the presentation including headings, lists, and detailed information"
+        },
+        "links": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "href": {
+                        "type": "string",
+                        "description": "URL of the source"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the source"
+                    }
+                },
+                "required": ["href", "title"]
+            },
+            "description": "List of reference links with href and title"
+        }
+    },
+    "required": ["content", "links"]
+}
+
 async def research_topic(query: str, mode: str = "ai") -> ResearchData:
     """
     Research a topic for a presentation.
@@ -80,59 +110,52 @@ async def research_topic(query: str, mode: str = "ai") -> ResearchData:
         # Return as ResearchData
         return ResearchData(content=content, links=[])
 
-    # Rest of the original function for online mode
-    # Configure Gemini model
+    # Rest of the original function for online mode with structured output
+    # Create a copy of the research config and add structured output schema
+    structured_config = RESEARCH_CONFIG.copy()
+    structured_config["response_schema"] = RESEARCH_SCHEMA
+    
+    # Configure Gemini model with structured output
     model = genai.GenerativeModel(
         model_name=RESEARCH_MODEL,
-        generation_config=RESEARCH_CONFIG
+        generation_config=structured_config
     )
     
-    # Create system prompt and user prompt content
-    system_content = """You are a professional researcher creating detailed content for presentations.
-    Research the given topic thoroughly and create comprehensive markdown content.
-    Make sure to include:
-    1. Introduction to the topic
-    2. Key facts, theories, or concepts
-    3. Historical background if relevant
-    4. Current state or applications
-    5. Future directions or trends
-    6. Organize with proper markdown headings, lists, and emphasis
+    # Create a focused prompt for research
+    prompt = f"""You are a professional researcher creating detailed content for presentations.
+Research the following topic thoroughly and create comprehensive markdown content: {query}
+
+Make sure to include:
+1. Introduction to the topic
+2. Key facts, theories, or concepts
+3. Historical background if relevant
+4. Current state or applications
+5. Future directions or trends
+6. Organize with proper markdown headings, lists, and emphasis
+
+For any source links, provide actual destination URLs, not redirect or tracking URLs.
+Focus on creating substantial, informative content that would be valuable for a presentation."""
     
-    Format your response as a JSON object with these fields (NO CODE BLOCKS):
-    - "content": Comprehensive markdown content for the presentation
-    - "links": Array of objects with "href" and "title" fields for source references
-    
-    DO NOT wrap your response in ```json or any other markdown formatting.
-    Just return a plain JSON object directly. Example:
-    {"content": "# My Title\\n## Section 1\\n...", "links": [{"href": "https://example.com", "title": "Example"}]}
-    
-    For any source links, make sure to provide actual destination URLs, not redirect or tracking URLs.
-    """
-    
-    user_content = f"Research the following presentation topic comprehensively: {query}"
-    
-    # Get response from Gemini - request JSON directly
-    response = model.generate_content(
-        [
-            {"role": "user", "parts": [{"text": system_content}]},
-            {"role": "model", "parts": [{"text": "I understand. I'll research the topic and provide comprehensive markdown content with sources in JSON format."}]},
-            {"role": "user", "parts": [{"text": user_content}]}
-        ],
-        generation_config=RESEARCH_CONFIG,
-    )
-    
-    # Process response
+    # Get response from Gemini with structured output
     try:
+        response = model.generate_content(prompt)
+        
         # Debug logging to see the raw response
-        print("Gemini API response raw text:")
+        print("Gemini API structured response:")
         print(response.text)
         print("=====================")
 
-        # Use shared utility to parse the JSON response reliably
-        return process_gemini_response(response.text)
+        # Parse the JSON response directly since it's guaranteed to be valid JSON
+        parsed_data = json.loads(response.text)
+        
+        # Create and return ResearchData object
+        return ResearchData(
+            content=parsed_data.get("content", ""),
+            links=parsed_data.get("links", [])
+        )
     
     except Exception as e:
-        logging.error(f"Error processing Gemini response: {e}")
+        logging.error(f"Error processing Gemini structured response: {e}")
         # Return fallback response if there's an error
         content = f"# Research Results\n\nThere was an error processing the research results for {query}.\n\n## Error\n\nUnable to process research results. Please try again later."
         return ResearchData(content=content, links=[])

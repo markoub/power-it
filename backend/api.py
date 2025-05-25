@@ -10,12 +10,15 @@ import sys
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout)
     ]
 )
+
+# Suppress debug messages from aiosqlite
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
 
 logger = logging.getLogger("powerit-backend")
 

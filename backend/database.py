@@ -34,7 +34,6 @@ class StepStatus(enum.Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
-    ERROR = "error"
 
 class PresentationStep(enum.Enum):
     RESEARCH = "research"

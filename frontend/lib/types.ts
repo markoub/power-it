@@ -23,7 +23,7 @@ export interface PresentationStep {
     | "images"
     | "compiled"
     | "pptx";
-  status: "pending" | "running" | "completed" | "error";
+  status: "pending" | "processing" | "completed" | "failed";
   result?: Record<string, any> | null;
   error_message?: string | null;
   created_at: string;

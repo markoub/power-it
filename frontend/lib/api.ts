@@ -349,6 +349,41 @@ export const api = {
     return await response.json();
   },
 
+  async modifyResearch(id: string | number, prompt: string): Promise<any> {
+    const response = await fetch(
+      `${API_URL}/presentations/${id}/research/modify`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+        mode: "cors",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to modify research: ${response.status}`);
+    }
+
+    return await response.json();
+  },
+
+  async saveModifiedResearch(
+    id: string | number,
+    data: any
+  ): Promise<boolean> {
+    const response = await fetch(
+      `${API_URL}/presentations/${id}/save_modified_research`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        mode: "cors",
+      }
+    );
+
+    return response.ok;
+  },
+
   async saveModifiedPresentation(
     id: string | number,
     data: any

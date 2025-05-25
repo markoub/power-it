@@ -36,6 +36,7 @@ from services import (
     execute_topic_update_task
 )
 from tools.images import generate_image_from_prompt
+from tools.modify import modify_research
 from config import PRESENTATIONS_STORAGE_DIR
 
 router = APIRouter(
@@ -781,6 +782,74 @@ async def modify_presentation_endpoint(
             status_code=500,
             content={"detail": f"Internal server error: {str(e)}"},
         )
+
+
+@router.post("/{presentation_id}/research/modify",
+           summary="Modify research",
+           description="Modify research content using AI based on user instructions")
+async def modify_research_endpoint(
+    presentation_id: int,
+    request: Request
+):
+    """Return modified research without saving it."""
+    try:
+        data = await request.json()
+        prompt = data.get("prompt")
+        if not prompt:
+            return JSONResponse(status_code=400, content={"detail": "Missing prompt"})
+
+        async with SessionLocal() as db:
+            step_result = await db.execute(
+                select(PresentationStepModel).filter(
+                    PresentationStepModel.presentation_id == presentation_id,
+                    PresentationStepModel.step.in_([
+                        PresentationStep.RESEARCH.value,
+                        PresentationStep.MANUAL_RESEARCH.value,
+                    ])
+                )
+            )
+            research_step = step_result.scalars().first()
+
+            if not research_step or research_step.status != StepStatus.COMPLETED.value:
+                return JSONResponse(status_code=400, content={"detail": "Research step not completed"})
+
+            research_data = research_step.get_result()
+            modified = await modify_research(research_data, prompt)
+            return JSONResponse(status_code=200, content=modified.model_dump())
+
+    except Exception as e:
+        import traceback
+        print("Error modifying research", e)
+        print(traceback.format_exc())
+        return JSONResponse(status_code=500, content={"detail": f"Error modifying research: {str(e)}"})
+
+
+@router.post("/{presentation_id}/save_modified_research",
+           summary="Save modified research",
+           description="Persist modified research data to the research step")
+async def save_modified_research(
+    presentation_id: int,
+    modified_data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    step_result = await db.execute(
+        select(PresentationStepModel).filter(
+            PresentationStepModel.presentation_id == presentation_id,
+            PresentationStepModel.step.in_([
+                PresentationStep.RESEARCH.value,
+                PresentationStep.MANUAL_RESEARCH.value,
+            ])
+        )
+    )
+    step = step_result.scalars().first()
+    if not step:
+        raise HTTPException(status_code=404, detail="Research step not found")
+
+    step.set_result(modified_data)
+    step.status = StepStatus.COMPLETED.value
+    await db.commit()
+
+    return {"message": f"Modified research saved for presentation {presentation_id}", "presentation_id": presentation_id}
 
 @router.post("/{presentation_id}/slides/{slide_index}/image",
            summary="Regenerate slide image",

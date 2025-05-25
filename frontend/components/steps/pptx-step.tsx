@@ -22,7 +22,7 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
   // Check if PPTX step is completed
   const pptxStep = presentation.steps?.find(step => step.step === 'pptx')
   const isPptxCompleted = pptxStep?.status === 'completed'
-  const isProcessing = pptxStep?.status === 'running'
+  const isProcessing = pptxStep?.status === 'processing'
 
   const generatePptx = async () => {
     setIsGenerating(true)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -45,6 +45,10 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     scrollToBottom()
   }, [messages])
 
+  // Memoize currentSlide properties to prevent unnecessary re-renders
+  const currentSlideId = useMemo(() => currentSlide?.id, [currentSlide?.id])
+  const currentSlideTitle = useMemo(() => currentSlide?.title, [currentSlide?.title])
+
   // Update welcome message when step, context, or currentSlide changes
   useEffect(() => {
     const getWelcomeMessage = () => {
@@ -76,7 +80,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     
     setMessages([welcomeMessage])
     setError(null)
-  }, [step, context, currentSlide])
+  }, [step, context, currentSlideId, currentSlideTitle])
 
   const updateMessageStatus = (messageIndex: number, status: MessageStatus) => {
     setMessages(prev => prev.map((msg, idx) => 
@@ -219,7 +223,19 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
           }
         }
       } else if (step === "Research") {
-        response = "I can help you with research questions and provide guidance on research methods. However, slide content modification is only available in the Slides step after you've generated slides.";
+        try {
+          const apiResp = await api.modifyResearch(presentation.id, input);
+          if (apiResp && apiResp.content) {
+            response = "I've prepared updated research content. You can apply the changes below.";
+            suggestedChanges = { research: apiResp };
+          } else {
+            response = "I've processed your request, but no specific changes were suggested.";
+          }
+        } catch (error) {
+          console.error("Error modifying research:", error);
+          response = "I encountered an error while trying to modify the research.";
+          setError("Failed to process research modification. Please try again.");
+        }
       } else if (step === "Illustrations") {
         response = "I can help with image suggestions and visual improvements. For slide content changes, please use the Slides step.";
       } else if (step === "PPTX") {
@@ -257,18 +273,21 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     if (suggestion) {
       onApplyChanges(suggestion)
       setSuggestion(null)
-      
+
       const successMessage: Message = {
         role: "assistant",
-        content: suggestion.presentation 
-          ? "Perfect! I've successfully applied the changes to your presentation. The modifications should now be visible in the slide editor."
-          : "Perfect! I've successfully applied the changes to your slide. The improvements should now be visible in the slide editor.",
+        content: step === "Research"
+          ? "Great! The research has been updated with the suggested changes."
+          : suggestion.presentation
+            ? "Perfect! I've successfully applied the changes to your presentation. The modifications should now be visible in the slide editor."
+            : "Perfect! I've successfully applied the changes to your slide. The improvements should now be visible in the slide editor.",
         status: "success",
         timestamp: new Date()
       }
       setMessages(prev => [...prev, successMessage])
     }
   }
+
 
   const dismissSuggestion = () => {
     setSuggestion(null)

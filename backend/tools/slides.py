@@ -407,7 +407,6 @@ The 'fields' property should only contain the fields specified for that slide ty
             prompt,
             generation_config=SLIDES_CONFIG,
             tools=[{"function_declarations": [function_declaration]}],
-            tool_choice={"function_call": {"name": "create_presentation"}},
             safety_settings=[
                 {
                     "category": "HARM_CATEGORY_HARASSMENT",

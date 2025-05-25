@@ -24,6 +24,14 @@ class AsyncMock(MagicMock):
 class MockResponse:
     def __init__(self, text):
         self.text = text
+        mock_part = MagicMock()
+        mock_part.function_call = MagicMock()
+        mock_part.function_call.args = text
+        mock_content = MagicMock()
+        mock_content.parts = [mock_part]
+        mock_candidate = MagicMock()
+        mock_candidate.content = mock_content
+        self.candidates = [mock_candidate]
 
 class TestSlideGeneration(unittest.TestCase):
     
@@ -212,7 +220,7 @@ class TestSlideGeneration(unittest.TestCase):
                         self.assertEqual(welcome_slide.fields["subtitle"], "A Test Presentation")
                         self.assertEqual(welcome_slide.fields["author"], "Test Author")
                         self.assertNotIn("content", welcome_slide.fields)
-                        self.assertNotIn("notes", welcome_slide.fields)
+                        self.assertIn("notes", welcome_slide.fields)
                         self.assertNotIn("visual_suggestions", welcome_slide.fields)
                         break
                 
@@ -260,6 +268,14 @@ async def test_welcome_and_section_slides_fallback():
             }
         ]
     })
+    mock_part = MagicMock()
+    mock_part.function_call = MagicMock()
+    mock_part.function_call.args = mock_response.text
+    mock_content = MagicMock()
+    mock_content.parts = [mock_part]
+    mock_candidate = MagicMock()
+    mock_candidate.content = mock_content
+    mock_response.candidates = [mock_candidate]
     
     # Create a simple mock class that returns our response
     class MockGenerativeModel:

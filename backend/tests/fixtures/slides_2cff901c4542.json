@@ -6,7 +6,8 @@
       "fields": {
         "title": "Artificial Intelligence in Healthcare",
         "subtitle": "Revolutionizing Patient Care",
-        "author": "Test Author"
+        "author": "Test Author",
+        "notes": "Speaker notes for Artificial Intelligence in Healthcare."
       }
     },
     {
@@ -19,13 +20,15 @@
           "Benefits",
           "Challenges",
           "Future Directions"
-        ]
+        ],
+        "notes": "Speaker notes for Table of Contents."
       }
     },
     {
       "type": "Section",
       "fields": {
-        "title": "Introduction"
+        "title": "Introduction",
+        "notes": "Speaker notes for Introduction."
       }
     },
     {
@@ -37,13 +40,15 @@
         "content": [
           "Artificial Intelligence (AI) is fundamentally changing the healthcare landscape.",
           "It is improving key areas such as diagnosis accuracy, treatment planning, and overall patient outcomes."
-        ]
+        ],
+        "notes": "Speaker notes for AI's Transformative Impact."
       }
     },
     {
       "type": "Section",
       "fields": {
-        "title": "Current Applications"
+        "title": "Current Applications",
+        "notes": "Speaker notes for Current Applications."
       }
     },
     {
@@ -55,7 +60,8 @@
         "content": [
           "AI algorithms are excelling at analyzing medical images (X-rays, CT scans, MRIs).",
           "They can detect subtle patterns often missed by the human eye, aiding in faster and more accurate diagnoses of conditions like cancer or diabetic retinopathy."
-        ]
+        ],
+        "notes": "Speaker notes for AI in Medical Imaging & Diagnostics."
       }
     },
     {
@@ -67,7 +73,8 @@
         "content": [
           "AI models analyze vast datasets to predict patient outcomes, identify high-risk patients, and forecast disease outbreaks.",
           "This enables proactive interventions and personalized care strategies."
-        ]
+        ],
+        "notes": "Speaker notes for Predictive Analytics & Patient Care."
       }
     },
     {
@@ -79,13 +86,15 @@
         "content": [
           "Virtual health assistants provide initial patient consultations, answer FAQs, and manage appointments, improving accessibility.",
           "AI significantly accelerates drug discovery by analyzing molecular data and predicting compound efficacy, reducing R&D time and cost."
-        ]
+        ],
+        "notes": "Speaker notes for Virtual Assistants & Drug Discovery."
       }
     },
     {
       "type": "Section",
       "fields": {
-        "title": "Benefits"
+        "title": "Benefits",
+        "notes": "Speaker notes for Benefits."
       }
     },
     {
@@ -99,13 +108,15 @@
           "Reduced healthcare costs through increased efficiency and optimized resource allocation.",
           "Personalized treatment plans tailored to individual patient data and genetic profiles.",
           "Overall improvement in patient outcomes and quality of care."
-        ]
+        ],
+        "notes": "Speaker notes for Key Benefits of AI in Healthcare."
       }
     },
     {
       "type": "Section",
       "fields": {
-        "title": "Challenges"
+        "title": "Challenges",
+        "notes": "Speaker notes for Challenges."
       }
     },
     {
@@ -119,13 +130,15 @@
           "Overcoming regulatory hurdles and establishing clear guidelines for AI technologies in healthcare.",
           "Integrating new AI systems seamlessly with existing legacy healthcare IT infrastructure.",
           "Ensuring physician adoption and training healthcare professionals to effectively use AI tools."
-        ]
+        ],
+        "notes": "Speaker notes for Navigating the Hurdles."
       }
     },
     {
       "type": "Section",
       "fields": {
-        "title": "Future Directions"
+        "title": "Future Directions",
+        "notes": "Speaker notes for Future Directions."
       }
     },
     {
@@ -133,7 +146,8 @@
       "fields": {
         "title": "The Future of AI in Healthcare",
         "image": "A futuristic image showing advanced medical robotics, real-time patient monitoring interfaces, and visualizations of personalized medicine.",
-        "explanation": "The future holds promise for advanced AI applications, including sophisticated medical robotics for surgery and care, continuous real-time patient monitoring, and the realization of fully personalized medicine driven by AI insights."
+        "explanation": "The future holds promise for advanced AI applications, including sophisticated medical robotics for surgery and care, continuous real-time patient monitoring, and the realization of fully personalized medicine driven by AI insights.",
+        "notes": "Speaker notes for The Future of AI in Healthcare."
       }
     }
   ],

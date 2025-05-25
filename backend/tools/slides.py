@@ -228,7 +228,12 @@ def generate_offline_slides(research: ResearchData, target_slides: int = 10, aut
                             # If logo fetch fails, keep the text name
                     except Exception as e:
                         print(f"OFFLINE MODE ERROR: Exception while fetching logo '{logo_term}': {str(e)}")
-    
+
+    # Add simple speaker notes for each slide
+    for slide in slides:
+        title = slide.get('fields', {}).get('title', 'this slide')
+        slide.setdefault('fields', {})['notes'] = f"Speaker notes for {title}."
+
     return {
         "title": presentation_title,
         "author": author,
@@ -339,7 +344,7 @@ The slides should be organized in clear sections (like "Market Research", "Our S
 
 REMEMBER: Use a VARIETY of slide types, prioritizing visual elements over plain text slides.
 
-For each slide, ONLY provide the required fields based on its type, as follows:
+For each slide, ONLY provide the required fields based on its type, as follows, and always include a "notes" field with 1-2 sentences of speaker notes:
 - Welcome slides: title, subtitle, author
 - Section slides: title
 - Content slides: title, content (MUST be a JSON array of strings, each string a bullet point)
@@ -353,7 +358,7 @@ For logos, simply put the company or product name (e.g., "AWS", "Microsoft", "Go
 
 DO NOT include any fields not specifically listed for each slide type. For example, Welcome slides should NOT have a content field.
 
-Note: Do not include the fields 'notes' or 'visual_suggestions' in your response as these will be handled separately.
+Note: Include the "notes" field for each slide. Do not include any "visual_suggestions" field.
 
 Format your response as a valid JSON object where:
 1. The root object has "title", "author", and "slides" properties
@@ -373,9 +378,35 @@ The 'fields' property should only contain the fields specified for that slide ty
         print(f"DEBUG: Model initialized")
         
         print(f"DEBUG: Sending request to Gemini API...")
+
+        function_declaration = {
+            "name": "create_presentation",
+            "description": "Structured slide presentation response",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "author": {"type": "string"},
+                    "slides": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {"type": "string"},
+                                "fields": {"type": "object"}
+                            },
+                            "required": ["type", "fields"]
+                        }
+                    }
+                },
+                "required": ["title", "slides"]
+            }
+        }
+
         response = await model.generate_content_async(
             prompt,
             generation_config=SLIDES_CONFIG,
+            tools=[{"function_declarations": [function_declaration]}],
             safety_settings=[
                 {
                     "category": "HARM_CATEGORY_HARASSMENT",
@@ -399,25 +430,32 @@ The 'fields' property should only contain the fields specified for that slide ty
         print(f"DEBUG: Response text length: {len(response.text)}")
         
         # Parse the response to extract the JSON
-        response_text = response.text
-        
-        # Find JSON content
-        print(f"DEBUG: Looking for JSON content in response...")
-        if "```json" in response_text:
-            # Extract JSON between markdown code blocks
-            print(f"DEBUG: Found markdown JSON code block")
-            json_str = response_text.split("```json")[1].split("```")[0].strip()
-            print(f"DEBUG: Extracted JSON from markdown block, length: {len(json_str)}")
-        else:
-            # Try to find JSON object in the text
-            print(f"DEBUG: No markdown code block found, searching for JSON object")
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}') + 1
-            if start_idx == -1 or end_idx == 0:
-                print(f"DEBUG ERROR: No JSON object found in response")
-                raise ValueError("No JSON found in response")
-            json_str = response_text[start_idx:end_idx]
-            print(f"DEBUG: Extracted JSON from text, length: {len(json_str)}")
+        json_str = None
+
+        # Check for structured function call response
+        try:
+            if hasattr(response, "candidates") and response.candidates:
+                candidate = response.candidates[0]
+                if candidate.content.parts and hasattr(candidate.content.parts[0], "function_call"):
+                    json_str = candidate.content.parts[0].function_call.args
+                    if not isinstance(json_str, str):
+                        json_str = None
+        except Exception as e:
+            print(f"DEBUG: Failed to parse structured response: {e}")
+
+        if not json_str:
+            response_text = response.text
+            print(f"DEBUG: Looking for JSON content in response text...")
+            if "```json" in response_text:
+                print(f"DEBUG: Found markdown JSON code block")
+                json_str = response_text.split("```json")[1].split("```")[0].strip()
+            else:
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}') + 1
+                if start_idx == -1 or end_idx == 0:
+                    print(f"DEBUG ERROR: No JSON object found in response")
+                    raise ValueError("No JSON found in response")
+                json_str = response_text[start_idx:end_idx]
         
         # Debug information about potentially problematic characters
         problem_chars = []

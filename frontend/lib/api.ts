@@ -110,6 +110,7 @@ export const api = {
               fields,
               title,
               content, // Now preserves array structure
+              notes: typeof fields.notes === "string" ? fields.notes : "",
               order: index,
               imagePrompt: "",
               imageUrl: imageUrl ? formatImageUrl(imageUrl) : "",

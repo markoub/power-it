@@ -8,6 +8,7 @@ export interface Slide {
   title: string;
   /** Convenience content (can be string or array of strings) */
   content: string | string[];
+  notes?: string;
   order: number;
   imagePrompt?: string;
   imageUrl?: string;

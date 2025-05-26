@@ -80,6 +80,10 @@ export default function CompiledStep({
   refreshPresentation,
 }: CompiledStepProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Check if compiled step is currently processing
+  const compiledStep = presentation.steps?.find(step => step.step === 'compiled');
+  const isProcessing = compiledStep?.status === 'processing';
 
   useEffect(() => {
     onContextChange("all");
@@ -106,6 +110,37 @@ export default function CompiledStep({
       setCurrentSlide(presentation.slides[prevIndex]);
     }
   };
+
+  // Show processing state if compilation is in progress
+  if (isProcessing) {
+    return (
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-bold mb-4 gradient-text">Compiling Presentation</h2>
+          <p className="text-gray-600 mb-6">
+            Combining slides and illustrations into a complete presentation.
+          </p>
+
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+            <div className="flex items-center justify-center gap-3 text-primary-600 mb-4">
+              <div className="h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+              <h3 className="text-xl font-semibold">Compiling...</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Finalizing your presentation structure and preparing all elements.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+              This process ensures all slides and images are properly integrated and ready for export.
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

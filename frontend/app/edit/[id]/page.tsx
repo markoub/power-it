@@ -26,7 +26,7 @@ import React from "react";
 const STEPS = ["Research", "Slides", "Illustration", "Compiled", "PPTX"];
 const STEP_API_NAMES = ["research", "slides", "images", "compiled", "pptx"];
 
-export default function EditPage({ params }: { params: { id: string } }) {
+export default function EditPage({ params }: { params: Promise<{ id: string }> }) {
   // Properly unwrap params to get the id
   const unwrappedParams = React.use(params);
   
@@ -64,40 +64,37 @@ export default function EditPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!presentation) return;
 
-    // Use adaptive polling - faster when things are processing, slower when stable
+    let pollInterval: NodeJS.Timeout;
+    let consecutiveUnchangedPolls = 0;
+    const MAX_UNCHANGED_POLLS = 5;
+    let lastPresentationHash = JSON.stringify(presentation.steps);
+
     const getCurrentPollingInterval = () => {
-      if (!presentation.steps) return 5000; // Default 5 seconds if no steps
+      if (!presentation.steps) return 10000; // Default 10 seconds if no steps
       
       const hasProcessingSteps = presentation.steps.some(step => step.status === "processing");
       const hasPendingSteps = presentation.steps.some(step => step.status === "pending");
       
-      if (hasProcessingSteps) return 2000; // 2 seconds when processing
-      if (hasPendingSteps) return 3000; // 3 seconds when pending
-      return 10000; // 10 seconds when everything is stable
+      if (hasProcessingSteps) return 3000; // 3 seconds when processing
+      if (hasPendingSteps) return 5000; // 5 seconds when pending
+      return 15000; // 15 seconds when everything is stable
     };
-
-    let pollInterval: NodeJS.Timeout;
-    let consecutiveUnchangedPolls = 0;
-    const MAX_UNCHANGED_POLLS = 3;
 
     const startPolling = () => {
       const intervalMs = getCurrentPollingInterval();
+      logInfo(`🔄 Starting polling with ${intervalMs}ms interval`);
       
       pollInterval = setInterval(async () => {
         try {
           const updatedPresentation = await api.getPresentation(unwrappedParams.id);
           if (updatedPresentation) {
+            const newPresentationHash = JSON.stringify(updatedPresentation.steps);
+            
             // Only update if there are actual changes to steps
-            const hasStepChanges = updatedPresentation.steps?.some((newStep, index) => {
-              const currentStep = presentation.steps?.[index];
-              return !currentStep || 
-                     currentStep.status !== newStep.status || 
-                     JSON.stringify(currentStep.result) !== JSON.stringify(newStep.result);
-            });
-
-            if (hasStepChanges) {
+            if (newPresentationHash !== lastPresentationHash) {
               logInfo('🔄 Presentation data updated from polling');
               setPresentation(updatedPresentation);
+              lastPresentationHash = newPresentationHash;
               
               // Only update current step automatically if user hasn't manually navigated
               if (!hasManuallyNavigated) {
@@ -107,17 +104,14 @@ export default function EditPage({ params }: { params: { id: string } }) {
                   setCurrentStep(newCurrentStep);
                 }
               } else {
-                logInfo(`🚫 Polling: Skipping auto step update because user manually navigated (hasManuallyNavigated=${hasManuallyNavigated})`);
+                logInfo(`🚫 Polling: Skipping auto step update because user manually navigated`);
               }
               
               // Reset consecutive unchanged counter
               consecutiveUnchangedPolls = 0;
-              
-              // Restart polling with new interval based on updated state
-              clearInterval(pollInterval);
-              startPolling();
             } else {
               consecutiveUnchangedPolls++;
+              logInfo(`🔄 No changes detected (${consecutiveUnchangedPolls}/${MAX_UNCHANGED_POLLS})`);
               
               // If we've had several polls with no changes and nothing is running,
               // slow down polling significantly
@@ -126,21 +120,26 @@ export default function EditPage({ params }: { params: { id: string } }) {
                   step => step.status === "processing" || step.status === "pending"
                 );
                 if (!hasActiveProcessing) {
+                  logInfo('🔄 No active processing, switching to slow polling');
                   clearInterval(pollInterval);
                   // Switch to very slow polling for completed presentations
                   pollInterval = setInterval(async () => {
-                    // Just check once every 30 seconds for completed presentations
                     try {
                       const check = await api.getPresentation(unwrappedParams.id);
-                      if (check && JSON.stringify(check) !== JSON.stringify(updatedPresentation)) {
-                        setPresentation(check);
-                        consecutiveUnchangedPolls = 0;
-                        clearInterval(pollInterval);
-                        startPolling(); // Resume normal polling if something changed
+                      if (check) {
+                        const checkHash = JSON.stringify(check.steps);
+                        if (checkHash !== lastPresentationHash) {
+                          logInfo('🔄 Changes detected in slow polling, resuming normal polling');
+                          setPresentation(check);
+                          lastPresentationHash = checkHash;
+                          consecutiveUnchangedPolls = 0;
+                          clearInterval(pollInterval);
+                          startPolling(); // Resume normal polling if something changed
+                        }
                       }
-                                         } catch (error) {
-                       logError('Error in slow polling:', error);
-                     }
+                    } catch (error) {
+                      logError('Error in slow polling:', error);
+                    }
                   }, 30000);
                 }
               }
@@ -154,8 +153,11 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
     startPolling();
 
-    return () => clearInterval(pollInterval);
-  }, [presentation, currentStep, unwrappedParams.id]);
+    return () => {
+      logInfo('🔄 Cleaning up polling interval');
+      clearInterval(pollInterval);
+    };
+  }, [unwrappedParams.id]); // Only depend on presentation ID, not the presentation object itself
 
   // Manual refresh function that components can call
   const refreshPresentation = async () => {
@@ -244,7 +246,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     setIsSaving(true);
     try {
       const updatedPresentation = await api.updatePresentation(
-        presentation.id,
+        String(presentation.id),
         presentation,
       );
 
@@ -441,12 +443,12 @@ export default function EditPage({ params }: { params: { id: string } }) {
       if (changes.research) {
         const updatedSteps = presentation.steps?.map(s =>
           s.step === "research" || s.step === "manual_research"
-            ? { ...s, result: changes.research, status: "completed" }
+            ? { ...s, result: changes.research, status: "completed" as const }
             : s
         ) || [];
 
         setPresentation({ ...presentation, steps: updatedSteps });
-        await api.saveModifiedResearch(presentation.id, changes.research);
+        await api.saveModifiedResearch(String(presentation.id), changes.research);
       }
     }
 
@@ -588,7 +590,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
       // Call the API to run the next step
       const result = await api.runPresentationStep(
-        presentation.id,
+        String(presentation.id),
         nextStepName,
       );
 

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText, Grid3X3, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Presentation, Slide } from "@/lib/types";
 import SlideRenderer from "@/components/slides/SlideRenderer";
@@ -94,12 +94,15 @@ export default function SlidesStep({
 }: SlidesStepProps) {
   const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [slideView, setSlideView] = useState<"overview" | "single">("overview");
 
   useEffect(() => {
-    // Set context to "single" when a slide is selected
+    // Update slide view based on current slide selection
     if (currentSlide) {
+      setSlideView("single");
       onContextChange("single");
     } else {
+      setSlideView("overview");
       onContextChange("all");
     }
   }, [currentSlide, onContextChange]);
@@ -138,8 +141,6 @@ export default function SlidesStep({
 
               if (refreshPresentation) {
                 await refreshPresentation();
-              } else {
-                window.location.reload();
               }
             }
           }
@@ -165,7 +166,52 @@ export default function SlidesStep({
     }
   };
 
+  const handleSlideClick = (slide: Slide) => {
+    setCurrentSlide(slide);
+    setSlideView("single");
+  };
+
+  const handleBackToOverview = () => {
+    setCurrentSlide(null);
+    setSlideView("overview");
+  };
+
   const noSlides = presentation.slides.length === 0;
+  
+  // Check if slides step is currently processing
+  const slidesStep = presentation.steps?.find(step => step.step === 'slides');
+  const isProcessing = slidesStep?.status === 'processing';
+
+  // Show processing state if slides are being generated
+  if (isProcessing) {
+    return (
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Slides</h2>
+          <p className="text-gray-600 mb-6">
+            Your slides are being generated using AI based on your research content.
+          </p>
+
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+            <div className="flex items-center justify-center gap-3 text-primary-600 mb-4">
+              <Loader2 size={32} className="animate-spin" />
+              <h3 className="text-xl font-semibold">Generating Slides...</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              This process may take a minute or two. Please wait while we create your slides.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+              The AI is analyzing your research content and creating structured slides with appropriate titles and content.
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (noSlides) {
     return (
@@ -210,6 +256,101 @@ export default function SlidesStep({
     );
   }
 
+  // Overview Mode - Show all slides as thumbnails
+  if (slideView === "overview") {
+    return (
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold gradient-text">Slides Overview</h2>
+              <p className="text-gray-600">
+                Click on any slide to edit it. You have {presentation.slides.length} slides in your presentation.
+              </p>
+            </div>
+            <Button
+              onClick={addNewSlide}
+              className="bg-primary hover:bg-primary-600 text-white flex items-center gap-2"
+              data-testid="add-slide-button"
+            >
+              <Plus size={16} />
+              Add Slide
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <AnimatePresence>
+              {presentation.slides.map((slide, index) => {
+                const slideType = detectSlideType(slide);
+                const typeInfo = getSlideTypeInfo(slideType);
+                const Icon = typeInfo.icon;
+                
+                return (
+                  <motion.div
+                    key={slide.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2, delay: index * 0.02 }}
+                  >
+                    <Card
+                      data-testid={`slide-thumbnail-${index}`}
+                      className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 group"
+                      onClick={() => handleSlideClick(slide)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Icon size={14} className="text-gray-500 flex-shrink-0" />
+                            <span className="font-medium truncate text-sm">
+                              {slide.title || `Slide ${index + 1}`}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSlide(slide.id);
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                        
+                        <Badge 
+                          className={`text-xs px-2 py-0.5 mb-3 ${typeInfo.color}`}
+                          variant="outline"
+                        >
+                          {typeInfo.label}
+                        </Badge>
+                        
+                        <div 
+                          className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg overflow-hidden"
+                          style={{ aspectRatio: '16/9' }}
+                        >
+                          <div className="h-full w-full bg-white rounded-sm">
+                            <SlideRenderer slide={slide} mini />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Single Slide Mode - Show selected slide with horizontal thumbnails below
   return (
     <div className="space-y-6">
       <motion.div
@@ -217,163 +358,81 @@ export default function SlidesStep({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl font-bold mb-4 gradient-text">Slides</h2>
-        <p className="text-gray-600 mb-6">
-          Create and edit your presentation slides. Preview is optimized for readability and content flow.
-        </p>
+        {/* Header with back button */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="outline"
+            onClick={handleBackToOverview}
+            className="flex items-center gap-2"
+            data-testid="back-to-overview-button"
+          >
+            <ArrowLeft size={16} />
+            Back to Overview
+          </Button>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold gradient-text">
+              {currentSlide?.title || "Untitled Slide"}
+            </h2>
+            <Badge 
+              className={`${getSlideTypeInfo(detectSlideType(currentSlide!)).color}`}
+              variant="outline"
+            >
+              {getSlideTypeInfo(detectSlideType(currentSlide!)).label}
+            </Badge>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          {/* Slide Navigation Sidebar */}
-          <div className="xl:col-span-1 space-y-4">
-            <div className="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Slides ({presentation.slides.length})</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addNewSlide}
-                  className="flex items-center gap-1 border-dashed"
-                  data-testid="add-slide-button"
+        {/* Main slide content */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
+          {/* Mode toggle */}
+          <div className="p-4 border-b border-gray-100">
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "preview" | "edit")}>
+              <TabsList className="bg-gray-100 p-1 rounded-lg">
+                <TabsTrigger 
+                  value="preview" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all flex items-center gap-2"
                 >
-                  <Plus size={14} />
-                  Add
-                </Button>
-              </div>
-              
-              <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
-                <AnimatePresence>
-                  {presentation.slides.map((slide, index) => {
-                    const slideType = detectSlideType(slide);
-                    const typeInfo = getSlideTypeInfo(slideType);
-                    const Icon = typeInfo.icon;
-                    
-                    return (
-                      <motion.div
-                        key={slide.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        transition={{ duration: 0.2, delay: index * 0.02 }}
-                      >
-                        <Card
-                          data-testid={`slide-thumbnail-${index}`}
-                          className={`cursor-pointer transition-all duration-200 ${
-                            currentSlide?.id === slide.id
-                              ? "ring-2 ring-primary-500 bg-primary-50 border-primary-200"
-                              : "hover:bg-gray-50 hover:border-gray-200"
-                          }`}
-                          onClick={() => setCurrentSlide(slide)}
-                        >
-                          <CardContent className="p-3">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Icon size={12} className="text-gray-500 flex-shrink-0" />
-                                <span className="font-medium truncate text-sm">
-                                  {slide.title || `Slide ${index + 1}`}
-                                </span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-500 flex-shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSlide(slide.id);
-                                }}
-                              >
-                                <Trash2 size={12} />
-                              </Button>
-                            </div>
-                            
-                            <Badge 
-                              className={`text-xs px-2 py-0.5 mb-2 ${typeInfo.color}`}
-                              variant="outline"
-                            >
-                              {typeInfo.label}
-                            </Badge>
-                            
-                            <div className="h-12 bg-gradient-to-br from-primary-50 to-secondary-50 rounded-md overflow-hidden p-1">
-                              <div className="h-full w-full bg-white rounded-sm flex items-center justify-center">
-                                <SlideRenderer slide={slide} mini />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-            </div>
+                  <Eye size={16} />
+                  Preview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="edit" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all flex items-center gap-2"
+                >
+                  <Edit3 size={16} />
+                  Edit
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          {/* Main Preview/Edit Area */}
-          <div className="xl:col-span-4">
-            {currentSlide ? (
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
-                {/* Header with slide info and mode toggle */}
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {currentSlide.title || "Untitled Slide"}
-                      </h3>
-                      <Badge 
-                        className={`${getSlideTypeInfo(detectSlideType(currentSlide)).color}`}
-                        variant="outline"
-                      >
-                        {getSlideTypeInfo(detectSlideType(currentSlide)).label}
-                      </Badge>
-                    </div>
-                    
-                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "preview" | "edit")}>
-                      <TabsList className="bg-gray-100 p-1 rounded-lg">
-                        <TabsTrigger 
-                          value="preview" 
-                          className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all flex items-center gap-2"
-                        >
-                          <Eye size={16} />
-                          Preview
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="edit" 
-                          className="data-[state=active]:bg-white data-[state=active]:text-primary-600 rounded-md transition-all flex items-center gap-2"
-                        >
-                          <Edit3 size={16} />
-                          Edit
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="p-6">
-                  <AnimatePresence mode="wait">
-                    {viewMode === "preview" ? (
-                      <motion.div
-                        key="preview"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                        className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl shadow-inner"
-                      >
-                        <div className="w-full flex items-center justify-center p-8">
-                          <div 
-                            className="w-full bg-white rounded-lg shadow-md overflow-hidden"
-                            style={{ 
-                              aspectRatio: '16/9',
-                              minHeight: '400px',
-                              maxHeight: '600px'
-                            }}
-                          >
+          {/* Content Area */}
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              {viewMode === "preview" ? (
+                <motion.div
+                  key="preview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl shadow-inner"
+                >
+                  <div className="w-full flex items-center justify-center p-8">
+                    <div 
+                      className="w-full bg-white rounded-lg shadow-md overflow-hidden"
+                      style={{ 
+                        aspectRatio: '16/9',
+                        minHeight: '400px',
+                        maxHeight: '600px'
+                      }}
+                    >
                       <div className="w-full h-full overflow-y-auto">
-                        <SlideRenderer slide={currentSlide} mini={false} />
+                        <SlideRenderer slide={currentSlide!} mini={false} />
                       </div>
                     </div>
                   </div>
-                  {currentSlide.notes && (
+                  {currentSlide?.notes && (
                     <div className="p-4">
                       <Accordion type="single" collapsible>
                         <AccordionItem value="notes">
@@ -386,59 +445,59 @@ export default function SlidesStep({
                     </div>
                   )}
                 </motion.div>
-                    ) : (
-                      <motion.div
-                        key="edit"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-6"
-                      >
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">
-                            Slide Title
-                          </label>
-                          <Input
-                            value={currentSlide.title}
-                            onChange={(e) =>
-                              updateSlide({
-                                ...currentSlide,
-                                title: e.target.value,
-                                fields: {
-                                  ...currentSlide.fields,
-                                  title: e.target.value,
-                                },
-                              })
-                            }
-                            placeholder="Enter slide title"
-                            className="text-xl font-semibold border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
-                            data-testid="slide-title-input"
-                          />
-                        </div>
+              ) : (
+                <motion.div
+                  key="edit"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Slide Title
+                    </label>
+                    <Input
+                      value={currentSlide?.title || ""}
+                      onChange={(e) =>
+                        updateSlide({
+                          ...currentSlide!,
+                          title: e.target.value,
+                          fields: {
+                            ...currentSlide!.fields,
+                            title: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Enter slide title"
+                      className="text-xl font-semibold border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all"
+                      data-testid="slide-title-input"
+                    />
+                  </div>
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">
-                            Slide Content (Markdown supported)
-                          </label>
-                          <Textarea
-                            value={
-                              Array.isArray(currentSlide.content)
-                                ? currentSlide.content.join('\n')
-                                : (typeof currentSlide.content === "string" ? currentSlide.content : "")
-                            }
-                            onChange={(e) => {
-                              const newContent = e.target.value;
-                              updateSlide({
-                                ...currentSlide,
-                                content: newContent, // Keep as string for user editing
-                                fields: {
-                                  ...currentSlide.fields,
-                                  content: newContent,
-                                },
-                              })
-                            }}
-                            placeholder="Enter slide content using Markdown:
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Slide Content (Markdown supported)
+                    </label>
+                    <Textarea
+                      value={
+                        Array.isArray(currentSlide?.content)
+                          ? currentSlide.content.join('\n')
+                          : (typeof currentSlide?.content === "string" ? currentSlide.content : "")
+                      }
+                      onChange={(e) => {
+                        const newContent = e.target.value;
+                        updateSlide({
+                          ...currentSlide!,
+                          content: newContent, // Keep as string for user editing
+                          fields: {
+                            ...currentSlide!.fields,
+                            content: newContent,
+                          },
+                        })
+                      }}
+                      placeholder="Enter slide content using Markdown:
 
 # Heading
 ## Subheading
@@ -447,75 +506,136 @@ export default function SlidesStep({
 *Italic text*
 
 Or let each line become a bullet point automatically!"
-                            rows={12}
-                            className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
-                          />
-                          <p className="text-xs text-gray-500">
-                            You can use Markdown formatting (headings, lists, bold, italic, etc.) or just type lines of text that will automatically become bullet points.
-                          </p>
-                        </div>
+                      rows={12}
+                      className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500">
+                      You can use Markdown formatting (headings, lists, bold, italic, etc.) or just type lines of text that will automatically become bullet points.
+                    </p>
+                  </div>
 
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">
-                            Speaker Notes
-                          </label>
-                          <Textarea
-                            value={currentSlide.notes || ""}
-                            onChange={(e) =>
-                              updateSlide({
-                                ...currentSlide,
-                                notes: e.target.value,
-                                fields: {
-                                  ...currentSlide.fields,
-                                  notes: e.target.value,
-                                },
-                              })
-                            }
-                            placeholder="Enter short script for presenter"
-                            rows={4}
-                            className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
-                          />
-                        </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Speaker Notes
+                    </label>
+                    <Textarea
+                      value={currentSlide?.notes || ""}
+                      onChange={(e) =>
+                        updateSlide({
+                          ...currentSlide!,
+                          notes: e.target.value,
+                          fields: {
+                            ...currentSlide!.fields,
+                            notes: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Enter short script for presenter"
+                      rows={4}
+                      className="resize-none border-gray-200 focus:border-primary-300 focus:ring focus:ring-primary-200 transition-all font-mono text-sm"
+                    />
+                  </div>
 
-                        {/* Live Preview in Edit Mode */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-3">Live Preview</h4>
-                          <div 
-                            className="bg-white rounded-md shadow-sm border overflow-hidden"
-                            style={{ aspectRatio: '16/9' }}
+                  {/* Live Preview in Edit Mode */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Live Preview</h4>
+                    <div 
+                      className="bg-white rounded-md shadow-sm border overflow-hidden"
+                      style={{ aspectRatio: '16/9' }}
+                    >
+                      <SlideRenderer slide={currentSlide!} mini={false} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Horizontal slide thumbnails */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">All Slides ({presentation.slides.length})</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addNewSlide}
+              className="flex items-center gap-1 border-dashed"
+              data-testid="add-slide-horizontal-button"
+            >
+              <Plus size={14} />
+              Add
+            </Button>
+          </div>
+          
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            <AnimatePresence>
+              {presentation.slides.map((slide, index) => {
+                const slideType = detectSlideType(slide);
+                const typeInfo = getSlideTypeInfo(slideType);
+                const Icon = typeInfo.icon;
+                const isSelected = currentSlide?.id === slide.id;
+                
+                return (
+                  <motion.div
+                    key={slide.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2, delay: index * 0.02 }}
+                    className="flex-shrink-0"
+                  >
+                    <Card
+                      data-testid={`slide-thumbnail-horizontal-${index}`}
+                      className={`cursor-pointer transition-all duration-200 w-48 ${
+                        isSelected
+                          ? "ring-2 ring-primary-500 bg-primary-50 border-primary-200"
+                          : "hover:bg-gray-50 hover:border-gray-200"
+                      }`}
+                      onClick={() => handleSlideClick(slide)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Icon size={12} className="text-gray-500 flex-shrink-0" />
+                            <span className="font-medium truncate text-sm">
+                              {slide.title || `Slide ${index + 1}`}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-red-50 hover:text-red-500 flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSlide(slide.id);
+                            }}
                           >
-                            <SlideRenderer slide={currentSlide} mini={false} />
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                        
+                        <Badge 
+                          className={`text-xs px-2 py-0.5 mb-2 ${typeInfo.color}`}
+                          variant="outline"
+                        >
+                          {typeInfo.label}
+                        </Badge>
+                        
+                        <div 
+                          className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-md overflow-hidden"
+                          style={{ aspectRatio: '16/9', height: '80px' }}
+                        >
+                          <div className="h-full w-full bg-white rounded-sm flex items-center justify-center">
+                            <SlideRenderer slide={slide} mini />
                           </div>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-96 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-8">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center"
-                >
-                  <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a slide to preview</h3>
-                  <p className="text-gray-500 mb-6">Choose a slide from the sidebar to see its content and make edits</p>
-                  <Button
-                    onClick={addNewSlide}
-                    className="bg-primary hover:bg-primary-600 text-white transition-all duration-300 shadow-md hover:shadow-primary-500/25"
-                    data-testid="add-first-slide-button"
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Add Your First Slide
-                  </Button>
-                </motion.div>
-              </div>
-            )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>

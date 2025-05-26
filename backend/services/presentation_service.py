@@ -114,6 +114,7 @@ async def execute_manual_research_task(presentation_id: int, research_content: s
 
 async def execute_slides_task(presentation_id: int):
     """Execute slides generation task for a presentation"""
+    
     # Create a new session for the background task
     async with SessionLocal() as db:
         try:
@@ -180,6 +181,8 @@ async def execute_slides_task(presentation_id: int):
             await db.commit()
             
         except Exception as e:
+            print(f"Error in slides task: {str(e)}")
+            
             # Update step status to failed
             slides_result = await db.execute(
                 select(PresentationStepModel).filter(

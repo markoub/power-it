@@ -29,6 +29,10 @@ interface ResearchStepProps {
 export default function ResearchStep({ presentation, setPresentation, savePresentation, mode = 'edit', onEditResearch, refreshPresentation }: ResearchStepProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRedoing, setIsRedoing] = useState(false)
+  
+  // Check if research step is currently processing
+  const researchStep = presentation.steps?.find(step => step.step === 'research' || step.step === 'manual_research');
+  const isStepProcessing = researchStep?.status === 'processing';
   const [manualResearch, setManualResearch] = useState("")
   const [topic, setTopic] = useState("")
   const [researchMethod, setResearchMethod] = useState<"ai" | "manual">("ai")
@@ -383,6 +387,37 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
   const researchData = getResearchContent()
   const researchContent = researchData.content
   const researchLinks = researchData.links
+
+  // Show processing state if research is being generated
+  if (isStepProcessing) {
+    return (
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Research</h2>
+          <p className="text-gray-600 mb-6">
+            AI is researching your topic and gathering comprehensive information.
+          </p>
+
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+            <div className="flex items-center justify-center gap-3 text-primary-600 mb-4">
+              <Loader2 size={32} className="animate-spin" />
+              <h3 className="text-xl font-semibold">Researching...</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              This process may take a minute as we gather and analyze information on your topic.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+              The AI is searching for relevant information, analyzing sources, and structuring the research content for your presentation.
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // If no method has been selected yet, show the selection interface
   if (!hasSelectedMethod) {

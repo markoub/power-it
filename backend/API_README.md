@@ -4,6 +4,8 @@
 
 The PowerIt Presentation API provides endpoints for creating, managing, and generating AI-powered presentations. This documentation provides a guide to help frontend developers integrate with the API effectively.
 
+The backend routers have been split into smaller modules for easier maintenance. Presentation related endpoints are grouped across `presentations.py`, `presentation_steps.py`, `presentation_modify.py`, and `presentation_images.py`.
+
 ## API Documentation
 
 The API includes comprehensive Swagger documentation that you can access at:

@@ -121,127 +121,45 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
       setMessages(prev => [...prev, processingMessage])
       const processingMessageIndex = userMessageIndex + 1
 
-      // Check if this is a presentation-level modification (add/remove slides)
-      const isPresentationLevelModification = (prompt: string) => {
-        const lowerPrompt = prompt.toLowerCase();
-        return lowerPrompt.includes('add') && (lowerPrompt.includes('slide') || lowerPrompt.includes('slides')) ||
-               lowerPrompt.includes('remove') && (lowerPrompt.includes('slide') || lowerPrompt.includes('slides')) ||
-               lowerPrompt.includes('delete') && (lowerPrompt.includes('slide') || lowerPrompt.includes('slides')) ||
-               lowerPrompt.includes('new slide') ||
-               lowerPrompt.includes('another slide') ||
-               lowerPrompt.includes('more slide') ||
-               lowerPrompt.includes('extra slide');
-      };
 
-      // Only allow slide modifications if we're on the slides step and have slides data
-      if (step === "Slides") {
-        // Check if slides are actually available before attempting modification
-        const hasSlidesData = presentation.slides && presentation.slides.length > 0;
-        const slidesStep = presentation.steps?.find(s => s.step === "slides");
-        const isSlidesCompleted = slidesStep?.status === "completed";
+
+      // Use the new wizard system
+      try {
+        // Prepare context for the wizard
+        const wizardContext: any = {
+          mode: context
+        };
         
-        if (!hasSlidesData || !isSlidesCompleted) {
-          response = "I can't modify slides yet because they haven't been generated. Please generate slides first by going to the Slides step.";
+        // Add slide information if in single slide mode
+        if (context === "single" && currentSlide) {
+          const slideIndex = presentation.slides.findIndex(s => s.id === currentSlide.id);
+          wizardContext.slide_index = slideIndex;
+          wizardContext.current_slide = currentSlide;
+        }
+        
+        // Call the new wizard API
+        const apiResp = await api.processWizardRequest(
+          presentation.id,
+          input,
+          step,
+          wizardContext
+        );
+        
+        if (apiResp) {
+          response = apiResp.response || "I've processed your request.";
+          
+          // Handle suggestions from the wizard
+          if (apiResp.suggestions) {
+            suggestedChanges = apiResp.suggestions;
+          }
         } else {
-          try {
-            // Determine if this is a presentation-level or single-slide modification
-            const isFullPresentationModification = isPresentationLevelModification(input);
-            
-            if (isFullPresentationModification) {
-              // Handle presentation-level modifications (add/remove slides)
-              console.log("Handling presentation-level modification:", input);
-              
-              const apiResp = await api.modifyPresentation(presentation.id, input, undefined, "slides");
-              
-              if (apiResp && apiResp.modified_presentation) {
-                response = "I've analyzed your request and created modifications to the presentation. You can preview the changes below and choose to apply or dismiss them.";
-                
-                // Transform the modified presentation data to match frontend expectations
-                const modifiedSlides = apiResp.modified_presentation.slides?.map((slide: any, index: number) => {
-                  const fields = slide.fields || {};
-                  const title = fields.title || `Slide ${index + 1}`;
-                  let content: any = fields.content || "";
-
-                  if (Array.isArray(content)) {
-                    content = content.join("\n");
-                  } else if (typeof content !== "string") {
-                    content = String(content || "");
-                  }
-
-                  return {
-                    id: slide.id || `slide-${index}`,
-                    type: slide.type || "Content",
-                    fields,
-                    title,
-                    content,
-                    order: index,
-                    imagePrompt: "",
-                    imageUrl: slide.image_url || "",
-                  };
-                }) || [];
-
-                suggestedChanges = {
-                  presentation: {
-                    ...presentation,
-                    slides: modifiedSlides
-                  }
-                };
-              } else {
-                response = "I've processed your request, but no specific changes were suggested. You could try a more specific request about what slides to add or remove.";
-              }
-            } else if (context === "single" && currentSlide) {
-              // Handle single slide modifications
-              const slideIndex = presentation.slides.findIndex(s => s.id === currentSlide.id);
-              
-              if (slideIndex === -1) {
-                response = "I couldn't find the selected slide. Please try selecting a different slide.";
-              } else {
-                const apiResp = await api.modifyPresentation(presentation.id, input, slideIndex, "slides");
-                const mod = apiResp.modified_slide;
-                
-                if (mod && mod.fields) {
-                  response = "I've analyzed your slide and created some improvements. You can preview the changes below and choose to apply or dismiss them.";
-                  suggestedChanges = {
-                    slide: {
-                      ...currentSlide,
-                      title: mod.fields.title || currentSlide.title,
-                      content: Array.isArray(mod.fields.content) ? mod.fields.content.join("\n") : (mod.fields.content || currentSlide.content)
-                    }
-                  };
-                } else {
-                  response = "I've processed your request, but no specific changes were suggested. The slide might already be well-optimized, or you could try a more specific request.";
-                }
-              }
-            } else {
-              // Context is "all" but not a presentation-level modification
-              response = "I can help with general questions about your presentation. For specific slide modifications, please select a slide first. For adding or removing slides, try requests like 'add a slide about...' or 'remove the slide about...'.";
-            }
-          } catch (error) {
-            console.error("Error modifying presentation/slide:", error);
-            response = "I encountered an error while trying to process your request. This might be because the presentation data isn't ready yet. Please try again after ensuring all previous steps are completed.";
-            setError("Failed to process modification. Please try again.");
-          }
+          response = "I've processed your request, but no specific response was generated.";
         }
-      } else if (step === "Research") {
-        try {
-          const apiResp = await api.modifyResearch(presentation.id, input);
-          if (apiResp && apiResp.content) {
-            response = "I've prepared updated research content. You can apply the changes below.";
-            suggestedChanges = { research: apiResp };
-          } else {
-            response = "I've processed your request, but no specific changes were suggested.";
-          }
-        } catch (error) {
-          console.error("Error modifying research:", error);
-          response = "I encountered an error while trying to modify the research.";
-          setError("Failed to process research modification. Please try again.");
-        }
-      } else if (step === "Illustrations") {
-        response = "I can help with image suggestions and visual improvements. For slide content changes, please use the Slides step.";
-      } else if (step === "PPTX") {
-        response = "The presentation is being finalized. If you need to make changes, please go back to the Slides step.";
-      } else {
-        response = "I'm here to help! Wizard support varies by step. For the best experience with slide modifications, please navigate to the Slides step and select a specific slide.";
+        
+      } catch (error) {
+        console.error("Error processing wizard request:", error);
+        response = "I encountered an error while processing your request. Please try again.";
+        setError("Failed to process wizard request. Please try again.");
       }
 
       // Update processing message with actual response

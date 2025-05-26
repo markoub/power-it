@@ -1,0 +1,153 @@
+"""
+Tests for the new wizard system.
+"""
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock
+from tools.wizard.wizard_factory import WizardFactory
+from tools.wizard.research_wizard import ResearchWizard
+from tools.wizard.slides_wizard import SlidesWizard
+from tools.wizard.general_wizard import GeneralWizard
+
+
+class TestWizardFactory:
+    """Test the wizard factory routing logic."""
+    
+    def test_wizard_factory_initialization(self):
+        """Test that wizard factory initializes correctly."""
+        factory = WizardFactory()
+        assert "research" in factory._wizards
+        assert "slides" in factory._wizards
+        assert "general" in factory._wizards
+        assert isinstance(factory._wizards["research"], ResearchWizard)
+        assert isinstance(factory._wizards["slides"], SlidesWizard)
+        assert isinstance(factory._wizards["general"], GeneralWizard)
+    
+    def test_determine_wizard_type_research(self):
+        """Test that research step routes to research wizard."""
+        factory = WizardFactory()
+        wizard_type = factory._determine_wizard_type("research", {})
+        assert wizard_type == "research"
+        
+        wizard_type = factory._determine_wizard_type("Research", {})
+        assert wizard_type == "research"
+    
+    def test_determine_wizard_type_slides(self):
+        """Test that slides step routes to slides wizard."""
+        factory = WizardFactory()
+        wizard_type = factory._determine_wizard_type("slides", {})
+        assert wizard_type == "slides"
+        
+        wizard_type = factory._determine_wizard_type("Slides", {})
+        assert wizard_type == "slides"
+    
+    def test_determine_wizard_type_general(self):
+        """Test that other steps route to general wizard."""
+        factory = WizardFactory()
+        
+        for step in ["illustrations", "pptx", "unknown", "other"]:
+            wizard_type = factory._determine_wizard_type(step, {})
+            assert wizard_type == "general"
+
+
+class TestResearchWizard:
+    """Test the research wizard functionality."""
+    
+    def test_research_wizard_capabilities(self):
+        """Test research wizard capabilities."""
+        wizard = ResearchWizard()
+        caps = wizard.get_capabilities()
+        
+        assert caps["type"] == "research"
+        assert caps["can_modify"] is True
+        assert caps["can_add_content"] is True
+        assert caps["can_answer_questions"] is True
+        assert "refine_research" in caps["supported_actions"]
+        assert "add_information" in caps["supported_actions"]
+    
+    def test_extract_research_data(self):
+        """Test extracting research data from presentation."""
+        wizard = ResearchWizard()
+        
+        # Test with valid research data
+        presentation_data = {
+            "steps": [
+                {
+                    "step": "research",
+                    "result": {"content": "Test research", "links": ["http://example.com"]}
+                }
+            ]
+        }
+        
+        research_data = wizard._extract_research_data(presentation_data)
+        assert research_data["content"] == "Test research"
+        assert research_data["links"] == ["http://example.com"]
+        
+        # Test with no research data
+        presentation_data = {"steps": []}
+        research_data = wizard._extract_research_data(presentation_data)
+        assert research_data["content"] == ""
+        assert research_data["links"] == []
+    
+    def test_is_modification_request(self):
+        """Test identifying modification requests."""
+        wizard = ResearchWizard()
+        
+        # Test modification keywords
+        assert wizard._is_modification_request("add more information") is True
+        assert wizard._is_modification_request("improve the research") is True
+        assert wizard._is_modification_request("modify this content") is True
+        assert wizard._is_modification_request("expand on this topic") is True
+        
+        # Test non-modification requests
+        assert wizard._is_modification_request("what is this about?") is False
+        assert wizard._is_modification_request("explain the topic") is False
+        assert wizard._is_modification_request("how does this work?") is False
+
+
+class TestSlidesWizard:
+    """Test the slides wizard functionality."""
+    
+    def test_slides_wizard_capabilities(self):
+        """Test slides wizard capabilities."""
+        wizard = SlidesWizard()
+        caps = wizard.get_capabilities()
+        
+        assert caps["type"] == "slides"
+        assert caps["can_modify_single"] is True
+        assert caps["can_modify_presentation"] is True
+        assert caps["can_add_slides"] is True
+        assert caps["can_remove_slides"] is True
+        assert "modify_slide_content" in caps["supported_actions"]
+        assert "add_new_slide" in caps["supported_actions"]
+    
+    def test_is_presentation_level_request(self):
+        """Test identifying presentation-level requests."""
+        wizard = SlidesWizard()
+        
+        # Test presentation-level keywords
+        assert wizard._is_presentation_level_request("add a new slide") is True
+        assert wizard._is_presentation_level_request("remove slide about") is True
+        assert wizard._is_presentation_level_request("delete this slide") is True
+        assert wizard._is_presentation_level_request("reorder the slides") is True
+        
+        # Test non-presentation-level requests
+        assert wizard._is_presentation_level_request("improve this content") is False
+        assert wizard._is_presentation_level_request("make it better") is False
+        assert wizard._is_presentation_level_request("what is this about?") is False
+
+
+class TestGeneralWizard:
+    """Test the general wizard functionality."""
+    
+    def test_general_wizard_capabilities(self):
+        """Test general wizard capabilities."""
+        wizard = GeneralWizard()
+        caps = wizard.get_capabilities()
+        
+        assert caps["type"] == "general"
+        assert caps["can_modify"] is False
+        assert caps["can_provide_guidance"] is True
+        assert caps["can_answer_questions"] is True
+        assert "answer_questions" in caps["supported_actions"]
+        assert "provide_guidance" in caps["supported_actions"] 

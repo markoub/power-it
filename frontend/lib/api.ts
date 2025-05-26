@@ -349,6 +349,32 @@ export const api = {
     return await response.json();
   },
 
+  async processWizardRequest(
+    id: string | number,
+    prompt: string,
+    currentStep: string,
+    context?: any
+  ): Promise<any> {
+    const payload = {
+      prompt,
+      current_step: currentStep,
+      context: context || {}
+    };
+
+    const response = await fetch(`${API_URL}/presentations/${id}/wizard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      mode: "cors",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to process wizard request: ${response.status}`);
+    }
+
+    return await response.json();
+  },
+
   async modifyResearch(id: string | number, prompt: string): Promise<any> {
     const response = await fetch(
       `${API_URL}/presentations/${id}/research/modify`,

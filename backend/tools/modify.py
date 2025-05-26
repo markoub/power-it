@@ -1,5 +1,6 @@
 """
 Tools for modifying existing presentations based on user instructions.
+This module now uses the new wizard system for better organization.
 """
 
 from typing import Dict, Any, Optional, List, Union
@@ -12,9 +13,13 @@ from config import MODIFY_MODEL, MODIFY_CONFIG
 from utils import extract_json_from_text
 import google.generativeai as genai
 from models import CompiledPresentation, CompiledSlide, ResearchData
+from .wizard.wizard_factory import WizardFactory
 
 # Offline mode check
 OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+
+# Global wizard factory instance
+_wizard_factory = WizardFactory()
 
 async def modify_single_slide(
     compiled_data: Dict[str, Any],
@@ -280,6 +285,29 @@ async def modify_presentation(
     except Exception as e:
         print(f"Error in modify_presentation: {str(e)}")
         raise e
+
+
+async def process_wizard_request(
+    prompt: str,
+    presentation_data: Dict[str, Any],
+    current_step: str,
+    context: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Process a wizard request using the new wizard system.
+    
+    Args:
+        prompt: User's request/question
+        presentation_data: Current presentation data
+        current_step: Current step in the presentation workflow
+        context: Additional context (e.g., selected slide, mode)
+        
+    Returns:
+        Dictionary containing response and any suggested changes
+    """
+    return await _wizard_factory.process_wizard_request(
+        prompt, presentation_data, current_step, context
+    )
 
 
 async def modify_research(

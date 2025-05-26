@@ -851,6 +851,93 @@ async def save_modified_research(
 
     return {"message": f"Modified research saved for presentation {presentation_id}", "presentation_id": presentation_id}
 
+
+@router.post("/{presentation_id}/wizard",
+           summary="Process wizard request",
+           description="Process a wizard request using the new context-aware wizard system")
+async def process_wizard_request_endpoint(
+    presentation_id: int,
+    request: Request
+):
+    """
+    Process a wizard request using the new wizard system.
+    Routes to appropriate wizard based on current step and context.
+    """
+    try:
+        data = await request.json()
+        prompt = data.get("prompt")
+        current_step = data.get("current_step", "unknown")
+        context = data.get("context", {})
+        
+        if not prompt:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Missing prompt"}
+            )
+        
+        # Get presentation data
+        async with SessionLocal() as db:
+            # Get presentation
+            presentation_result = await db.execute(
+                select(Presentation).filter(Presentation.id == presentation_id)
+            )
+            presentation = presentation_result.scalars().first()
+            
+            if not presentation:
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": "Presentation not found"}
+                )
+            
+            # Get all steps for this presentation
+            steps_result = await db.execute(
+                select(PresentationStepModel).filter(
+                    PresentationStepModel.presentation_id == presentation_id
+                )
+            )
+            steps = steps_result.scalars().all()
+            
+            # Build presentation data structure
+            presentation_data = {
+                "id": presentation.id,
+                "name": presentation.name,
+                "topic": presentation.topic,
+                "author": presentation.author,
+                "steps": []
+            }
+            
+            for step in steps:
+                step_data = {
+                    "step": step.step,
+                    "status": step.status,
+                    "result": step.get_result() if step.status == StepStatus.COMPLETED.value else None
+                }
+                presentation_data["steps"].append(step_data)
+            
+            # Import and use the wizard system
+            from tools.modify import process_wizard_request
+            
+            result = await process_wizard_request(
+                prompt=prompt,
+                presentation_data=presentation_data,
+                current_step=current_step,
+                context=context
+            )
+            
+            return JSONResponse(
+                status_code=200,
+                content=result
+            )
+            
+    except Exception as e:
+        import traceback
+        print(f"Error in wizard request: {str(e)}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error processing wizard request: {str(e)}"}
+        )
+
 @router.post("/{presentation_id}/slides/{slide_index}/image",
            summary="Regenerate slide image",
            description="Generate a new image for a specific slide and update the images step")

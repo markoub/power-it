@@ -30,6 +30,8 @@ Key improvements to the API documentation:
 
 For detailed API documentation, see `API_README.md`.
 
+The `routers` package now organizes presentation endpoints across multiple modules for readability. See `routers/presentation_steps.py`, `routers/presentation_modify.py`, and `routers/presentation_images.py`.
+
 ## Setup
 
 ### Prerequisites

@@ -41,8 +41,11 @@ export async function createPresentation(page: Page, name: string, topic: string
   // Navigate directly to the create page
   await page.goto('http://localhost:3000/create');
   
-  // Wait for the create form to be visible
-  await expect(page.getByTestId('create-presentation-form')).toBeVisible();
+  // Wait for page to load completely
+  await page.waitForLoadState('networkidle');
+  
+  // Wait for the create form to be visible with a longer timeout
+  await expect(page.getByTestId('create-presentation-form')).toBeVisible({ timeout: 10000 });
   
   // Fill out the basic form (only name and author required)
   await page.getByTestId('presentation-title-input').fill(uniqueName);

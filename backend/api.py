@@ -27,6 +27,9 @@ from database import init_db
 
 # Import routers
 from routers.presentations import router as presentations_router
+from routers.presentation_steps import router as presentation_steps_router
+from routers.presentation_modify import router as presentation_modify_router
+from routers.presentation_images import router as presentation_images_router
 from routers.images import router as images_router
 from routers.logos import router as logos_router
 from routers.pptx import router as pptx_router
@@ -83,6 +86,9 @@ app.add_middleware(
 
 # Include routers
 app.include_router(presentations_router)
+app.include_router(presentation_steps_router)
+app.include_router(presentation_modify_router)
+app.include_router(presentation_images_router)
 app.include_router(images_router)
 app.include_router(logos_router)
 app.include_router(pptx_router)

@@ -363,26 +363,58 @@ class SlidesWizard(BaseWizard):
         
         # Add mock suggestions for modification requests
         if request_type == "single_slide" and context and context.get("slide_index") is not None:
-            # Mock single slide suggestion
+            # Mock single slide suggestion - get the current slide and modify it
             slide_index = context.get("slide_index")
-            base_response["suggestions"] = {
-                "slide": {
-                    "id": f"slide-{slide_index}",
-                    "type": "Content",
-                    "title": "Enhanced Slide Title (Offline Mock)",
-                    "content": "This is mock enhanced content for offline testing. The slide has been improved with better formatting and more engaging content.",
-                    "notes": "Mock notes for offline testing",
-                    "order": slide_index,
-                    "imagePrompt": "",
-                    "imageUrl": "",
-                    "fields": {
-                        "title": "Enhanced Slide Title (Offline Mock)",
-                        "content": "This is mock enhanced content for offline testing. The slide has been improved with better formatting and more engaging content.",
-                        "notes": "Mock notes for offline testing"
+            
+            # Try to get the current slide from presentation data using the same extraction method
+            current_slide = None
+            if presentation_data:
+                slides_data = self._extract_slides_data(presentation_data)
+                slides = slides_data.get("slides", [])
+                if 0 <= slide_index < len(slides):
+                    current_slide = slides[slide_index]
+            
+            if current_slide:
+                # Create a modified version of the current slide with substantial changes
+                current_title = current_slide.get("title", "Slide Title")
+                current_content = current_slide.get("content", "Slide content")
+                
+                # Make sure the suggested slide is definitely different
+                suggested_title = f"Enhanced: {current_title}" if not current_title.startswith("Enhanced:") else f"Improved {current_title.replace('Enhanced: ', '')}"
+                
+                # Create substantially different content
+                if "bullet points" in prompt.lower() or "engaging" in prompt.lower():
+                    suggested_content = f"""• Key Point 1: Enhanced version of your content
+• Key Point 2: Additional insights and details
+• Key Point 3: Actionable takeaways for your audience
+
+{current_content}
+
+Additional engaging elements:
+- Interactive examples
+- Real-world applications
+- Clear call-to-action"""
+                else:
+                    suggested_content = f"IMPROVED CONTENT: {current_content}\n\nAdditional enhancements:\n- Better structure\n- More engaging language\n- Clearer messaging"
+                
+                base_response["suggestions"] = {
+                    "slide": {
+                        "title": suggested_title,
+                        "content": suggested_content,
+                        "type": current_slide.get("type", "content"),
+                        "imagePrompt": "Professional illustration that enhances the slide message"
                     }
-                },
-                "slide_index": slide_index
-            }
+                }
+            else:
+                # Fallback if no current slide found
+                base_response["suggestions"] = {
+                    "slide": {
+                        "title": "Enhanced Slide Title",
+                        "content": "• Improved bullet point 1\n• Enhanced bullet point 2\n• Engaging call-to-action",
+                        "type": "content",
+                        "imagePrompt": "Professional illustration"
+                    }
+                }
         elif request_type == "presentation_level":
             # Mock presentation-level suggestion
             base_response["suggestions"] = {
@@ -393,14 +425,22 @@ class SlidesWizard(BaseWizard):
                             "type": "Content", 
                             "title": "Mock Slide 1 (Offline)",
                             "content": "Mock content for slide 1",
-                            "order": 0
+                            "order": 0,
+                            "fields": {
+                                "title": "Mock Slide 1 (Offline)",
+                                "content": "Mock content for slide 1"
+                            }
                         },
                         {
                             "id": "slide-1",
                             "type": "Content",
                             "title": "Mock Slide 2 (Offline)", 
                             "content": "Mock content for slide 2",
-                            "order": 1
+                            "order": 1,
+                            "fields": {
+                                "title": "Mock Slide 2 (Offline)",
+                                "content": "Mock content for slide 2"
+                            }
                         }
                     ]
                 }

@@ -216,6 +216,10 @@ export default function IllustrationStep({
   const hasNoImages = presentation.slides.every(
     (slide) => !slide.imageUrl || slide.imageUrl === ""
   );
+  
+  // Check if images step is currently processing
+  const imagesStep = presentation.steps?.find(step => step.step === 'images');
+  const isStepProcessing = imagesStep?.status === 'processing';
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedImageSlide, setSelectedImageSlide] = useState<Slide | null>(null);
@@ -246,6 +250,37 @@ export default function IllustrationStep({
       setGeneratingSlideId(null);
     }
   };
+
+  // Show processing state if images are being generated
+  if (isStepProcessing) {
+    return (
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Images</h2>
+          <p className="text-gray-600 mb-6">
+            AI is creating custom illustrations for your slides based on their content.
+          </p>
+
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+            <div className="flex items-center justify-center gap-3 text-primary-600 mb-4">
+              <Loader2 size={32} className="animate-spin" />
+              <h3 className="text-xl font-semibold">Generating Images...</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              This process may take a few minutes as we create unique illustrations for each slide.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+              The AI is analyzing slide content and generating appropriate visual elements to enhance your presentation.
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

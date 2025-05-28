@@ -12,19 +12,24 @@ from prompts import get_prompt, PromptModel
 @pytest.mark.asyncio
 async def test_get_prompt_creates_default(tmp_path):
     await init_db()
-    text = await get_prompt("research_prompt_test", "DEFAULT TEXT")
+    # Use a unique test name to avoid conflicts with previous test runs
+    import time
+    test_name = f"research_prompt_test_{int(time.time() * 1000)}"
+    text = await get_prompt(test_name, "DEFAULT TEXT")
     assert text == "DEFAULT TEXT"
     async with SessionLocal() as db:
-        result = await db.execute(select(PromptModel).filter(PromptModel.name == "research_prompt_test"))
+        result = await db.execute(select(PromptModel).filter(PromptModel.name == test_name))
         obj = result.scalars().first()
         assert obj is not None
         assert obj.text == "DEFAULT TEXT"
 
     # Update text directly
     async with SessionLocal() as db:
+        result = await db.execute(select(PromptModel).filter(PromptModel.name == test_name))
+        obj = result.scalars().first()
         obj.text = "UPDATED"
         db.add(obj)
         await db.commit()
 
-    text2 = await get_prompt("research_prompt_test", "SHOULD NOT USE")
+    text2 = await get_prompt(test_name, "SHOULD NOT USE")
     assert text2 == "UPDATED"

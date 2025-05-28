@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { createPresentation } from './utils';
 
-test.setTimeout(120000); // 2 minutes
-
 test.describe('Wizard Improvements Demo', () => {
   test('should demonstrate enhanced wizard functionality', async ({ page }) => {
+    test.setTimeout(120000); // 2 minutes
     const name = `Wizard Demo ${Date.now()}`;
     const topic = 'Digital Marketing Strategies for Small Businesses';
 
@@ -185,8 +184,8 @@ test.describe('Wizard Improvements Demo', () => {
       await page.waitForTimeout(1500);
     }
     
-    // Check that latest message is visible
-    const latestMessage = page.locator('text=Third test message');
+    // Check that latest message is visible (specifically the user message)
+    const latestMessage = page.getByTestId('wizard-message-user').filter({ hasText: 'Third test message' });
     await expect(latestMessage).toBeVisible();
     console.log('✅ Auto-scroll functionality working');
 
@@ -209,6 +208,7 @@ test.describe('Wizard Improvements Demo', () => {
   });
 
   test('should handle different step contexts', async ({ page }) => {
+    test.setTimeout(120000); // 2 minutes
     const name = `Context Test ${Date.now()}`;
     const topic = 'Context Testing';
 

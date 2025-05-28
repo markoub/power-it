@@ -24,7 +24,7 @@ endef
 .PHONY: help setup run clean
 .PHONY: test-backend test-backend-online test-backend-offline test-backend-unit test-backend-integration
 .PHONY: test-frontend test-e2e test-e2e-headed test-e2e-debug test-e2e-api test-e2e-specific test-e2e-list
-.PHONY: test-all test-all-online test-all-offline
+.PHONY: test-all test-all-online test-all-offline test-all-failures
 .PHONY: install-deps install-browsers dev
 
 # Default target when just running `make`
@@ -58,6 +58,7 @@ help:
 	@printf "  \033[1;33mmake test-all\033[0m            - Run all tests (backend + frontend + e2e)\n"
 	@printf "  \033[1;33mmake test-all-online\033[0m     - Run all tests with network access\n"
 	@printf "  \033[1;33mmake test-all-offline\033[0m    - Run all tests without network access\n"
+	@printf "  \033[1;33mmake test-all-failures\033[0m   - Run all tests and show only failures summary\n"
 	@printf "\n"
 	@printf "\033[1;32mDevelopment Tools:\033[0m\n"
 	@printf "  \033[1;33mmake install-deps\033[0m        - Install project dependencies\n"
@@ -200,6 +201,32 @@ test-all-online: test-backend-online test-frontend
 # Run all tests without network access
 test-all-offline: test-backend-offline test-frontend test-e2e
 	$(call print_info,All offline tests complete!)
+
+# Run all tests and show only failures summary
+test-all-failures:
+	$(call print_info,Running all tests and collecting failures...)
+	@printf "=== RUNNING ALL TESTS - FAILURES ONLY ===\n" > test-failures.log
+	@printf "\n" >> test-failures.log
+	@printf "🔧 Backend Tests:\n" >> test-failures.log
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh 2>&1 | grep -E "(FAILED|ERROR|AssertionError)" >> ../test-failures.log || true
+	@printf "\n" >> test-failures.log
+	@printf "🌐 E2E Tests:\n" >> test-failures.log
+	@cd $(TESTING_DIR) && npx playwright test --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
+	@printf "\n" >> test-failures.log
+	@printf "=== SUMMARY ===\n" >> test-failures.log
+	@if [ -s test-failures.log ] && grep -q -E "(FAILED|ERROR|✘|failed|AssertionError|TimeoutError)" test-failures.log; then \
+		$(call print_warn,Tests completed with failures. See summary below:); \
+		printf "\n"; \
+		cat test-failures.log; \
+		printf "\n"; \
+		$(call print_warn,To run specific failing tests:); \
+		printf "  Backend: cd backend && ./run_tests.sh tests/specific_test.py::test_name\n"; \
+		printf "  E2E: cd testing && npx playwright test specific-test.spec.ts\n"; \
+	else \
+		$(call print_info,All tests passed! No failures detected.); \
+		printf "All tests passed! No failures detected.\n" >> test-failures.log; \
+		cat test-failures.log; \
+	fi
 
 # ==========================================
 # Development Tools

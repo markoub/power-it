@@ -34,17 +34,35 @@ export default function WizardSuggestion({
       console.log('[DEBUG] hasChanges check:', {
         currentSlide: {
           title: currentSlide.title,
-          content: currentSlide.content?.substring(0, 100) + '...'
+          content: typeof currentSlide.content === 'string' 
+            ? currentSlide.content.substring(0, 100) + '...'
+            : Array.isArray(currentSlide.content) 
+              ? currentSlide.content.join(' ').substring(0, 100) + '...'
+              : 'No content'
         },
         suggestedSlide: {
           title: suggestedSlide.title,
-          content: suggestedSlide.content?.substring(0, 100) + '...'
+          content: typeof suggestedSlide.content === 'string'
+            ? suggestedSlide.content.substring(0, 100) + '...'
+            : Array.isArray(suggestedSlide.content)
+              ? suggestedSlide.content.join(' ').substring(0, 100) + '...'
+              : 'No content'
         }
       })
       
       // More robust comparison that handles formatting differences
       const titleChanged = suggestedSlide.title && suggestedSlide.title.trim() !== (currentSlide.title || '').trim()
-      const contentChanged = suggestedSlide.content && suggestedSlide.content.trim() !== (currentSlide.content || '').trim()
+      
+      // Handle content comparison for both string and array types
+      const normalizeContent = (content: string | string[] | undefined): string => {
+        if (!content) return ''
+        if (typeof content === 'string') return content.trim()
+        if (Array.isArray(content)) return content.join(' ').trim()
+        return ''
+      }
+      
+      const contentChanged = suggestedSlide.content && 
+        normalizeContent(suggestedSlide.content) !== normalizeContent(currentSlide.content)
       
       console.log('[DEBUG] hasChanges result:', { titleChanged, contentChanged, hasChanges: titleChanged || contentChanged })
       
@@ -61,10 +79,18 @@ export default function WizardSuggestion({
       const suggestedSlide = suggestion.slide
       const changes = []
       
+      // Helper function to normalize content for comparison
+      const normalizeContent = (content: string | string[] | undefined): string => {
+        if (!content) return ''
+        if (typeof content === 'string') return content.trim()
+        if (Array.isArray(content)) return content.join(' ').trim()
+        return ''
+      }
+      
       if (suggestedSlide.title !== currentSlide.title) {
         changes.push("title")
       }
-      if (suggestedSlide.content !== currentSlide.content) {
+      if (normalizeContent(suggestedSlide.content) !== normalizeContent(currentSlide.content)) {
         changes.push("content")
       }
       
@@ -133,20 +159,36 @@ export default function WizardSuggestion({
                       <div>
                         <span className="text-red-600 font-medium text-xs block mb-1">Current:</span>
                         <div className="text-xs text-gray-600 bg-white p-2 rounded border-l-2 border-red-200">
-                          {currentSlide?.content || "No content"}
+                          {typeof currentSlide?.content === 'string' 
+                            ? currentSlide.content 
+                            : Array.isArray(currentSlide?.content)
+                              ? currentSlide.content.join(' ')
+                              : "No content"}
                         </div>
                       </div>
                       <ArrowRight className="h-3 w-3 text-gray-400 mx-auto" />
                       <div>
                         <span className="text-green-600 font-medium text-xs block mb-1">Suggested:</span>
                         <div className="text-xs text-primary-600 bg-white p-2 rounded border-l-2 border-green-200">
-                          <pre className="whitespace-pre-wrap font-sans">{suggestion.slide.content}</pre>
+                          <pre className="whitespace-pre-wrap font-sans">
+                            {typeof suggestion.slide.content === 'string' 
+                              ? suggestion.slide.content 
+                              : Array.isArray(suggestion.slide.content)
+                                ? suggestion.slide.content.join(' ')
+                                : "No content"}
+                          </pre>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="text-primary-600">
-                      <pre className="whitespace-pre-wrap font-sans text-xs">{suggestion.slide.content}</pre>
+                      <pre className="whitespace-pre-wrap font-sans text-xs">
+                        {typeof suggestion.slide.content === 'string' 
+                          ? suggestion.slide.content 
+                          : Array.isArray(suggestion.slide.content)
+                            ? suggestion.slide.content.join(' ')
+                            : "No content"}
+                      </pre>
                     </div>
                   )}
                 </div>
@@ -173,7 +215,11 @@ export default function WizardSuggestion({
                   <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
                   {showPreview && slide.content && (
                     <div className="text-xs text-gray-600 mt-1 line-clamp-2">
-                      {typeof slide.content === 'string' ? slide.content.substring(0, 100) + '...' : ''}
+                      {typeof slide.content === 'string' 
+                        ? slide.content.substring(0, 100) + '...' 
+                        : Array.isArray(slide.content)
+                          ? slide.content.join(' ').substring(0, 100) + '...'
+                          : ''}
                     </div>
                   )}
                 </div>
@@ -209,7 +255,9 @@ export default function WizardSuggestion({
                     <div className="text-xs text-gray-600 mt-1 line-clamp-2">
                       {typeof slide.content === 'string'
                         ? slide.content.substring(0, 100) + '...'
-                        : ''}
+                        : Array.isArray(slide.content)
+                          ? slide.content.join(' ').substring(0, 100) + '...'
+                          : ''}
                     </div>
                   )}
                 </div>

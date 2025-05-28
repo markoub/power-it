@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { createPresentation } from "./utils";
 
-test.setTimeout(120000);
-
 test.describe("Markdown Slides", () => {
+  test.setTimeout(120000);
   test("slides render markdown content correctly", async ({ page }) => {
     const name = `Markdown Slides Test ${Date.now()}`;
     const topic = "Testing markdown rendering";

@@ -53,22 +53,22 @@ async def run_step(
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
 
-    if step in [PresentationStep.RESEARCH, PresentationStep.MANUAL_RESEARCH]:
-        step_exists_query = select(PresentationStepModel).where(
-            (PresentationStepModel.presentation_id == presentation_id) &
-            (PresentationStepModel.step == step_name)
-        )
-        step_exists_result = await db.execute(step_exists_query)
-        step_exists = step_exists_result.scalars().first()
+    # Check if step exists for any step type
+    step_exists_query = select(PresentationStepModel).where(
+        (PresentationStepModel.presentation_id == presentation_id) &
+        (PresentationStepModel.step == step_name)
+    )
+    step_exists_result = await db.execute(step_exists_query)
+    step_exists = step_exists_result.scalars().first()
 
-        if not step_exists:
-            new_step = PresentationStepModel(
-                presentation_id=presentation_id,
-                step=step_name,
-                status=StepStatus.PENDING.value
-            )
-            db.add(new_step)
-            await db.commit()
+    if not step_exists:
+        new_step = PresentationStepModel(
+            presentation_id=presentation_id,
+            step=step_name,
+            status=StepStatus.PENDING.value
+        )
+        db.add(new_step)
+        await db.commit()
 
     query = update(PresentationStepModel).where(
         (PresentationStepModel.presentation_id == presentation_id) &

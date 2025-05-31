@@ -29,6 +29,7 @@ The API supports the following main features:
 - Generating PowerPoint (PPTX) files
 - Exporting presentations to PDF
 - Searching for company logos
+- AI Wizard assistant for modifying research, slides, and presentations
 
 ## Authentication
 
@@ -57,6 +58,17 @@ A typical workflow for creating a presentation involves:
 
 6. **Generate PPTX** (`POST /presentations/{id}/steps/pptx/run`)
    - Creates a downloadable PowerPoint file
+
+### Using the AI Wizard
+
+The AI Wizard can help modify content at any step:
+
+1. **Get wizard suggestions** (`POST /presentations/{id}/wizard`)
+   - Send a request with the user's prompt and current context
+   - Receives AI-generated suggestions for improvements
+
+2. **Save modified research** (`PUT /presentations/{id}/research`)
+   - Apply wizard-suggested changes to research content
 
 ## Understanding Slide Types
 
@@ -129,6 +141,34 @@ Response includes all steps and their statuses:
     }
     // other steps...
   ]
+}
+```
+
+### Using the AI Wizard
+
+```json
+POST /presentations/1/wizard
+
+{
+  "prompt": "Add more information about AI ethics and privacy concerns",
+  "step": "research",
+  "context": {}
+}
+```
+
+Response with suggestions:
+
+```json
+{
+  "response": "I've updated the research content based on your request. The changes include the specific information you asked for.",
+  "suggestions": {
+    "research": {
+      "content": "Enhanced research content with additional information about AI ethics...",
+      "links": [...]
+    }
+  },
+  "wizard_type": "research",
+  "step": "research"
 }
 ```
 

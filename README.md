@@ -30,6 +30,7 @@ powerit/
 
 - **Research**: Researches a topic and generates comprehensive markdown content with sources
 - **Slides**: Creates structured presentation slides based on research results
+- **AI Wizard Assistant**: Context-aware AI assistant that helps modify research, slides, and presentations
 - **Web Interface**: Modern UI for managing presentations and running tools
 - **Background Processing**: Tasks run asynchronously with status tracking
 - **Database Storage**: Persistent storage of presentations and results
@@ -166,9 +167,13 @@ The frontend communicates with the backend through the API. The integration work
 1. Open http://localhost:3000 in your browser
 2. Create a new presentation with a name and topic
 3. Wait for the research step to complete
-4. View and edit research results
+4. View and edit research results using the AI Wizard:
+   - Click on the Research step to view research content
+   - Use the AI Wizard on the right to request modifications
+   - Click "Apply" to update the research with suggested changes
 5. Run the slides generation step
-6. View the generated slides
+6. View and edit the generated slides with the AI Wizard
+7. Export the final presentation as a PowerPoint file
 
 ## API Endpoints
 
@@ -177,6 +182,8 @@ The frontend communicates with the backend through the API. The integration work
 - `GET /presentations/{id}` - Get presentation details
 - `POST /presentations/{id}/steps/{step_name}/run` - Run a presentation step
 - `PUT /presentations/{id}/steps/{step_name}` - Update step results
+- `POST /presentations/{id}/wizard` - Process wizard requests for AI assistance
+- `PUT /presentations/{id}/research` - Save modified research content
 
 ## Troubleshooting
 

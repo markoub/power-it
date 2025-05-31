@@ -20,6 +20,13 @@ from tools import (
 )
 from tools.images import _generate_image_for_slide, image_executor
 from config import PRESENTATIONS_STORAGE_DIR, OFFLINE_MODE
+from utils import (
+    get_presentation_step,
+    update_step_status,
+    get_completed_research_step,
+    ensure_presentation_dirs,
+    get_presentation_images_dir
+)
 
 # Background task functions
 async def execute_research_task(presentation_id: int, topic: str, author: str = None):
@@ -27,90 +34,79 @@ async def execute_research_task(presentation_id: int, topic: str, author: str = 
     # Create a new session for the background task
     async with SessionLocal() as db:
         try:
-            # Update step status to processing
-            step_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.RESEARCH.value
-                )
-            )
-            step = step_result.scalars().first()
-            
+            # Get step and update to processing
+            step = await get_presentation_step(db, presentation_id, PresentationStep.RESEARCH)
             if not step:
                 return
             
-            # Get presentation to retrieve author if needed
-            presentation_result = await db.execute(
-                select(Presentation).filter(Presentation.id == presentation_id)
-            )
-            presentation = presentation_result.scalars().first()
+            step.status = StepStatus.PROCESSING.value
+            await db.commit()
             
-            # If author wasn't provided, use it from the presentation
-            if author is None and presentation and presentation.author:
-                author = presentation.author
+            # Get presentation to retrieve author if needed
+            if author is None:
+                presentation_result = await db.execute(
+                    select(Presentation).filter(Presentation.id == presentation_id)
+                )
+                presentation = presentation_result.scalars().first()
+                if presentation and presentation.author:
+                    author = presentation.author
             
             # Run research tool
             research_data = await research_topic(topic)
             
             # Update step with result
-            step.set_result(research_data.model_dump())
-            step.status = StepStatus.COMPLETED.value
-            await db.commit()
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.RESEARCH,
+                status=StepStatus.COMPLETED,
+                result=research_data.model_dump()
+            )
             
         except Exception as e:
             # Update step status to failed
-            step_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.RESEARCH.value
-                )
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.RESEARCH,
+                status=StepStatus.FAILED,
+                error=str(e)
             )
-            step = step_result.scalars().first()
-            
-            if step:
-                step.status = StepStatus.FAILED.value
-                step.set_result({"error": str(e)})
-                await db.commit()
 
 async def execute_manual_research_task(presentation_id: int, research_content: str):
     """Execute manual research task for a presentation"""
     # Create a new session for the background task
     async with SessionLocal() as db:
         try:
-            # Update step status to processing
-            step_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.MANUAL_RESEARCH.value
-                )
-            )
-            step = step_result.scalars().first()
-            
+            # Get step and update to processing
+            step = await get_presentation_step(db, presentation_id, PresentationStep.MANUAL_RESEARCH)
             if not step:
                 return
+                
+            step.status = StepStatus.PROCESSING.value
+            await db.commit()
             
             # Process manual research
             research_data = await process_manual_research(research_content)
             
             # Update step with result
-            step.set_result(research_data.model_dump())
-            step.status = StepStatus.COMPLETED.value
-            await db.commit()
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.MANUAL_RESEARCH,
+                status=StepStatus.COMPLETED,
+                result=research_data.model_dump()
+            )
             
         except Exception as e:
             # Update step status to failed
-            step_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.MANUAL_RESEARCH.value
-                )
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.MANUAL_RESEARCH,
+                status=StepStatus.FAILED,
+                error=str(e)
             )
-            step = step_result.scalars().first()
-            
-            if step:
-                step.status = StepStatus.FAILED.value
-                step.set_result({"error": str(e)})
-                await db.commit()
 
 async def execute_slides_task(presentation_id: int):
     """Execute slides generation task for a presentation"""
@@ -123,42 +119,15 @@ async def execute_slides_task(presentation_id: int):
                 select(Presentation).filter(Presentation.id == presentation_id)
             )
             presentation = presentation_result.scalars().first()
-            author = None
-            if presentation:
-                author = presentation.author
+            author = presentation.author if presentation else None
             
-            # Get research data - first try regular research
-            research_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.RESEARCH.value
-                )
-            )
-            research_step = research_result.scalars().first()
-            
-            # If no regular research found, try manual research
-            if not research_step or research_step.status != StepStatus.COMPLETED.value:
-                manual_research_result = await db.execute(
-                    select(PresentationStepModel).filter(
-                        PresentationStepModel.presentation_id == presentation_id,
-                        PresentationStepModel.step == PresentationStep.MANUAL_RESEARCH.value
-                    )
-                )
-                research_step = manual_research_result.scalars().first()
-                
-                # If still no valid research found, exit
-                if not research_step or research_step.status != StepStatus.COMPLETED.value:
-                    return
+            # Get completed research data (regular or manual)
+            research_step = await get_completed_research_step(db, presentation_id)
+            if not research_step:
+                return
             
             # Get slides step
-            slides_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.SLIDES.value
-                )
-            )
-            slides_step = slides_result.scalars().first()
-            
+            slides_step = await get_presentation_step(db, presentation_id, PresentationStep.SLIDES)
             if not slides_step:
                 return
             
@@ -176,26 +145,25 @@ async def execute_slides_task(presentation_id: int):
             slides_data = await generate_slides(research_data, target_slides, author)
             
             # Update slides step with result
-            slides_step.set_result(slides_data.model_dump())
-            slides_step.status = StepStatus.COMPLETED.value
-            await db.commit()
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.SLIDES,
+                status=StepStatus.COMPLETED,
+                result=slides_data.model_dump()
+            )
             
         except Exception as e:
             print(f"Error in slides task: {str(e)}")
             
             # Update step status to failed
-            slides_result = await db.execute(
-                select(PresentationStepModel).filter(
-                    PresentationStepModel.presentation_id == presentation_id,
-                    PresentationStepModel.step == PresentationStep.SLIDES.value
-                )
+            await update_step_status(
+                db=db,
+                presentation_id=presentation_id,
+                step=PresentationStep.SLIDES,
+                status=StepStatus.FAILED,
+                error=str(e)
             )
-            slides_step = slides_result.scalars().first()
-            
-            if slides_step:
-                slides_step.status = StepStatus.FAILED.value
-                slides_step.set_result({"error": str(e)})
-                await db.commit()
 
 async def execute_images_task(presentation_id: int):
     """

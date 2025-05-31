@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Save, Loader2 } from "lucide-react";
@@ -31,7 +31,7 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   const unwrappedParams = React.use(params);
   
   // Development flag for verbose logging - set to false to reduce console spam
-  const VERBOSE_LOGGING = process.env.NODE_ENV === 'development' && true;
+  const VERBOSE_LOGGING = process.env.NODE_ENV === 'development' && false;
   
   const router = useRouter();
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -43,6 +43,24 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   const [wizardContext, setWizardContext] = useState<"all" | "single">("all");
   const [isProcessingStep, setIsProcessingStep] = useState(false);
   const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
+  
+  // Refs to avoid stale closures in polling
+  const presentationRef = useRef(presentation);
+  const currentStepRef = useRef(currentStep);
+  const hasManuallyNavigatedRef = useRef(hasManuallyNavigated);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    presentationRef.current = presentation;
+  }, [presentation]);
+  
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+  
+  useEffect(() => {
+    hasManuallyNavigatedRef.current = hasManuallyNavigated;
+  }, [hasManuallyNavigated]);
 
   // Helper for structured logging
   const logInfo = (message: string, data?: any) => {
@@ -65,99 +83,113 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
     if (!presentation) return;
 
     let pollInterval: NodeJS.Timeout;
+    let slowPollInterval: NodeJS.Timeout;
     let consecutiveUnchangedPolls = 0;
     const MAX_UNCHANGED_POLLS = 5;
     let lastPresentationHash = JSON.stringify(presentation.steps);
 
     const getCurrentPollingInterval = () => {
-      if (!presentation.steps) return 10000; // Default 10 seconds if no steps
+      const currentPresentation = presentationRef.current;
+      if (!currentPresentation?.steps) return 10000; // Default 10 seconds if no steps
       
-      const hasProcessingSteps = presentation.steps.some(step => step.status === "processing");
-      const hasPendingSteps = presentation.steps.some(step => step.status === "pending");
+      const hasProcessingSteps = currentPresentation.steps.some(step => step.status === "processing");
+      const hasPendingSteps = currentPresentation.steps.some(step => step.status === "pending");
       
-      if (hasProcessingSteps) return 3000; // 3 seconds when processing
-      if (hasPendingSteps) return 5000; // 5 seconds when pending
-      return 15000; // 15 seconds when everything is stable
+      if (hasProcessingSteps) return 1000; // 1 second when processing for faster updates
+      if (hasPendingSteps) return 2000; // 2 seconds when pending
+      return 10000; // 10 seconds when everything is stable
     };
 
-    const startPolling = () => {
-      const intervalMs = getCurrentPollingInterval();
-      logInfo(`🔄 Starting polling with ${intervalMs}ms interval`);
-      
-      pollInterval = setInterval(async () => {
-        try {
-          const updatedPresentation = await api.getPresentation(unwrappedParams.id);
-          if (updatedPresentation) {
-            const newPresentationHash = JSON.stringify(updatedPresentation.steps);
+    const pollPresentation = async () => {
+      try {
+        const updatedPresentation = await api.getPresentation(unwrappedParams.id);
+        if (updatedPresentation) {
+          const newPresentationHash = JSON.stringify(updatedPresentation.steps);
+          
+          // Only update if there are actual changes to steps
+          if (newPresentationHash !== lastPresentationHash) {
+            logInfo('🔄 Presentation data updated from polling');
+            setPresentation(updatedPresentation);
+            lastPresentationHash = newPresentationHash;
             
-            // Only update if there are actual changes to steps
-            if (newPresentationHash !== lastPresentationHash) {
-              logInfo('🔄 Presentation data updated from polling');
-              setPresentation(updatedPresentation);
-              lastPresentationHash = newPresentationHash;
-              
-              // Only update current step automatically if user hasn't manually navigated
-              if (!hasManuallyNavigated) {
-                const newCurrentStep = determineCurrentStep(updatedPresentation);
-                if (newCurrentStep !== currentStep) {
-                  logInfo(`🔄 Polling: Auto-updating current step from ${currentStep} to ${newCurrentStep}`);
-                  setCurrentStep(newCurrentStep);
+            // Check if a step that was processing is now completed
+            const oldSteps = JSON.parse(lastPresentationHash);
+            const nowCompleted = updatedPresentation.steps.some((s) => {
+              const oldStep = oldSteps?.find((os: any) => os.step === s.step);
+              return oldStep?.status === "processing" && s.status === "completed";
+            });
+            
+            // Only update current step automatically if user hasn't manually navigated
+            // OR if a processing step just completed
+            if (!hasManuallyNavigatedRef.current || nowCompleted) {
+              const newCurrentStep = determineCurrentStep(updatedPresentation);
+              if (newCurrentStep !== currentStepRef.current) {
+                logInfo(`🔄 Polling: Auto-updating current step from ${currentStepRef.current} to ${newCurrentStep}`);
+                setCurrentStep(newCurrentStep);
+                
+                // Reset manual navigation flag if we auto-navigated due to completion
+                if (nowCompleted) {
+                  setHasManuallyNavigated(false);
                 }
-              } else {
-                logInfo(`🚫 Polling: Skipping auto step update because user manually navigated`);
               }
-              
-              // Reset consecutive unchanged counter
-              consecutiveUnchangedPolls = 0;
             } else {
-              consecutiveUnchangedPolls++;
-              logInfo(`🔄 No changes detected (${consecutiveUnchangedPolls}/${MAX_UNCHANGED_POLLS})`);
-              
-              // If we've had several polls with no changes and nothing is running,
-              // slow down polling significantly
-              if (consecutiveUnchangedPolls >= MAX_UNCHANGED_POLLS) {
-                const hasActiveProcessing = updatedPresentation.steps?.some(
-                  step => step.status === "processing" || step.status === "pending"
-                );
-                if (!hasActiveProcessing) {
-                  logInfo('🔄 No active processing, switching to slow polling');
-                  clearInterval(pollInterval);
-                  // Switch to very slow polling for completed presentations
-                  pollInterval = setInterval(async () => {
-                    try {
-                      const check = await api.getPresentation(unwrappedParams.id);
-                      if (check) {
-                        const checkHash = JSON.stringify(check.steps);
-                        if (checkHash !== lastPresentationHash) {
-                          logInfo('🔄 Changes detected in slow polling, resuming normal polling');
-                          setPresentation(check);
-                          lastPresentationHash = checkHash;
-                          consecutiveUnchangedPolls = 0;
-                          clearInterval(pollInterval);
-                          startPolling(); // Resume normal polling if something changed
-                        }
-                      }
-                    } catch (error) {
-                      logError('Error in slow polling:', error);
-                    }
-                  }, 30000);
-                }
+              logInfo(`🚫 Polling: Skipping auto step update because user manually navigated`);
+            }
+            
+            // Reset consecutive unchanged counter
+            consecutiveUnchangedPolls = 0;
+            
+            // If we were in slow polling mode and detected changes, switch back to normal polling
+            if (slowPollInterval) {
+              clearInterval(slowPollInterval);
+              slowPollInterval = undefined;
+              // Instead of calling startNormalPolling recursively, just set up a new interval
+              const intervalMs = getCurrentPollingInterval();
+              logInfo(`🔄 Resuming normal polling with ${intervalMs}ms interval`);
+              pollInterval = setInterval(pollPresentation, intervalMs);
+            }
+          } else {
+            consecutiveUnchangedPolls++;
+            logInfo(`🔄 No changes detected (${consecutiveUnchangedPolls}/${MAX_UNCHANGED_POLLS})`);
+            
+            // If we've had several polls with no changes and nothing is running,
+            // slow down polling significantly
+            if (consecutiveUnchangedPolls >= MAX_UNCHANGED_POLLS && !slowPollInterval) {
+              const hasActiveProcessing = updatedPresentation.steps?.some(
+                step => step.status === "processing" || step.status === "pending"
+              );
+              if (!hasActiveProcessing) {
+                logInfo('🔄 No active processing, switching to slow polling');
+                clearInterval(pollInterval);
+                pollInterval = undefined;
+                
+                // Start slow polling
+                slowPollInterval = setInterval(pollPresentation, 30000);
               }
             }
           }
-        } catch (error) {
-          logError('Error polling presentation updates:', error);
         }
-      }, intervalMs);
+      } catch (error) {
+        logError('Error polling presentation updates:', error);
+      }
     };
 
-    startPolling();
+    const startNormalPolling = () => {
+      if (pollInterval) return; // Prevent multiple intervals
+      
+      const intervalMs = getCurrentPollingInterval();
+      logInfo(`🔄 Starting polling with ${intervalMs}ms interval`);
+      pollInterval = setInterval(pollPresentation, intervalMs);
+    };
+
+    startNormalPolling();
 
     return () => {
-      logInfo('🔄 Cleaning up polling interval');
-      clearInterval(pollInterval);
+      logInfo('🔄 Cleaning up polling intervals');
+      if (pollInterval) clearInterval(pollInterval);
+      if (slowPollInterval) clearInterval(slowPollInterval);
     };
-  }, [unwrappedParams.id]); // Only depend on presentation ID, not the presentation object itself
+  }, [unwrappedParams.id]); // Only depend on presentation ID, not on state that changes within the effect
 
   // Manual refresh function that components can call
   const refreshPresentation = async () => {
@@ -188,23 +220,31 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
     }
 
     let highestCompletedStep = -1;
+    let firstProcessingStep = -1;
+    
     for (let i = 0; i < STEP_API_NAMES.length; i++) {
       const stepName = STEP_API_NAMES[i];
       const step = presentationData.steps.find((s: any) => s.step === stepName);
 
       if (step && step.status === "completed") {
         highestCompletedStep = i;
+      } else if (step && step.status === "processing" && firstProcessingStep === -1) {
+        firstProcessingStep = i;
       } else {
         // Found first incomplete step
         break;
       }
     }
 
+    // If a step is currently processing, show that step
+    if (firstProcessingStep !== -1) {
+      return firstProcessingStep;
+    }
+    
     // If nothing is completed, start with step 0
     if (highestCompletedStep === -1) return 0;
 
     // Show the last completed step so users can see their results
-    // Only advance to next step when user manually navigates
     return highestCompletedStep;
   };
 
@@ -421,6 +461,23 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
         ...presentation,
         slides: changes.slides,
       });
+    } else if (changes.research) {
+      // Apply research changes
+      const updatedSteps = presentation.steps?.map(s =>
+        s.step === "research" || s.step === "manual_research"
+          ? { ...s, result: changes.research, status: "completed" as const }
+          : s
+      ) || [];
+
+      setPresentation({ ...presentation, steps: updatedSteps });
+      await api.saveModifiedResearch(String(presentation.id), changes.research);
+      
+      toast({
+        title: "Research updated",
+        description: "The research has been updated successfully.",
+        action: <ToastAction altText="OK">OK</ToastAction>,
+      });
+      return;
     } else if (changes.presentation) {
       // Apply presentation-level changes (add/remove slides, etc.)
       setPresentation({
@@ -440,16 +497,6 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
           setCurrentSlide(null);
         }
       }
-      if (changes.research) {
-        const updatedSteps = presentation.steps?.map(s =>
-          s.step === "research" || s.step === "manual_research"
-            ? { ...s, result: changes.research, status: "completed" as const }
-            : s
-        ) || [];
-
-        setPresentation({ ...presentation, steps: updatedSteps });
-        await api.saveModifiedResearch(String(presentation.id), changes.research);
-      }
     }
 
     await savePresentation();
@@ -463,8 +510,8 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
     });
   };
 
-  // Check if a step is completed based on backend data
-  const isStepCompleted = (stepIndex: number) => {
+  // Memoize step checking functions to prevent recreation on every render
+  const isStepCompleted = useCallback((stepIndex: number) => {
     if (!presentation || !presentation.steps) return false;
 
     const stepName = STEP_API_NAMES[stepIndex];
@@ -480,89 +527,97 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
     }
 
     return step?.status === "completed";
-  };
+  }, [presentation, VERBOSE_LOGGING]);
 
   // Check if a step is pending/processing
-  const isStepPending = (stepIndex: number) => {
+  const isStepPending = useCallback((stepIndex: number) => {
     if (!presentation || !presentation.steps) return false;
 
     const stepName = STEP_API_NAMES[stepIndex];
     const step = presentation.steps.find((s) => s.step === stepName);
 
     return step?.status === "pending";
-  };
+  }, [presentation]);
 
   // Check if a step is processing
-  const isStepProcessing = (stepIndex: number) => {
+  const isStepProcessing = useCallback((stepIndex: number) => {
     if (!presentation || !presentation.steps) return false;
 
     const stepName = STEP_API_NAMES[stepIndex];
     const step = presentation.steps.find((s) => s.step === stepName);
 
     return step?.status === "processing";
-  };
-
-  // Memoize the completed steps array to ensure React detects changes
-  const completedSteps = useMemo(() => {
-    if (!presentation?.steps) return [];
-    
-    const completed = STEP_API_NAMES.map((name, index) => isStepCompleted(index));
-    logInfo('🔄 Completed steps array updated:', completed.map((isCompleted, index) => ({
-      step: STEP_API_NAMES[index],
-      completed: isCompleted
-    })));
-    
-    return completed;
-  }, [presentation?.steps]);
-
-  // Memoize the pending steps array
-  const pendingSteps = useMemo(() => {
-    if (!presentation?.steps) return [];
-    
-    const pending = STEP_API_NAMES.map((name, index) => isStepPending(index));
-    logInfo('🔄 Pending steps array updated:', pending.map((isPending, index) => ({
-      step: STEP_API_NAMES[index],
-      pending: isPending
-    })));
-    
-    return pending;
-  }, [presentation?.steps]);
-
-  // Memoize the processing steps array
-  const processSteps = useMemo(() => {
-    if (!presentation?.steps) return [];
-    
-    const processing = STEP_API_NAMES.map((name, index) => isStepProcessing(index));
-    logInfo('🔄 Processing steps array updated:', processing.map((isProcessing, index) => ({
-      step: STEP_API_NAMES[index],
-      processing: isProcessing
-    })));
-    
-    return processing;
-  }, [presentation?.steps]);
+  }, [presentation]);
 
   // Check if a step has failed
-  const isStepFailed = (stepIndex: number) => {
+  const isStepFailed = useCallback((stepIndex: number) => {
     if (!presentation || !presentation.steps) return false;
 
     const stepName = STEP_API_NAMES[stepIndex];
     const step = presentation.steps.find((s) => s.step === stepName);
 
     return step?.status === "failed";
-  };
+  }, [presentation]);
+
+  // Memoize the completed steps array to ensure React detects changes
+  const completedSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const completed = STEP_API_NAMES.map((name, index) => isStepCompleted(index));
+    
+    return completed;
+  }, [presentation?.steps, isStepCompleted]);
+
+  // Memoize the pending steps array
+  const pendingSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const pending = STEP_API_NAMES.map((name, index) => isStepPending(index));
+    
+    return pending;
+  }, [presentation?.steps, isStepPending]);
+
+  // Memoize the processing steps array
+  const processSteps = useMemo(() => {
+    if (!presentation?.steps) return [];
+    
+    const processing = STEP_API_NAMES.map((name, index) => isStepProcessing(index));
+    
+    return processing;
+  }, [presentation?.steps, isStepProcessing]);
 
   // Memoize the failed steps array
   const failedSteps = useMemo(() => {
     if (!presentation?.steps) return [];
     
     const failed = STEP_API_NAMES.map((name, index) => isStepFailed(index));
-    logInfo('🔄 Failed steps array updated:', failed.map((isFailed, index) => ({
-      step: STEP_API_NAMES[index],
-      failed: isFailed
-    })));
     
     return failed;
-  }, [presentation?.steps]);
+  }, [presentation?.steps, isStepFailed]);
+
+  // Log step arrays for debugging (outside of memoization to avoid issues)
+  useEffect(() => {
+    if (VERBOSE_LOGGING && presentation?.steps) {
+      logInfo('🔄 Step arrays updated:', {
+        completedSteps: completedSteps.map((isCompleted, index) => ({
+          step: STEP_API_NAMES[index],
+          completed: isCompleted
+        })),
+        pendingSteps: pendingSteps.map((isPending, index) => ({
+          step: STEP_API_NAMES[index],
+          pending: isPending
+        })),
+        processSteps: processSteps.map((isProcessing, index) => ({
+          step: STEP_API_NAMES[index],
+          processing: isProcessing
+        })),
+        failedSteps: failedSteps.map((isFailed, index) => ({
+          step: STEP_API_NAMES[index],
+          failed: isFailed
+        }))
+      });
+    }
+  }, [completedSteps, pendingSteps, processSteps, failedSteps, VERBOSE_LOGGING]);
 
   // Continue to next step function
   const handleContinueToNextStep = async () => {
@@ -600,14 +655,20 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
           description: `Starting ${STEPS[nextStepIndex]} generation process...`,
         });
 
-        // Wait a bit for the step to be processed
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Refresh the presentation to get updated step status
-        await fetchPresentation();
-
-        // Don't automatically move to the next step - let user see the results
-        // The determineCurrentStep function will now keep them on the completed step
+        // Immediately update the step status to processing locally
+        const updatedSteps = presentation.steps.map(s => 
+          s.step === nextStepName ? { ...s, status: "processing" } : s
+        );
+        setPresentation({ ...presentation, steps: updatedSteps });
+        
+        // Navigate to the processing step
+        setCurrentStep(nextStepIndex);
+        setHasManuallyNavigated(false); // Allow auto-navigation during processing
+        
+        // Force immediate refresh to get latest status
+        setTimeout(async () => {
+          await refreshPresentation();
+        }, 500);
       } else {
         throw new Error("Failed to start the next step");
       }
@@ -641,12 +702,6 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   // Handle direct step navigation
   const handleStepChange = (stepIndex: number) => {
     logInfo(`🔄 Step change requested: ${stepIndex}, current: ${currentStep}, hasManuallyNavigated: ${hasManuallyNavigated}`);
-    logInfo(`🔍 Step completion status:`, {
-      completedSteps: completedSteps,
-      isStepCompleted: (index: number) => isStepCompleted(index),
-      targetStepCompleted: isStepCompleted(stepIndex),
-      previousStepCompleted: stepIndex > 0 ? isStepCompleted(stepIndex - 1) : false
-    });
     
     // We can always navigate to current step
     if (stepIndex === currentStep) return;
@@ -686,6 +741,16 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
       const stepName = STEP_API_NAMES[stepIndex];
       logInfo(`🔄 Rerunning step: ${stepName} (index: ${stepIndex})`);
 
+      // Immediately update the step status to processing locally
+      const updatedSteps = presentation.steps.map(s => 
+        s.step === stepName ? { ...s, status: "processing" } : s
+      );
+      setPresentation({ ...presentation, steps: updatedSteps });
+      
+      // Navigate to the processing step
+      setCurrentStep(stepIndex);
+      setHasManuallyNavigated(false); // Allow auto-navigation during processing
+      
       // Call the API to rerun the step
       const result = await api.runPresentationStep(
         typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id,
@@ -698,11 +763,10 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
           description: `${STEPS[stepIndex]} is being regenerated...`,
         });
 
-        // Wait a bit for the step to be processed
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Refresh the presentation to get updated step status
-        await fetchPresentation();
+        // Force immediate refresh to get latest status
+        setTimeout(async () => {
+          await refreshPresentation();
+        }, 500);
       } else {
         throw new Error("Failed to rerun the step");
       }

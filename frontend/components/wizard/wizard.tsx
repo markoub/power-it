@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import WizardMessage from "@/components/wizard/wizard-message"
 import WizardSuggestion from "@/components/wizard/wizard-suggestion"
+import ResearchContext from "@/components/wizard/research-context"
 import { api } from "@/lib/api"
 
 interface WizardProps {
@@ -256,6 +257,11 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
       )}
       
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Show research context when on Research step */}
+        {step === "Research" && (
+          <ResearchContext presentation={presentation} />
+        )}
+        
         <AnimatePresence>
           {messages.map((message, index) => (
             <motion.div

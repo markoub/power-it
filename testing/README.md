@@ -71,6 +71,9 @@ Environment variables:
 - `create-presentation.spec.ts`: Tests for presentation creation flow
 - `presentations-list.spec.ts`: Tests for presentation listing and management
 - `wizard.spec.ts`: Tests for the presentation wizard
+- `wizard-research-context.spec.ts`: Tests for research context display in wizard
+- `wizard-improvements.spec.ts`: Tests for wizard improvement suggestions
+- `test-research-apply-fix.spec.ts`: Tests for wizard research apply functionality
 - And more...
 
 ## Debugging Failed Tests
@@ -96,4 +99,24 @@ If tests are running slowly:
 If running in online mode without API keys:
 1. Set `GEMINI_API_KEY` environment variable
 2. Set `OPENAI_API_KEY` environment variable
-3. Or switch back to offline mode for testing 
+3. Or switch back to offline mode for testing
+
+## Recent Test Additions
+
+### Wizard Research Apply Test (May 31, 2025)
+Added `test-research-apply-fix.spec.ts` to verify that wizard research modifications are properly applied:
+
+```bash
+# Run this specific test
+npx playwright test test-research-apply-fix.spec.ts
+
+# Or with offline mode disabled to test with real APIs
+POWERIT_OFFLINE=0 npx playwright test test-research-apply-fix.spec.ts
+```
+
+This test verifies:
+1. User can navigate to research step
+2. User can request research modifications via wizard
+3. Wizard generates appropriate suggestions
+4. Clicking "Apply" actually updates the research content
+5. The suggestion is properly dismissed after applying 

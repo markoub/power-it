@@ -33,7 +33,8 @@ npx serve build
 - Modern UI built with Next.js, React, and Tailwind CSS
 - Integration with the backend API for fetching and creating presentations
 - AI-powered presentation creation workflow
-- Interactive presentation editor
+- Interactive presentation editor with AI Wizard assistant
+- Context-aware wizard for modifying research, slides, and presentations
 - Responsive design for mobile and desktop
 - Static build for easy deployment on any hosting platform
 
@@ -56,6 +57,9 @@ frontend/
 │   └── page.tsx     # Home page
 ├── components/      # Reusable React components
 │   ├── ui/          # UI components (buttons, inputs, etc.)
+│   ├── wizard/      # AI Wizard components
+│   ├── steps/       # Step-specific components
+│   ├── slides/      # Slide type renderers
 │   └── ...          # Application-specific components
 ├── lib/             # Utilities and services
 │   ├── api.ts       # API client for backend communication

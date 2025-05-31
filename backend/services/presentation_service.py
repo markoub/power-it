@@ -12,13 +12,12 @@ from tools import (
     research_topic,
     process_manual_research,
     generate_slides,
-    generate_slide_images,
-    generate_image_from_prompt,
     generate_compiled_presentation,
     generate_pptx_from_slides, 
     convert_pptx_to_png
 )
-from tools.images import _generate_image_for_slide, image_executor
+from tools.image_provider import generate_slide_images, generate_image_from_prompt
+from tools.images import image_executor  # Keep the executor for compatibility
 from config import PRESENTATIONS_STORAGE_DIR, OFFLINE_MODE
 from utils import (
     get_presentation_step,
@@ -108,8 +107,8 @@ async def execute_manual_research_task(presentation_id: int, research_content: s
                 error=str(e)
             )
 
-async def execute_slides_task(presentation_id: int):
-    """Execute slides generation task for a presentation"""
+async def execute_slides_task(presentation_id: int, slides_customization=None):
+    """Execute slides generation task for a presentation with optional customization"""
     
     # Create a new session for the background task
     async with SessionLocal() as db:
@@ -138,11 +137,24 @@ async def execute_slides_task(presentation_id: int):
             # Convert research data to ResearchData model
             research_data = ResearchData(**research_step.get_result())
             
-            # Use default 10 slides
-            target_slides = 10
+            # Extract customization parameters or use defaults
+            from config import SLIDES_DEFAULTS
+            target_slides = slides_customization.target_slides if slides_customization and slides_customization.target_slides else SLIDES_DEFAULTS["target_slides"]
+            target_audience = slides_customization.target_audience if slides_customization and slides_customization.target_audience else SLIDES_DEFAULTS["target_audience"]
+            content_density = slides_customization.content_density if slides_customization and slides_customization.content_density else SLIDES_DEFAULTS["content_density"]
+            presentation_duration = slides_customization.presentation_duration if slides_customization and slides_customization.presentation_duration else SLIDES_DEFAULTS["presentation_duration"]
+            custom_prompt = slides_customization.custom_prompt if slides_customization and slides_customization.custom_prompt else None
             
-            # Run slides generation tool with author
-            slides_data = await generate_slides(research_data, target_slides, author)
+            # Run slides generation tool with customization parameters
+            slides_data = await generate_slides(
+                research_data, 
+                target_slides, 
+                author, 
+                target_audience=target_audience,
+                content_density=content_density,
+                presentation_duration=presentation_duration,
+                custom_prompt=custom_prompt
+            )
             
             # Update slides step with result
             await update_step_status(
@@ -165,9 +177,13 @@ async def execute_slides_task(presentation_id: int):
                 error=str(e)
             )
 
-async def execute_images_task(presentation_id: int):
+async def execute_images_task(presentation_id: int, image_provider: str = None):
     """
     Background task to generate images for presentation slides
+    
+    Args:
+        presentation_id: ID of the presentation
+        image_provider: Optional image provider override ("openai" or "gemini")
     """
     # Create a new session for the background task
     async with SessionLocal() as db:
@@ -230,8 +246,15 @@ async def execute_images_task(presentation_id: int):
                 
                 for index, slide in enumerate(slides_obj.slides):
                     try:
-                        # Call the function directly without executor in offline mode
-                        result_list = _generate_image_for_slide(slide, index, presentation_id)
+                        # In offline mode, we still use the provider wrapper
+                        # It will handle offline mode internally
+                        from tools.image_provider import generate_slide_images as gen_images
+                        # Generate for single slide
+                        single_slide_obj = SlidePresentation(title="temp", slides=[slide])
+                        result_list = await gen_images(single_slide_obj, presentation_id, provider=image_provider)
+                        # Fix slide indices since we're processing one slide at a time
+                        for img in result_list:
+                            img.slide_index = index
                         print(f"Generated {len(result_list)} dummy images for slide {index}")
                     except Exception as gen_err:
                         print(f"Error generating image for slide {index}: {gen_err}")
@@ -251,13 +274,14 @@ async def execute_images_task(presentation_id: int):
                 # Generate images sequentially so we can store each one as it is created
                 for index, slide in enumerate(slides_obj.slides):
                     try:
-                        result_list = await asyncio.get_event_loop().run_in_executor(
-                            image_executor,
-                            _generate_image_for_slide,
-                            slide,
-                            index,
-                            presentation_id,
-                        )
+                        # Use the provider wrapper for online mode too
+                        from tools.image_provider import generate_slide_images as gen_images
+                        # Generate for single slide
+                        single_slide_obj = SlidePresentation(title="temp", slides=[slide])
+                        result_list = await gen_images(single_slide_obj, presentation_id, provider=image_provider)
+                        # Fix slide indices since we're processing one slide at a time
+                        for img in result_list:
+                            img.slide_index = index
                     except Exception as gen_err:
                         print(f"Error generating image for slide {index}: {gen_err}")
                         result_list = []

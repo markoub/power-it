@@ -20,7 +20,15 @@ from prompts import get_prompt
 OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
 
 
-async def generate_slides(research: ResearchData, target_slides: int = 10, author: str = None) -> SlidePresentation:
+async def generate_slides(
+    research: ResearchData, 
+    target_slides: int = 10, 
+    author: str = None,
+    target_audience: str = "general",
+    content_density: str = "medium",
+    presentation_duration: int = 15,
+    custom_prompt: str = None
+) -> SlidePresentation:
     """
     Generate presentation slides based on research data.
     
@@ -28,13 +36,17 @@ async def generate_slides(research: ResearchData, target_slides: int = 10, autho
         research: Research data about the topic
         target_slides: Approximate number of slides to generate
         author: Author name for the presentation (defaults to PRESENTATION_STRUCTURE's default_author)
+        target_audience: Target audience for the presentation (e.g., 'executives', 'technical', 'general')
+        content_density: Content density level ('low', 'medium', 'high')
+        presentation_duration: Total presentation duration in minutes (affects speaker notes)
+        custom_prompt: Additional custom prompt to influence slide generation
         
     Returns:
         A SlidePresentation object with slide content
     """
     if OFFLINE_MODE:
         print(f"OFFLINE MODE: Generating dynamic slides response based on research content")
-        offline_response = generate_offline_slides(research, target_slides, author)
+        offline_response = generate_offline_slides(research, target_slides, author, target_audience, content_density, presentation_duration, custom_prompt)
         print(f"OFFLINE MODE: Generated {len(offline_response['slides'])} slides with title: {offline_response['title']}")
         
         # Log the slide types for debugging
@@ -72,10 +84,52 @@ async def generate_slides(research: ResearchData, target_slides: int = 10, autho
                           if info.get('include_in_prompt', True)]
     print(f"DEBUG: Slide types included in prompt: {', '.join(prompt_slide_types)}")
     
+    # Create content density instructions
+    density_instructions = {
+        "low": "Keep slides concise with minimal text. Use 2-3 bullet points per slide maximum. Focus on visual elements and key messages only.",
+        "medium": "Balance text with visuals. Use 3-5 bullet points per slide. Include adequate detail without overwhelming the audience.",
+        "high": "Provide comprehensive detail. Use 5-7 bullet points per slide. Include thorough explanations and supporting information."
+    }
+    
+    # Create audience-specific instructions
+    audience_instructions = {
+        "executives": "Focus on high-level strategy, business impact, ROI, and key metrics. Use executive summary style content.",
+        "technical": "Include technical details, implementation specifics, architecture diagrams, and technical considerations.",
+        "general": "Use accessible language suitable for a broad audience. Balance technical concepts with business value.",
+        "students": "Include educational context, step-by-step explanations, and learning objectives.",
+        "sales": "Emphasize benefits, competitive advantages, customer success stories, and value propositions."
+    }
+    
+    # Calculate speaker notes timing (approximate words per minute = 150)
+    avg_words_per_minute = 150
+    total_words_budget = presentation_duration * avg_words_per_minute
+    words_per_slide = total_words_budget // target_slides if target_slides > 0 else 100
+    
+    # Build dynamic prompt additions
+    customization_prompt = f"""
+CUSTOMIZATION REQUIREMENTS:
+- Target Audience: {target_audience.title()} - {audience_instructions.get(target_audience, audience_instructions['general'])}
+- Content Density: {content_density.title()} - {density_instructions.get(content_density, density_instructions['medium'])}
+- Presentation Duration: {presentation_duration} minutes total
+- Speaker Notes: Write approximately {words_per_slide} words per slide in the "notes" field to match the {presentation_duration}-minute duration
+"""
+    
+    if custom_prompt:
+        customization_prompt += f"""
+- Custom Instructions: {custom_prompt}
+"""
+    
     # Create the prompt for slide generation with updated format for the new Slide model
     prompt_template = await get_prompt("slides_prompt", DEFAULT_SLIDES_PROMPT)
-    prompt = prompt_template.format(research_content=research_content, target_slides=target_slides, slide_types_info=slide_types_info, author=author)
+    prompt = prompt_template.format(
+        research_content=research_content, 
+        target_slides=target_slides, 
+        slide_types_info=slide_types_info, 
+        author=author
+    ) + customization_prompt
+    
     print(f"DEBUG: Prompt length: {len(prompt)} characters")
+    print(f"DEBUG: Target audience: {target_audience}, Content density: {content_density}, Duration: {presentation_duration}min")
 
     try:
         # Generate the slides using Gemini

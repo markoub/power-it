@@ -4,8 +4,16 @@ from tools.logo_fetcher import download_logo
 
 # This function is extracted from tools.slides for offline slide generation
 
-def generate_offline_slides(research: ResearchData, target_slides: int = 10, author: str = None) -> dict:
-    """Generate a realistic offline slides response based on research content."""
+def generate_offline_slides(
+    research: ResearchData, 
+    target_slides: int = 10, 
+    author: str = None,
+    target_audience: str = "general",
+    content_density: str = "medium",
+    presentation_duration: int = 15,
+    custom_prompt: str = None
+) -> dict:
+    """Generate a realistic offline slides response based on research content with customization options."""
     if author is None:
         author = PRESENTATION_STRUCTURE.get("default_author", "AI Presenter")
 
@@ -18,7 +26,7 @@ def generate_offline_slides(research: ResearchData, target_slides: int = 10, aut
         if len(line) > 10 and len(line) < 100 and not line.startswith('-') and not line.startswith('•'):
             title_candidates.append(line)
     if title_candidates:
-        presentation_title = title_candidates[0].rstrip('.').rstrip(':')
+        presentation_title = title_candidates[0].rstrip('.').rstrip(':').lstrip('#').strip()
     else:
         presentation_title = "Business Presentation"
 
@@ -36,7 +44,7 @@ def generate_offline_slides(research: ResearchData, target_slides: int = 10, aut
                 if current_section:
                     content_sections.append(current_section)
                     current_section = []
-                current_section.append(line.rstrip(':').rstrip('#').strip())
+                current_section.append(line.rstrip(':').lstrip('#').strip())
             else:
                 current_section.append(line)
     if current_section:
@@ -153,8 +161,35 @@ def generate_offline_slides(research: ResearchData, target_slides: int = 10, aut
                     except Exception:
                         pass
 
+    # Generate speaker notes based on duration and density
+    avg_words_per_minute = 150
+    total_words_budget = presentation_duration * avg_words_per_minute
+    words_per_slide = total_words_budget // len(slides) if len(slides) > 0 else 100
+    
+    # Adjust content based on density
+    density_multipliers = {"low": 0.6, "medium": 1.0, "high": 1.4}
+    actual_words = int(words_per_slide * density_multipliers.get(content_density, 1.0))
+    
+    # Create audience-specific speaker notes
+    audience_styles = {
+        "executives": "business impact and strategic value",
+        "technical": "implementation details and technical specifications", 
+        "general": "key concepts and practical applications",
+        "students": "educational context and learning objectives",
+        "sales": "customer benefits and competitive advantages"
+    }
+    
     for slide in slides:
         title = slide.get("fields", {}).get("title", "this slide")
-        slide.setdefault("fields", {})["notes"] = f"Speaker notes for {title}."
+        style = audience_styles.get(target_audience, audience_styles["general"])
+        
+        if actual_words <= 50:
+            notes = f"Brief notes for {title} focusing on {style}."
+        elif actual_words <= 100:
+            notes = f"Speaker notes for {title}. This slide covers {style}. Key points to emphasize during presentation."
+        else:
+            notes = f"Comprehensive speaker notes for {title}. This slide focuses on {style}. Include detailed explanations of each point, provide context and background information, and connect to broader presentation themes. Estimated speaking time: {actual_words // 150:.1f} minutes."
+            
+        slide.setdefault("fields", {})["notes"] = notes
 
     return {"title": presentation_title, "author": author, "slides": slides}

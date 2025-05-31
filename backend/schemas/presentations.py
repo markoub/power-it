@@ -180,6 +180,26 @@ class TopicUpdateRequest(BaseModel):
         description="The new topic for the presentation"
     )
 
+class SlidesCustomizationRequest(BaseModel):
+    """Model for slides generation customization options"""
+    target_slides: Optional[int] = Field(None, description="Approximate number of slides to generate (with some tolerance)")
+    target_audience: Optional[str] = Field(None, description="Target audience for the presentation (e.g., 'executives', 'technical', 'general')")
+    content_density: Optional[str] = Field(None, description="Content density level: 'low' (minimal text), 'medium' (balanced), 'high' (detailed)")
+    presentation_duration: Optional[int] = Field(None, description="Total presentation duration in minutes (affects speaker notes)")
+    custom_prompt: Optional[str] = Field(None, description="Custom prompt addition to influence slide generation")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "target_slides": 12,
+                "target_audience": "executives",
+                "content_density": "low",
+                "presentation_duration": 20,
+                "custom_prompt": "Focus on business impact and ROI metrics"
+            }
+        }
+    )
+
 class PaginatedPresentationsResponse(BaseModel):
     """Paginated response for presentations list"""
     items: List[PresentationResponse] = Field(description="Presentations on the current page")

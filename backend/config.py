@@ -57,40 +57,58 @@ if OFFLINE_MODE:
     os.environ["OPENAI_API_KEY"] = "fake-openai-key"
     print("Config: Set OPENAI_API_KEY environment variable to fake key for offline mode")
 
-# Model configurations
-RESEARCH_MODEL = "gemini-2.5-flash-preview-04-17"
-SLIDES_MODEL = "gemini-2.5-flash-preview-04-17"
-MODIFY_MODEL = "gemini-2.5-flash-preview-04-17"
+# Model configurations - use environment variables with defaults
+RESEARCH_MODEL = os.getenv("RESEARCH_MODEL", "gemini-2.5-flash-preview-04-17")
+SLIDES_MODEL = os.getenv("SLIDES_MODEL", "gemini-2.5-flash-preview-04-17")
+MODIFY_MODEL = os.getenv("MODIFY_MODEL", "gemini-2.5-flash-preview-04-17")
 
 # Generation configurations
 RESEARCH_CONFIG = {
-    "temperature": 0.2,
-    "top_p": 0.95,
-    "top_k": 40,
-    "max_output_tokens": 108192,
+    "temperature": float(os.getenv("RESEARCH_TEMPERATURE", "0.2")),
+    "top_p": float(os.getenv("RESEARCH_TOP_P", "0.95")),
+    "top_k": int(os.getenv("RESEARCH_TOP_K", "40")),
+    "max_output_tokens": int(os.getenv("RESEARCH_MAX_OUTPUT_TOKENS", "108192")),
     "response_mime_type": "application/json",
 }
 
 SLIDES_CONFIG = {
-    "temperature": 0.3,
-    "top_p": 0.95,
-    "top_k": 40,
-    "max_output_tokens": 104096,
+    "temperature": float(os.getenv("SLIDES_TEMPERATURE", "0.3")),
+    "top_p": float(os.getenv("SLIDES_TOP_P", "0.95")),
+    "top_k": int(os.getenv("SLIDES_TOP_K", "40")),
+    "max_output_tokens": int(os.getenv("SLIDES_MAX_OUTPUT_TOKENS", "200000")),
 }
 
 MODIFY_CONFIG = {
-    "temperature": 0.25,
-    "top_p": 0.92,
-    "top_k": 50,
-    "max_output_tokens": 108192,
+    "temperature": float(os.getenv("MODIFY_TEMPERATURE", "0.25")),
+    "top_p": float(os.getenv("MODIFY_TOP_P", "0.92")),
+    "top_k": int(os.getenv("MODIFY_TOP_K", "50")),
+    "max_output_tokens": int(os.getenv("MODIFY_MAX_OUTPUT_TOKENS", "108192")),
 }
+
+# Image generation provider configuration
+IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "openai").lower()  # Options: "openai" or "gemini"
 
 # OpenAI Image generation configuration
 OPENAI_IMAGE_CONFIG = {
-    "model": "gpt-image-1",
-    "quality": "standard",
-    "size": "1024x1024",
-    "output_format": "png",
+    "model": os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1"),
+    "quality": os.getenv("OPENAI_IMAGE_QUALITY", "standard"),
+    "size": os.getenv("OPENAI_IMAGE_SIZE", "1024x1024"),
+    "output_format": os.getenv("OPENAI_IMAGE_FORMAT", "png"),
+}
+
+# Gemini Image generation configuration
+GEMINI_IMAGE_CONFIG = {
+    "model": os.getenv("GEMINI_IMAGE_MODEL", "imagen-3.0-generate-002"),
+    "safety_filter_level": os.getenv("GEMINI_IMAGE_SAFETY", "block_only_high"),
+    "person_generation": os.getenv("GEMINI_IMAGE_PERSON", "allow_all"),
+}
+
+# Slides customization defaults
+SLIDES_DEFAULTS = {
+    "target_slides": int(os.getenv("SLIDES_DEFAULT_COUNT", "10")),
+    "target_audience": os.getenv("SLIDES_DEFAULT_AUDIENCE", "general"),
+    "content_density": os.getenv("SLIDES_DEFAULT_DENSITY", "medium"),  # low, medium, high
+    "presentation_duration": int(os.getenv("SLIDES_DEFAULT_DURATION", "15")),  # minutes
 }
 
 # Storage configuration

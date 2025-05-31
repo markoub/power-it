@@ -6,7 +6,7 @@ from typing import Dict, Any
 import json
 
 from database import get_db, Presentation, PresentationStepModel, PresentationStep, StepStatus
-from schemas.presentations import StepUpdateRequest
+from schemas.presentations import StepUpdateRequest, SlidesCustomizationRequest
 from services import (
     execute_research_task,
     execute_manual_research_task,
@@ -91,9 +91,12 @@ async def run_step(
             raise HTTPException(status_code=400, detail="Research content is required for manual research")
         background_tasks.add_task(execute_manual_research_task, presentation_id, research_content)
     elif step == PresentationStep.SLIDES:
-        background_tasks.add_task(execute_slides_task, presentation_id)
+        # Extract slides customization parameters from the request
+        slides_customization = SlidesCustomizationRequest(**params) if params else None
+        background_tasks.add_task(execute_slides_task, presentation_id, slides_customization)
     elif step == PresentationStep.IMAGES:
-        background_tasks.add_task(execute_images_task, presentation_id)
+        image_provider = params.get('image_provider')  # Optional provider override
+        background_tasks.add_task(execute_images_task, presentation_id, image_provider)
     elif step == PresentationStep.COMPILED:
         background_tasks.add_task(execute_compiled_task, presentation_id)
     elif step == PresentationStep.PPTX:

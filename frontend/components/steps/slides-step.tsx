@@ -9,7 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText, Grid3X3, ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText, Grid3X3, ArrowLeft, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Presentation, Slide } from "@/lib/types";
 import SlideRenderer from "@/components/slides/SlideRenderer";
@@ -82,6 +85,14 @@ const getSlideTypeInfo = (slideType: string) => {
   return typeMap[slideType] || typeMap["Content"];
 };
 
+interface SlidesCustomization {
+  target_slides: number;
+  target_audience: string;
+  content_density: string;
+  presentation_duration: number;
+  custom_prompt: string;
+}
+
 export default function SlidesStep({
   presentation,
   currentSlide,
@@ -95,6 +106,14 @@ export default function SlidesStep({
   const [viewMode, setViewMode] = useState<"preview" | "edit">("preview");
   const [isGenerating, setIsGenerating] = useState(false);
   const [slideView, setSlideView] = useState<"overview" | "single">("overview");
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [customization, setCustomization] = useState<SlidesCustomization>({
+    target_slides: 10,
+    target_audience: "general",
+    content_density: "medium",
+    presentation_duration: 15,
+    custom_prompt: "",
+  });
 
   useEffect(() => {
     // Update slide view based on current slide selection
@@ -113,7 +132,14 @@ export default function SlidesStep({
       setIsGenerating(true);
 
       const presentationId = typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id;
-      const result = await api.runPresentationStep(presentationId, "slides");
+      
+      // Prepare customization parameters, filtering out empty custom_prompt
+      const params: any = { ...customization };
+      if (!params.custom_prompt.trim()) {
+        delete params.custom_prompt;
+      }
+      
+      const result = await api.runPresentationStep(presentationId, "slides", params);
 
       if (result) {
         toast({
@@ -232,24 +258,120 @@ export default function SlidesStep({
               Your presentation needs slides. You can generate them automatically using AI based on your research.
             </p>
 
-            <Button
-              onClick={handleGenerateSlides}
-              className="bg-primary hover:bg-primary-600 text-white px-6 py-2"
-              disabled={isGenerating}
-              data-testid="run-slides-button"
-            >
-              {isGenerating ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={18} className="animate-spin" />
-                  Generating Slides...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Sparkles size={18} />
-                  Generate Slides
-                </span>
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+              <Dialog open={showCustomization} onOpenChange={setShowCustomization}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    data-testid="customize-slides-button"
+                  >
+                    <Settings size={18} />
+                    Customize
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Customize Slides Generation</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="target_slides">Number of Slides (approximate)</Label>
+                      <Input
+                        id="target_slides"
+                        type="number"
+                        min="3"
+                        max="30"
+                        value={customization.target_slides}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, target_slides: parseInt(e.target.value) || 10 }))}
+                        placeholder="10"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="target_audience">Target Audience</Label>
+                      <Select 
+                        value={customization.target_audience} 
+                        onValueChange={(value) => setCustomization(prev => ({ ...prev, target_audience: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select audience" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General Audience</SelectItem>
+                          <SelectItem value="executives">Executives</SelectItem>
+                          <SelectItem value="technical">Technical Team</SelectItem>
+                          <SelectItem value="students">Students</SelectItem>
+                          <SelectItem value="sales">Sales Team</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="content_density">Content Density</Label>
+                      <Select 
+                        value={customization.content_density} 
+                        onValueChange={(value) => setCustomization(prev => ({ ...prev, content_density: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select density" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low (Minimal text, visual focus)</SelectItem>
+                          <SelectItem value="medium">Medium (Balanced content)</SelectItem>
+                          <SelectItem value="high">High (Detailed information)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="presentation_duration">Presentation Duration (minutes)</Label>
+                      <Input
+                        id="presentation_duration"
+                        type="number"
+                        min="5"
+                        max="120"
+                        value={customization.presentation_duration}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, presentation_duration: parseInt(e.target.value) || 15 }))}
+                        placeholder="15"
+                      />
+                      <p className="text-xs text-gray-500">Affects the length of speaker notes</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="custom_prompt">Additional Instructions (optional)</Label>
+                      <Textarea
+                        id="custom_prompt"
+                        value={customization.custom_prompt}
+                        onChange={(e) => setCustomization(prev => ({ ...prev, custom_prompt: e.target.value }))}
+                        placeholder="e.g., Focus on ROI metrics, Include case studies, Emphasize technical challenges..."
+                        rows={3}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                onClick={handleGenerateSlides}
+                className="bg-primary hover:bg-primary-600 text-white px-6 py-2"
+                disabled={isGenerating}
+                data-testid="run-slides-button"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin" />
+                    Generating Slides...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Sparkles size={18} />
+                    Generate Slides
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
         </motion.div>
       </div>

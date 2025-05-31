@@ -391,5 +391,123 @@ async def test_3images_conversion():
         # Restore original offline mode
         tools.slides.OFFLINE_MODE = original_offline_mode
 
+@pytest.mark.asyncio
+async def test_slides_customization_parameters():
+    """Test that slides generation properly handles customization parameters"""
+    
+    # Mock research data
+    research = ResearchData(content="This is test research content about business processes")
+    
+    # Mock the Gemini API response
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "title": "Business Processes",
+        "author": "Test Author",
+        "slides": [
+            {
+                "type": "Welcome",
+                "fields": {
+                    "title": "Business Processes",
+                    "subtitle": "Executive Overview",
+                    "author": "Test Author"
+                }
+            },
+            {
+                "type": "Content",
+                "fields": {
+                    "title": "Key Business Insights",
+                    "content": ["Strategic value proposition", "Market impact analysis"],
+                    "notes": "Executive-focused speaker notes with business impact details"
+                }
+            }
+        ]
+    })
+    
+    # Create a simple mock class that returns our response
+    class MockGenerativeModel:
+        async def generate_content_async(self, prompt, **kwargs):
+            # Verify that customization parameters are included in the prompt
+            assert "Target Audience: Executives" in prompt
+            assert "Content Density: Low" in prompt  
+            assert "Presentation Duration: 20 minutes" in prompt
+            assert "Focus on business metrics and ROI" in prompt
+            return mock_response
+    
+    # Temporarily disable offline mode for this test
+    import tools.slides
+    original_offline_mode = tools.slides.OFFLINE_MODE
+    tools.slides.OFFLINE_MODE = False
+    
+    try:
+        # Patch the genai.GenerativeModel to return our mock
+        with patch('google.generativeai.GenerativeModel', return_value=MockGenerativeModel()):
+            # Generate slides with customization parameters
+            presentation = await generate_slides(
+                research, 
+                target_slides=8,
+                author="Test Author",
+                target_audience="executives",
+                content_density="low", 
+                presentation_duration=20,
+                custom_prompt="Focus on business metrics and ROI"
+            )
+            
+            # Verify that the presentation was generated
+            assert presentation is not None
+            assert presentation.title == "Business Processes"
+            assert presentation.author == "Test Author"
+            assert len(presentation.slides) >= 2
+    finally:
+        # Restore original offline mode
+        tools.slides.OFFLINE_MODE = original_offline_mode
+
+def test_offline_slides_customization():
+    """Test that offline slides generation handles customization parameters"""
+    
+    from offline_responses.slides import generate_offline_slides
+    
+    # Mock research data
+    research = ResearchData(content="Artificial Intelligence and Machine Learning in Healthcare")
+    
+    # Generate slides with customization
+    result = generate_offline_slides(
+        research,
+        target_slides=6,
+        author="Dr. Smith",
+        target_audience="technical",
+        content_density="high",
+        presentation_duration=30,
+        custom_prompt="Focus on technical implementation details"
+    )
+    
+    # Verify basic structure
+    assert result["title"] is not None
+    assert result["author"] == "Dr. Smith"
+    assert len(result["slides"]) <= 8  # Should respect target_slides with some tolerance
+    
+    # Check that speaker notes reflect the customization
+    for slide in result["slides"]:
+        notes = slide["fields"].get("notes", "")
+        assert len(notes) > 0
+        # For technical audience and high density, notes should be comprehensive
+        if "technical" in notes.lower() or "implementation" in notes.lower():
+            assert len(notes) > 50  # Should be detailed for technical audience
+
+def test_config_defaults():
+    """Test that configuration defaults are properly set"""
+    
+    from config import SLIDES_DEFAULTS
+    
+    # Verify that defaults exist and have reasonable values
+    assert "target_slides" in SLIDES_DEFAULTS
+    assert "target_audience" in SLIDES_DEFAULTS  
+    assert "content_density" in SLIDES_DEFAULTS
+    assert "presentation_duration" in SLIDES_DEFAULTS
+    
+    assert SLIDES_DEFAULTS["target_slides"] > 0
+    assert SLIDES_DEFAULTS["target_audience"] in ["general", "executives", "technical", "students", "sales"]
+    assert SLIDES_DEFAULTS["content_density"] in ["low", "medium", "high"]
+    assert SLIDES_DEFAULTS["presentation_duration"] > 0
+
 if __name__ == "__main__":
     unittest.main() 

@@ -94,6 +94,41 @@ export const api = {
             const title = fields.title || `Slide ${index + 1}`;
             let content: any = fields.content || "";
 
+            // Handle different slide types that store content in different fields
+            if (!content) {
+              switch (slide.type) {
+                case "Welcome":
+                  // Welcome slides often have subtitle and author instead of content
+                  content = [fields.subtitle, fields.author].filter(Boolean).join('\n\n');
+                  break;
+                case "Section":
+                  // Section slides might not have content, that's OK
+                  content = "";
+                  break;
+                case "TableOfContents":
+                  // TOC slides have sections array
+                  if (fields.sections && Array.isArray(fields.sections)) {
+                    content = fields.sections.map((section: string) => `- ${section}`).join('\n');
+                  }
+                  break;
+                case "3Images":
+                  // 3Images slides store content in image descriptions
+                  content = [
+                    fields.image1 ? `**Image 1:** ${fields.image1}` : '',
+                    fields.image2 ? `**Image 2:** ${fields.image2}` : '',
+                    fields.image3 ? `**Image 3:** ${fields.image3}` : ''
+                  ].filter(Boolean).join('\n\n');
+                  break;
+                case "ContentWithLogos":
+                  // Logos slides might have company info
+                  const logos = [fields.logo1, fields.logo2, fields.logo3].filter(Boolean);
+                  if (logos.length > 0) {
+                    content = `Companies featured: ${logos.join(', ')}`;
+                  }
+                  break;
+              }
+            }
+
             // Preserve original content structure but ensure it's valid
             if (Array.isArray(content)) {
               // Keep as array for proper markdown rendering
@@ -427,7 +462,16 @@ export const api = {
     return response.ok;
   },
 
-  async runPresentationStep(id: string, step: string, params?: { topic?: string; research_content?: string }): Promise<any> {
+  async runPresentationStep(id: string, step: string, params?: { 
+    topic?: string; 
+    research_content?: string; 
+    image_provider?: string;
+    target_slides?: number;
+    target_audience?: string;
+    content_density?: string;
+    presentation_duration?: number;
+    custom_prompt?: string;
+  }): Promise<any> {
     try {
       // Prepare request body with optional parameters
       const body = params ? JSON.stringify(params) : undefined;
@@ -458,14 +502,15 @@ export const api = {
   async regenerateImage(
     id: string | number,
     slideIndex: number,
-    prompt: string
+    prompt: string,
+    provider?: string
   ): Promise<any> {
     const response = await fetch(
       `${API_URL}/presentations/${id}/slides/${slideIndex}/image`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, provider }),
         mode: "cors",
       }
     );

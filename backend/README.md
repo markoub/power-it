@@ -54,11 +54,36 @@ pip install -r requirements.txt
 
 ### Environment Variables
 
-The following environment variables are required:
+Copy `backend/.env.example` to `backend/.env` and configure your settings.
 
-- `GEMINI_API_KEY` - Google Gemini API key
-- `OPENAI_API_KEY` - OpenAI API key (for image generation)
+**Required API Keys:**
+- `GEMINI_API_KEY` - Google Gemini API key for content generation
+- `OPENAI_API_KEY` - OpenAI API key for image generation
+
+**Common Configuration:**
 - `POWERIT_OFFLINE` - Set to `1` to run without internet using recorded fixtures
+- `POWERIT_ENV` - Environment setting (`production` or `test`)
+- `DATABASE_FILE` - SQLite database filename (default: `presentations.db`)
+- `STORAGE_DIR` - Custom storage directory for generated files
+
+**AI Model Configuration:**
+- `RESEARCH_MODEL` - Model for research tasks (default: `gemini-2.5-flash-preview-04-17`)
+- `SLIDES_MODEL` - Model for slide generation (default: `gemini-2.5-flash-preview-04-17`)
+- `MODIFY_MODEL` - Model for modifications (default: `gemini-2.5-flash-preview-04-17`)
+
+**Generation Parameters:**
+You can fine-tune AI generation by setting temperature, top_p, top_k, and max_output_tokens for each task type:
+- Research: `RESEARCH_TEMPERATURE`, `RESEARCH_TOP_P`, `RESEARCH_TOP_K`, `RESEARCH_MAX_OUTPUT_TOKENS`
+- Slides: `SLIDES_TEMPERATURE`, `SLIDES_TOP_P`, `SLIDES_TOP_K`, `SLIDES_MAX_OUTPUT_TOKENS`
+- Modify: `MODIFY_TEMPERATURE`, `MODIFY_TOP_P`, `MODIFY_TOP_K`, `MODIFY_MAX_OUTPUT_TOKENS`
+
+**Image Generation:**
+- `OPENAI_IMAGE_MODEL` - OpenAI model for images (default: `gpt-image-1`)
+- `OPENAI_IMAGE_QUALITY` - Image quality: `standard` or `hd`
+- `OPENAI_IMAGE_SIZE` - Image dimensions (default: `1024x1024`)
+- `OPENAI_IMAGE_FORMAT` - Output format (default: `png`)
+
+See `.env.example` for a complete list with descriptions and defaults.
 
 ### Running the API
 

@@ -111,15 +111,71 @@ Valid slide types defined in `backend/tools/slide_config.py`:
 ## Key Configuration
 
 ### Environment Variables
+
+**Required API Keys:**
 ```bash
 # Backend (.env)
-GEMINI_API_KEY=your_key_here
-OPENAI_API_KEY=your_key_here
-POWERIT_OFFLINE=1  # Enable offline mode
+GEMINI_API_KEY=your_key_here      # Google Gemini API for content generation
+OPENAI_API_KEY=your_key_here      # OpenAI API for image generation
+```
 
+**Operational Modes:**
+```bash
+POWERIT_OFFLINE=1                 # Enable offline mode (uses cached responses)
+POWERIT_ENV=production            # Environment setting (production/test)
+```
+
+**Model Configuration:**
+```bash
+# AI models for different tasks (defaults to gemini-2.5-flash-preview-04-17)
+RESEARCH_MODEL=gemini-2.5-flash-preview-04-17
+SLIDES_MODEL=gemini-2.5-flash-preview-04-17
+MODIFY_MODEL=gemini-2.5-flash-preview-04-17
+```
+
+**Generation Parameters:**
+```bash
+# Research generation
+RESEARCH_TEMPERATURE=0.2          # Controls randomness (0.0-1.0)
+RESEARCH_TOP_P=0.95              # Nucleus sampling threshold
+RESEARCH_TOP_K=40                # Top-k sampling
+RESEARCH_MAX_OUTPUT_TOKENS=108192
+
+# Slides generation  
+SLIDES_TEMPERATURE=0.3
+SLIDES_TOP_P=0.95
+SLIDES_TOP_K=40
+SLIDES_MAX_OUTPUT_TOKENS=104096
+
+# Modify generation
+MODIFY_TEMPERATURE=0.25
+MODIFY_TOP_P=0.92
+MODIFY_TOP_K=50
+MODIFY_MAX_OUTPUT_TOKENS=108192
+```
+
+**OpenAI Image Generation:**
+```bash
+OPENAI_IMAGE_MODEL=gpt-image-1    # Model to use
+OPENAI_IMAGE_QUALITY=standard     # Quality: standard or hd
+OPENAI_IMAGE_SIZE=1024x1024       # Image dimensions
+OPENAI_IMAGE_FORMAT=png           # Output format
+```
+
+**Storage & Database:**
+```bash
+STORAGE_DIR=/custom/storage/path  # Custom storage directory
+DATABASE_FILE=presentations.db    # SQLite database file
+TEST_DATABASE_FILE=presentations_test.db
+```
+
+**Frontend Configuration:**
+```bash
 # Frontend (.env.production)
 NEXT_PUBLIC_API_URL=http://backend-url:8000
 ```
+
+See `backend/.env.example` for a complete list of available environment variables.
 
 ### VCR Test Modes
 - `GEMINI_VCR_MODE=record` - Record Gemini API calls
@@ -134,6 +190,10 @@ NEXT_PUBLIC_API_URL=http://backend-url:8000
 4. **Database**: SQLite file `presentations.db` auto-created on first run
 5. **API Docs**: Available at `http://localhost:8000/docs` when backend is running
 6. **Image Storage**: Generated images stored in `storage/presentations/{id}/images/`
+
+## Development Guidelines
+
+- **Server Management**: never run new server, backend or frontend, without checking if there is one already available. If needed, first kill all active ones, before running new
 
 ## Recent Fixes and Known Issues
 
@@ -199,3 +259,28 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 This command helps maintain consistent commit messages and ensures all changes are properly documented in version control.
+
+### /update-docs - Update Documentation from Environment Configuration
+
+When you want to update documentation to reflect current environment variable usage, use the `/update-docs` command. This command will:
+
+1. Analyze the current `.env` file to identify all environment variables
+2. Search the codebase to determine which variables are actually used
+3. Check `config.py` to see how environment variables are loaded
+4. Update relevant documentation files to reflect the current configuration
+5. Create or update `.env.example` with all available variables
+
+**Usage**: Simply type `/update-docs` and I will:
+- Scan for environment variable usage across the backend
+- Identify unused variables in `.env`
+- Update `CLAUDE.md`, `backend/README.md`, and main `README.md`
+- Generate a comprehensive `.env.example` file
+- Report which documentation files were updated
+
+**What gets updated**:
+- Environment variable sections in all documentation
+- Configuration examples and defaults
+- Descriptions of each variable's purpose
+- Organization by logical categories (API Keys, Models, Parameters, etc.)
+
+This command ensures your documentation stays in sync with your actual configuration usage.

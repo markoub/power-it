@@ -48,10 +48,9 @@ def _find_section_text_shapes(slide):
         # If sorting fails, leave them in the order they were found
         pass
     
-    # Map to section numbers, skipping the first one (usually title)
+    # Map to section numbers
     for i, shape in enumerate(text_placeholders):
-        if i == 0 and "Title" in shape.name:
-            continue  # Skip the title placeholder
+        # Use 1-based indexing for section numbers
         section_num = i + 1
         if section_num <= 8:  # Only sections 1-8
             section_shapes[section_num] = shape

@@ -69,10 +69,16 @@ cd ..
    deactivate
    ```
 
-3. Create a `.env` file with your API key:
+3. Configure environment variables:
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Edit .env with your API keys:
+   # - GEMINI_API_KEY=your_gemini_api_key_here
+   # - OPENAI_API_KEY=your_openai_api_key_here
    ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
+   
+   See `backend/.env.example` for all available configuration options including AI models, generation parameters, and more.
 
 ### Frontend
 

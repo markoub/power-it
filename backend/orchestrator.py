@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional
 
 from tools.research import research_topic
 from tools.slides import generate_slides
-from tools.images import generate_slide_images
+from tools.image_provider import generate_slide_images
 from models import FullPresentation, PresentationMeta, ImageGeneration, ResearchData, SlidePresentation
 
 async def create_presentation(
@@ -10,7 +10,8 @@ async def create_presentation(
     target_slides: int = 10, 
     generate_images: bool = False, 
     presentation_id: int = None,
-    author: Optional[str] = None
+    author: Optional[str] = None,
+    image_provider: Optional[str] = None
 ) -> FullPresentation:
     """
     Orchestrates the creation of a complete presentation by chaining research, slides generation, and optional image generation.
@@ -43,7 +44,7 @@ async def create_presentation(
     if generate_images:
         try:
             # If presentation_id is provided, store images in the filesystem
-            images = await generate_slide_images(slides_data, presentation_id)
+            images = await generate_slide_images(slides_data, presentation_id, provider=image_provider)
         except Exception as e:
             print(f"Error generating images: {str(e)}")
             # Continue without images
@@ -61,7 +62,8 @@ async def update_presentation_topic(
     target_slides: int = 10,
     generate_images: bool = False,
     presentation_id: int = None,
-    author: Optional[str] = None
+    author: Optional[str] = None,
+    image_provider: Optional[str] = None
 ) -> FullPresentation:
     """
     Updates an existing presentation by rerunning research with a new topic,
@@ -97,7 +99,7 @@ async def update_presentation_topic(
     if generate_images:
         try:
             # If presentation_id is provided, store images in the filesystem
-            images = await generate_slide_images(slides_data, presentation_id)
+            images = await generate_slide_images(slides_data, presentation_id, provider=image_provider)
         except Exception as e:
             print(f"Error generating images: {str(e)}")
             # Continue without images

@@ -91,7 +91,7 @@ IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "openai").lower()  # Options: "open
 # OpenAI Image generation configuration
 OPENAI_IMAGE_CONFIG = {
     "model": os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1"),
-    "quality": os.getenv("OPENAI_IMAGE_QUALITY", "standard"),
+    "quality": os.getenv("OPENAI_IMAGE_QUALITY", "low"),
     "size": os.getenv("OPENAI_IMAGE_SIZE", "1024x1024"),
     "output_format": os.getenv("OPENAI_IMAGE_FORMAT", "png"),
 }

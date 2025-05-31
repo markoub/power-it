@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Loader2, RefreshCw, Wand2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Loader2, RefreshCw, Wand2, ImageIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import { api } from "@/lib/api"
@@ -33,6 +35,7 @@ export default function IllustrationStep({
 }: IllustrationStepProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatingSlideId, setGeneratingSlideId] = useState<string | null>(null)
+  const [imageProvider, setImageProvider] = useState<"openai" | "gemini">("openai")
 
   useEffect(() => {
     // Set context to "single" when a slide is selected
@@ -81,7 +84,8 @@ export default function IllustrationStep({
           },
           body: JSON.stringify({
             prompt: imagePrompt,
-            size: "1024x1024"
+            size: "1024x1024",
+            provider: imageProvider
           }),
           mode: 'cors',
         });
@@ -140,8 +144,10 @@ export default function IllustrationStep({
     setIsGenerating(true);
 
     try {
-      // Call the API to run the images step
-      const result = await api.runPresentationStep(String(presentation.id), "images");
+      // Call the API to run the images step with the selected provider
+      const result = await api.runPresentationStep(String(presentation.id), "images", {
+        image_provider: imageProvider
+      });
 
       if (result) {
         toast({
@@ -232,7 +238,7 @@ export default function IllustrationStep({
     const prompt = slide.imagePrompt || generatePromptForSlide(slide);
 
     try {
-      const data = await api.regenerateImage(presentation.id, index, prompt);
+      const data = await api.regenerateImage(presentation.id, index, prompt, imageProvider);
       let imageUrl = data.image_url || "";
       if (imageUrl && !imageUrl.startsWith("http")) {
         imageUrl = `${API_URL}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
@@ -286,7 +292,33 @@ export default function IllustrationStep({
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold gradient-text">Illustrations</h2>
+          <div>
+            <h2 className="text-2xl font-bold gradient-text">Illustrations</h2>
+            <div className="flex items-center gap-4 mt-2">
+              <Label htmlFor="provider-select" className="text-sm font-medium text-gray-700">
+                Image Provider:
+              </Label>
+              <Select value={imageProvider} onValueChange={(value: "openai" | "gemini") => setImageProvider(value)}>
+                <SelectTrigger id="provider-select" className="w-[180px]">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon size={14} />
+                      OpenAI (GPT Image 1)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="gemini">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon size={14} />
+                      Google Gemini (Imagen 3)
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           {!noSlides && (
             <Button
               onClick={generateAllImages}

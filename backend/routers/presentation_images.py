@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 import os
 
 from database import get_db, PresentationStepModel, PresentationStep, StepStatus
-from tools.images import generate_image_from_prompt
+from tools.image_provider import generate_image_from_prompt
 from config import PRESENTATIONS_STORAGE_DIR
 
 router = APIRouter(
@@ -24,6 +24,7 @@ async def regenerate_slide_image(
 ):
     data = await request.json()
     prompt = data.get("prompt")
+    provider = data.get("provider")  # Optional provider override
     if not prompt:
         raise HTTPException(status_code=400, detail="Missing prompt")
 
@@ -50,7 +51,7 @@ async def regenerate_slide_image(
         slides_data["slides"][slide_index].get("fields", {}).get("title", "")
     )
 
-    result = await generate_image_from_prompt(prompt, "1024x1024", presentation_id)
+    result = await generate_image_from_prompt(prompt, "1024x1024", presentation_id, provider=provider)
     if not result or not result.image_path:
         raise HTTPException(status_code=500, detail="Image generation failed")
 

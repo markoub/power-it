@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional
 from models import ImageGeneration
-from tools import generate_image_from_prompt
+from tools.image_provider import generate_image_from_prompt
 import os
 
 router = APIRouter(
@@ -39,6 +39,7 @@ async def generate_image(
         data = await request.json()
         prompt = data.get("prompt")
         size = data.get("size", "1024x1024")
+        provider = data.get("provider")  # Optional provider override
         
         if not prompt:
             return JSONResponse(
@@ -57,7 +58,7 @@ async def generate_image(
         # No presentation ID here, but we'll use a special ID for standalone images
         temp_presentation_id = 0  # Use 0 for temporary/standalone images
         
-        result = await generate_image_from_prompt(prompt, size, temp_presentation_id)
+        result = await generate_image_from_prompt(prompt, size, temp_presentation_id, provider=provider)
         if not result:
             raise HTTPException(status_code=500, detail="Image generation failed")
         

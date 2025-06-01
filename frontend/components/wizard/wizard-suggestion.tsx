@@ -104,22 +104,22 @@ export default function WizardSuggestion({
   }
 
   return (
-    <div className="border border-primary-200 rounded-lg p-4 bg-primary-50" data-testid="wizard-suggestion">
+    <div className="border border-primary/20 rounded-lg p-4 bg-primary/10 dark:bg-primary/20 dark:border-primary/30" data-testid="wizard-suggestion">
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium text-primary-700">Suggested Changes</h4>
+          <h4 className="font-medium text-primary">Suggested Changes</h4>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className="text-primary-600 hover:text-primary-700 h-auto p-1"
+            className="text-primary hover:text-primary/80 h-auto p-1"
             data-testid="wizard-preview-toggle"
           >
             <Eye className="h-4 w-4 mr-1" />
             {showPreview ? "Hide" : "Preview"}
           </Button>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           {isSingleSlide
             ? `I've created improvements for this slide. ${getChangesSummary()}`
             : isAllSlides
@@ -130,21 +130,21 @@ export default function WizardSuggestion({
         </p>
       </div>
 
-      <div className="bg-white rounded-md p-3 mb-3 text-sm max-h-60 overflow-y-auto">
+      <div className="bg-background border border-border rounded-md p-3 mb-3 text-sm max-h-60 overflow-y-auto">
         {isSingleSlide && (
           <div className="space-y-3">
             {suggestion.slide.title && suggestion.slide.title !== currentSlide?.title && (
               <div className="space-y-2">
-                <span className="font-medium text-gray-700 block">Title Changes:</span>
-                <div className="bg-gray-50 rounded p-2 space-y-1">
+                <span className="font-medium text-foreground block">Title Changes:</span>
+                <div className="bg-muted rounded p-2 space-y-1">
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-red-600 font-medium">Before:</span>
-                    <span className="text-gray-600">{currentSlide?.title || "No title"}</span>
+                    <span className="text-muted-foreground">{currentSlide?.title || "No title"}</span>
                   </div>
-                  <ArrowRight className="h-3 w-3 text-gray-400 mx-auto" />
+                  <ArrowRight className="h-3 w-3 text-muted-foreground mx-auto" />
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-green-600 font-medium">After:</span>
-                    <span className="text-primary-600 font-medium">{suggestion.slide.title}</span>
+                    <span className="text-primary font-medium">{suggestion.slide.title}</span>
                   </div>
                 </div>
               </div>
@@ -152,13 +152,13 @@ export default function WizardSuggestion({
             
             {suggestion.slide.content && suggestion.slide.content !== currentSlide?.content && (
               <div className="space-y-2">
-                <span className="font-medium text-gray-700 block">Content Changes:</span>
-                <div className="bg-gray-50 rounded p-2">
+                <span className="font-medium text-foreground block">Content Changes:</span>
+                <div className="bg-muted rounded p-2">
                   {showPreview ? (
                     <div className="space-y-2">
                       <div>
                         <span className="text-red-600 font-medium text-xs block mb-1">Current:</span>
-                        <div className="text-xs text-gray-600 bg-white p-2 rounded border-l-2 border-red-200">
+                        <div className="text-xs text-muted-foreground bg-background p-2 rounded border-l-2 border-red-200">
                           {typeof currentSlide?.content === 'string' 
                             ? currentSlide.content 
                             : Array.isArray(currentSlide?.content)
@@ -166,10 +166,10 @@ export default function WizardSuggestion({
                               : "No content"}
                         </div>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-gray-400 mx-auto" />
+                      <ArrowRight className="h-3 w-3 text-muted-foreground mx-auto" />
                       <div>
                         <span className="text-green-600 font-medium text-xs block mb-1">Suggested:</span>
-                        <div className="text-xs text-primary-600 bg-white p-2 rounded border-l-2 border-green-200">
+                        <div className="text-xs text-primary bg-background p-2 rounded border-l-2 border-green-200">
                           <pre className="whitespace-pre-wrap font-sans">
                             {typeof suggestion.slide.content === 'string' 
                               ? suggestion.slide.content 
@@ -181,7 +181,7 @@ export default function WizardSuggestion({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-primary-600">
+                    <div className="text-primary">
                       <pre className="whitespace-pre-wrap font-sans text-xs">
                         {typeof suggestion.slide.content === 'string' 
                           ? suggestion.slide.content 
@@ -197,9 +197,9 @@ export default function WizardSuggestion({
             
             {suggestion.slide.imagePrompt && (
               <div className="space-y-2">
-                <span className="font-medium text-gray-700 block">Image Suggestion:</span>
-                <div className="bg-blue-50 rounded p-2">
-                  <span className="text-blue-700 text-xs">{suggestion.slide.imagePrompt}</span>
+                <span className="font-medium text-foreground block">Image Suggestion:</span>
+                <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded p-2">
+                  <span className="text-blue-600 dark:text-blue-400 text-xs">{suggestion.slide.imagePrompt}</span>
                 </div>
               </div>
             )}
@@ -208,13 +208,13 @@ export default function WizardSuggestion({
 
         {isAllSlides && (
           <div>
-            <p className="text-gray-700 mb-2 font-medium">Changes to {suggestion.slides.length} slides:</p>
+            <p className="text-foreground mb-2 font-medium">Changes to {suggestion.slides.length} slides:</p>
             <div className="space-y-2">
               {suggestion.slides.slice(0, 5).map((slide: Slide, index: number) => (
-                <div key={index} className="bg-gray-50 rounded p-2">
-                  <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
+                <div key={index} className="bg-muted rounded p-2">
+                  <div className="font-medium text-primary text-xs">{slide.title}</div>
                   {showPreview && slide.content && (
-                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {typeof slide.content === 'string' 
                         ? slide.content.substring(0, 100) + '...' 
                         : Array.isArray(slide.content)
@@ -225,7 +225,7 @@ export default function WizardSuggestion({
                 </div>
               ))}
               {suggestion.slides.length > 5 && (
-                <div className="text-xs text-gray-500 text-center py-1">
+                <div className="text-xs text-muted-foreground text-center py-1">
                   ...and {suggestion.slides.length - 5} more slides
                 </div>
               )}
@@ -235,8 +235,8 @@ export default function WizardSuggestion({
         
         {isResearch && (
           <div>
-            <p className="text-gray-700 mb-2 font-medium">Updated Research:</p>
-            <div className="bg-gray-50 rounded p-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+            <p className="text-foreground mb-2 font-medium">Updated Research:</p>
+            <div className="bg-muted rounded p-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
               {suggestion.research.content}
             </div>
           </div>
@@ -244,15 +244,15 @@ export default function WizardSuggestion({
 
         {isPresentationLevel && (
           <div>
-            <p className="text-gray-700 mb-2 font-medium">
+            <p className="text-foreground mb-2 font-medium">
               Modified presentation with {suggestion.presentation.slides.length} slides:
             </p>
             <div className="space-y-2">
               {suggestion.presentation.slides.slice(0, 5).map((slide: any, index: number) => (
-                <div key={index} className="bg-gray-50 rounded p-2">
-                  <div className="font-medium text-primary-600 text-xs">{slide.title}</div>
+                <div key={index} className="bg-muted rounded p-2">
+                  <div className="font-medium text-primary text-xs">{slide.title}</div>
                   {showPreview && slide.content && (
-                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {typeof slide.content === 'string'
                         ? slide.content.substring(0, 100) + '...'
                         : Array.isArray(slide.content)
@@ -263,7 +263,7 @@ export default function WizardSuggestion({
                 </div>
               ))}
               {suggestion.presentation.slides.length > 5 && (
-                <div className="text-xs text-gray-500 text-center py-1">
+                <div className="text-xs text-muted-foreground text-center py-1">
                   …and {suggestion.presentation.slides.length - 5} more slides
                 </div>
               )}
@@ -273,14 +273,14 @@ export default function WizardSuggestion({
       </div>
 
       <div className="flex justify-between items-center">
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-muted-foreground">
           {hasChanges() ? "Ready to apply" : "No changes detected"}
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+            className="flex items-center gap-1 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors"
             onClick={onDismiss}
             data-testid="wizard-dismiss-button"
           >
@@ -289,7 +289,7 @@ export default function WizardSuggestion({
           </Button>
           <Button
             size="sm"
-            className="bg-primary hover:bg-primary-600 text-white flex items-center gap-1 disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-1 disabled:opacity-50"
             onClick={onApply}
             disabled={!hasChanges()}
             data-testid="wizard-apply-button"

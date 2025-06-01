@@ -221,7 +221,7 @@ export default function SlidesStep({
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Slides</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             Your slides are being generated using AI based on your research content.
           </p>
 
@@ -230,7 +230,7 @@ export default function SlidesStep({
               <Loader2 size={32} className="animate-spin" />
               <h3 className="text-xl font-semibold">Generating Slides...</h3>
             </div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               This process may take a minute or two. Please wait while we create your slides.
             </p>
             <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
@@ -251,13 +251,13 @@ export default function SlidesStep({
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl font-bold mb-4 gradient-text">Slides</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             Create and edit your presentation slides. Add titles and content for each slide.
           </p>
 
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
             <h3 className="text-xl font-semibold mb-6">Generate Slides</h3>
-            <p className="text-gray-600 mb-8">
+            <p className="text-muted-foreground mb-8">
               Your presentation needs slides. You can generate them automatically using AI based on your research.
             </p>
 
@@ -393,7 +393,7 @@ export default function SlidesStep({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold gradient-text">Slides Overview</h2>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Click on any slide to edit it. You have {presentation.slides.length} slides in your presentation.
               </p>
             </div>

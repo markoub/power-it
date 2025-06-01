@@ -13,14 +13,14 @@ export default function WizardMessage({ role, content }: WizardMessageProps) {
     <div className={`flex gap-2 ${isAssistant ? "flex-row" : "flex-row-reverse"}`}>
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isAssistant ? "bg-primary-100 text-primary-500" : "bg-gray-100 text-gray-500"
+          isAssistant ? "bg-primary/20 text-primary dark:bg-primary/30" : "bg-muted text-muted-foreground"
         }`}
       >
         {isAssistant ? <Sparkles size={16} /> : <UserIcon size={16} />}
       </div>
       <div
         className={`rounded-lg p-3 max-w-[85%] ${
-          isAssistant ? "bg-primary-50 text-gray-800" : "bg-gray-100 text-gray-800 ml-auto"
+          isAssistant ? "bg-primary/10 text-foreground dark:bg-primary/20" : "bg-muted text-foreground ml-auto"
         }`}
         data-testid={`wizard-message-${role}`}
       >

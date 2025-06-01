@@ -231,9 +231,9 @@ export default function PresentationList() {
           className="max-w-md mx-auto"
         >
           <h2 className="text-xl font-semibold mb-3 text-red-700">Failed to Load Presentations</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+          <p className="text-muted-foreground mb-6">{error}</p>
           <Button 
-            className="bg-primary hover:bg-primary-600 text-white font-medium px-6 py-2 rounded-full"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-2 rounded-full"
             onClick={() => loadPresentations()}
             data-testid="retry-button"
           >
@@ -328,23 +328,23 @@ export default function PresentationList() {
                 />
                 <div className="absolute top-3 right-3">
                   {presentation.researchMethod === "ai" ? (
-                    <div className="bg-primary-100 text-primary-600 text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-ai">
+                    <div className="bg-primary/20 text-primary text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-ai">
                       <Sparkles size={12} />
                       AI Research
                     </div>
                   ) : (
-                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-manual">
+                    <div className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1" data-testid="research-method-manual">
                       <FileText size={12} />
                       Manual
                     </div>
                   )}
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800 dark:text-gray-100" data-testid="presentation-name">{presentation.name}</CardTitle>
-                <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="presentation-author">By {presentation.author}</p>
+                <CardTitle className="text-xl font-bold text-foreground" data-testid="presentation-name">{presentation.name}</CardTitle>
+                <p className="text-sm text-muted-foreground" data-testid="presentation-author">By {presentation.author}</p>
                 <div className="hidden" data-testid="presentation-id">ID: {presentation.id}</div>
               </CardHeader>
               <CardContent>
-                <div className="w-full aspect-[16/9] bg-gradient-to-br from-primary-50 to-secondary-50 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
+                <div className="w-full aspect-[16/9] bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg flex items-center justify-center mb-4 overflow-hidden group relative">
                   <img
                     src={previewImages[presentation.id.toString()] ?? `/placeholder.svg?height=180&width=320&query=colorful presentation slide with abstract shapes`}
                     alt="Presentation thumbnail"
@@ -352,10 +352,10 @@ export default function PresentationList() {
                     data-testid="presentation-thumbnail"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                    <p className="text-white text-sm font-medium" data-testid="presentation-slide-count">{presentation.slides && presentation.slides.length ? presentation.slides.length : 0} slides</p>
+                    <p className="text-white drop-shadow-md text-sm font-medium" data-testid="presentation-slide-count">{presentation.slides && presentation.slides.length ? presentation.slides.length : 0} slides</p>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="text-sm text-muted-foreground">
                   <p data-testid="presentation-created-date">Created: {typeof window !== 'undefined' && presentation.createdAt ? 
                     new Date(presentation.createdAt).toLocaleDateString() : 'N/A'}</p>
                   {presentation.topic && <p className="truncate" data-testid="presentation-topic">Topic: {presentation.topic}</p>}
@@ -366,7 +366,7 @@ export default function PresentationList() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-1 hover:bg-primary-50 hover:text-primary-600 transition-colors"
+                    className="flex items-center gap-1 hover:bg-primary/10 hover:text-primary transition-colors"
                     data-testid="edit-presentation-button"
                   >
                     <Edit size={16} />

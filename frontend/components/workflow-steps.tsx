@@ -160,13 +160,13 @@ export default function WorkflowSteps({
     } else if (isStepAvailable(index)) {
       return "bg-blue-500 text-white"; // Available: blue
     } else if (isStepPending(index)) {
-      return "bg-gray-300 text-gray-600"; // Pending: grey
+      return "bg-muted text-muted-foreground"; // Pending: grey
     } else if (index === currentStep) {
       return "bg-blue-500 text-white ring-4 ring-blue-100"; // Current step (blue)
     } else if (isStepEnabled(index)) {
-      return "bg-gray-100 text-gray-400 hover:bg-gray-200"; // Enabled
+      return "bg-muted text-muted-foreground hover:bg-muted/80"; // Enabled
     } else {
-      return "bg-gray-100 text-gray-300 cursor-not-allowed opacity-60"; // Disabled
+      return "bg-muted text-muted-foreground/50 cursor-not-allowed opacity-60"; // Disabled
     }
   };
 
@@ -177,13 +177,13 @@ export default function WorkflowSteps({
     if (isStepProcessing(index)) return "text-yellow-600";
     if (isStepFailed(index)) return "text-red-600";
     if (isStepAvailable(index)) return "text-blue-600";
-    if (isStepPending(index)) return "text-gray-400";
-    return "text-gray-500";
+    if (isStepPending(index)) return "text-muted-foreground";
+    return "text-muted-foreground";
   };
 
   return (
     <>
-      <div className="w-full bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="w-full bg-card/80 backdrop-blur-sm rounded-xl shadow-sm border border-border p-6">
         <div className="relative flex justify-between items-start">
           {steps.map((step, index) => (
             <div key={step} className="flex flex-col items-center relative group flex-1">
@@ -192,7 +192,7 @@ export default function WorkflowSteps({
                 <div className="absolute top-4 left-1/2 w-full h-[2px] z-0">
                   {/* Base dotted line */}
                   <div 
-                    className="h-full w-full border-t-2 border-dotted border-gray-300"
+                    className="h-full w-full border-t-2 border-dotted border-muted-foreground/30"
                     style={{ 
                       borderImage: 'repeating-linear-gradient(to right, #d1d5db 0, #d1d5db 8px, transparent 8px, transparent 16px) 1'
                     }}

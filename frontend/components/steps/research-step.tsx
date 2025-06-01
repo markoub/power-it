@@ -398,7 +398,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Research</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             AI is researching your topic and gathering comprehensive information.
           </p>
 
@@ -407,7 +407,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
               <Loader2 size={32} className="animate-spin" />
               <h3 className="text-xl font-semibold">Researching...</h3>
             </div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               This process may take a minute as we gather and analyze information on your topic.
             </p>
             <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
@@ -428,7 +428,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             <Search className="h-6 w-6 text-primary-500" />
             Choose Research Method
           </CardTitle>
-          <p className="text-gray-600" data-testid="research-method-description">
+          <p className="text-muted-foreground" data-testid="research-method-description">
             Select how you'd like to research content for your presentation.
           </p>
         </CardHeader>
@@ -454,7 +454,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                     <Sparkles size={20} className="text-primary-500" />
                     AI Research
                   </Label>
-                  <p className="text-sm text-gray-600 mt-2" data-testid="ai-research-description">
+                  <p className="text-sm text-muted-foreground mt-2" data-testid="ai-research-description">
                     Let AI generate comprehensive research content based on your topic. Perfect for exploring new subjects or getting structured insights.
                   </p>
                   <div className="mt-3 text-xs text-gray-500" data-testid="ai-research-features">
@@ -478,10 +478,10 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 <RadioGroupItem value="manual" id="manual" className="text-primary mt-1" data-testid="manual-research-radio" />
                 <div className="flex-1">
                   <Label htmlFor="manual" className="flex items-center gap-2 cursor-pointer text-lg font-medium" data-testid="manual-research-label">
-                    <BookOpen size={20} className="text-gray-600" />
+                    <BookOpen size={20} className="text-muted-foreground" />
                     Manual Research
                   </Label>
-                  <p className="text-sm text-gray-600 mt-2" data-testid="manual-research-description">
+                  <p className="text-sm text-muted-foreground mt-2" data-testid="manual-research-description">
                     Enter your own research content, data, or prepared material. Ideal when you have specific information or expertise to include.
                   </p>
                   <div className="mt-3 text-xs text-gray-500" data-testid="manual-research-features">
@@ -519,7 +519,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
               {researchMethod === "ai" ? (
                 <Sparkles className="h-5 w-5 text-primary-500" />
               ) : (
-                <BookOpen className="h-5 w-5 text-gray-600" />
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
               )}
               <span className="font-medium" data-testid="selected-method-text">
                 {researchMethod === "ai" ? "AI Research" : "Manual Research"} Selected
@@ -655,7 +655,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
         <Card data-testid="manual-research-interface">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" data-testid="manual-research-interface-title">
-              <BookOpen className="h-5 w-5 text-gray-600" />
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
               Manual Research
             </CardTitle>
           </CardHeader>

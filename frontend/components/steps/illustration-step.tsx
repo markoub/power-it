@@ -270,7 +270,7 @@ export default function IllustrationStep({
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl font-bold mb-4 gradient-text">Generating Images</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             AI is creating custom illustrations for your slides based on their content.
           </p>
 
@@ -279,7 +279,7 @@ export default function IllustrationStep({
               <Loader2 size={32} className="animate-spin" />
               <h3 className="text-xl font-semibold">Generating Images...</h3>
             </div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               This process may take a few minutes as we create unique illustrations for each slide.
             </p>
             <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
@@ -343,7 +343,7 @@ export default function IllustrationStep({
             </Button>
           )}
         </div>
-        <p className="text-gray-600 mb-6">Generate or customize illustrations for each slide in your presentation.</p>
+        <p className="text-muted-foreground mb-6">Generate or customize illustrations for each slide in your presentation.</p>
 
         {noSlides ? (
           <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">

@@ -25,12 +25,12 @@ test.describe('Homepage Pagination', () => {
     await expect(page.getByTestId('presentations-grid')).toBeVisible({ timeout: 10000 });
     
     // Check that the pagination info shows correct information
-    const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+    const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
     await expect(paginationInfo).toBeVisible();
     
     // Verify the format matches "Showing X to Y of Z presentations"
     const infoText = await paginationInfo.textContent();
-    expect(infoText).toMatch(/Showing \d+ to \d+ of \d+ presentations/);
+    expect(infoText).toMatch(/Showing \d+[–\-]\d+ of \d+ presentations/);
   });
 
   test('should disable Previous button on first page', async ({ page }) => {
@@ -48,7 +48,7 @@ test.describe('Homepage Pagination', () => {
     await expect(page.getByTestId('presentations-grid')).toBeVisible({ timeout: 10000 });
     
     // Get initial pagination info
-    const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+    const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
     const initialInfo = await paginationInfo.textContent();
     
     // Click Next button
@@ -78,7 +78,7 @@ test.describe('Homepage Pagination', () => {
     await page.waitForLoadState('networkidle');
     
     // Get pagination info on page 2
-    const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+    const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
     const page2Info = await paginationInfo.textContent();
     
     // Click Previous button
@@ -104,7 +104,7 @@ test.describe('Homepage Pagination', () => {
     
     if (await page3Link.isVisible()) {
       // Get initial pagination info
-      const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+      const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
       const initialInfo = await paginationInfo.textContent();
       
       // Click on page 3
@@ -153,7 +153,7 @@ test.describe('Homepage Pagination', () => {
     await expect(page.getByTestId('presentations-grid')).toBeVisible({ timeout: 10000 });
 
     // Get initial pagination info
-    const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+    const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
     if (!(await paginationInfo.isVisible())) {
       test.skip('Not enough data for pagination');
     }
@@ -184,7 +184,7 @@ test.describe('Homepage Pagination', () => {
     await expect(page.getByTestId('presentations-grid')).toBeVisible({ timeout: 10000 });
 
     // Get initial pagination info
-    const paginationInfo = page.locator('text=/Showing \\d+ to \\d+ of \\d+ presentations/');
+    const paginationInfo = page.locator('text=/Showing \\d+[–\\-]\\d+ of \\d+ presentations/');
     if (!(await paginationInfo.isVisible())) {
       test.skip('Not enough data for pagination');
     }

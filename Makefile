@@ -242,12 +242,12 @@ install-deps:
 	else \
 		$(call print_warn,Package manager not detected. Please install python3, libreoffice, and ghostscript manually.); \
 	fi
-        @cd $(BACKEND_DIR) && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
-        @if [ -f package.json ]; then \
-                npm install; \
-        else \
-                $(call print_warn,Skipping root npm install - package.json missing); \
-        fi
+	@cd $(BACKEND_DIR) && python3 -m venv venv && . venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt && deactivate
+	@if [ -f package.json ]; then \
+		npm install; \
+	else \
+		$(call print_warn,Skipping root npm install - package.json missing); \
+	fi
 	@chmod +x $(BACKEND_DIR)/run_tests.sh $(BACKEND_DIR)/record_tests.sh $(BACKEND_DIR)/record_all_tests.sh 2>/dev/null || true
 	@if [ -f $(FRONTEND_DIR)/package.json ]; then \
 		cd $(FRONTEND_DIR) && npm install; \

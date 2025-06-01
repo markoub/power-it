@@ -402,15 +402,15 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             AI is researching your topic and gathering comprehensive information.
           </p>
 
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
-            <div className="flex items-center justify-center gap-3 text-primary-600 mb-4">
+          <div className="bg-card p-8 rounded-xl shadow-sm border border-border text-center">
+            <div className="flex items-center justify-center gap-3 text-primary mb-4">
               <Loader2 size={32} className="animate-spin" />
               <h3 className="text-xl font-semibold">Researching...</h3>
             </div>
             <p className="text-muted-foreground mb-4">
               This process may take a minute as we gather and analyze information on your topic.
             </p>
-            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
               The AI is searching for relevant information, analyzing sources, and structuring the research content for your presentation.
             </div>
           </div>
@@ -425,7 +425,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
       <Card className="max-w-4xl mx-auto" data-testid="research-method-selection">
         <CardHeader>
           <CardTitle className="text-2xl font-bold flex items-center gap-2" data-testid="research-method-title">
-            <Search className="h-6 w-6 text-primary-500" />
+            <Search className="h-6 w-6 text-primary" />
             Choose Research Method
           </CardTitle>
           <p className="text-muted-foreground" data-testid="research-method-description">
@@ -442,7 +442,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             <motion.div
               whileHover={{ scale: 1.02 }}
               className={`p-6 rounded-lg border cursor-pointer transition-all ${
-                researchMethod === "ai" ? "border-primary-300 bg-primary-50" : "border-gray-200 bg-white"
+                researchMethod === "ai" ? "border-primary bg-primary/5 dark:bg-primary/10" : "border-border bg-card"
               }`}
               onClick={() => setResearchMethod("ai")}
               data-testid="ai-research-option"
@@ -451,13 +451,13 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 <RadioGroupItem value="ai" id="ai" className="text-primary mt-1" data-testid="ai-research-radio" />
                 <div className="flex-1">
                   <Label htmlFor="ai" className="flex items-center gap-2 cursor-pointer text-lg font-medium" data-testid="ai-research-label">
-                    <Sparkles size={20} className="text-primary-500" />
+                    <Sparkles size={20} className="text-primary" />
                     AI Research
                   </Label>
                   <p className="text-sm text-muted-foreground mt-2" data-testid="ai-research-description">
                     Let AI generate comprehensive research content based on your topic. Perfect for exploring new subjects or getting structured insights.
                   </p>
-                  <div className="mt-3 text-xs text-gray-500" data-testid="ai-research-features">
+                  <div className="mt-3 text-xs text-muted-foreground" data-testid="ai-research-features">
                     ✓ Comprehensive content generation<br/>
                     ✓ Structured research format<br/>
                     ✓ Time-saving approach
@@ -469,7 +469,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             <motion.div
               whileHover={{ scale: 1.02 }}
               className={`p-6 rounded-lg border cursor-pointer transition-all ${
-                researchMethod === "manual" ? "border-primary-300 bg-primary-50" : "border-gray-200 bg-white"
+                researchMethod === "manual" ? "border-primary bg-primary/5 dark:bg-primary/10" : "border-border bg-card"
               }`}
               onClick={() => setResearchMethod("manual")}
               data-testid="manual-research-option"
@@ -484,7 +484,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                   <p className="text-sm text-muted-foreground mt-2" data-testid="manual-research-description">
                     Enter your own research content, data, or prepared material. Ideal when you have specific information or expertise to include.
                   </p>
-                  <div className="mt-3 text-xs text-gray-500" data-testid="manual-research-features">
+                  <div className="mt-3 text-xs text-muted-foreground" data-testid="manual-research-features">
                     ✓ Full control over content<br/>
                     ✓ Use existing research<br/>
                     ✓ Custom data and insights
@@ -497,7 +497,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
           <div className="flex justify-center mt-6">
             <Button
               onClick={() => handleMethodSelection(researchMethod)}
-              className="bg-primary hover:bg-primary-600 text-white px-8 py-2 rounded-full flex items-center gap-2"
+              className="px-8 py-2 rounded-full flex items-center gap-2"
               data-testid="continue-with-method-button"
             >
               Continue with {researchMethod === "ai" ? "AI Research" : "Manual Research"}
@@ -517,7 +517,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3" data-testid="selected-method-display">
               {researchMethod === "ai" ? (
-                <Sparkles className="h-5 w-5 text-primary-500" />
+                <Sparkles className="h-5 w-5 text-primary" />
               ) : (
                 <BookOpen className="h-5 w-5 text-muted-foreground" />
               )}
@@ -544,7 +544,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
         <Card data-testid="ai-research-interface">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" data-testid="ai-research-interface-title">
-              <Sparkles className="h-5 w-5 text-primary-500" />
+              <Sparkles className="h-5 w-5 text-primary" />
               AI Research
             </CardTitle>
           </CardHeader>
@@ -562,7 +562,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 disabled={isGenerating || isRedoing}
                 data-testid="topic-input"
               />
-              <p className="text-xs text-gray-500 mt-1" data-testid="topic-input-help">
+              <p className="text-xs text-muted-foreground mt-1" data-testid="topic-input-help">
                 Be specific about what you want to research (e.g., "Machine Learning in Healthcare", "Digital Marketing Strategies 2024")
               </p>
             </div>
@@ -572,7 +572,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 <Button
                   onClick={handleGenerateContent}
                   disabled={isGenerating || !topic.trim()}
-                  className="bg-primary hover:bg-primary-600 text-white flex items-center gap-2"
+                  className="flex items-center gap-2"
                   data-testid="start-ai-research-button"
                 >
                   {isGenerating ? (
@@ -614,8 +614,8 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             {researchContent && (
               <div className="mt-6" data-testid="ai-research-content-display">
                 <Label className="text-sm font-medium mb-2 block" data-testid="ai-research-content-label">Generated Research Content</Label>
-                <div className="bg-gray-50 border rounded-lg p-4 max-h-96 overflow-y-auto" data-testid="ai-research-content">
-                  <div className="prose prose-sm text-gray-700 max-w-none">
+                <div className="bg-muted/50 border rounded-lg p-4 max-h-96 overflow-y-auto" data-testid="ai-research-content">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown>{researchContent}</ReactMarkdown>
                   </div>
                 </div>
@@ -624,16 +624,16 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 {researchLinks && researchLinks.length > 0 && (
                   <div className="mt-4" data-testid="ai-research-links-display">
                     <Label className="text-sm font-medium mb-2 block" data-testid="ai-research-links-label">Research Sources</Label>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3">
                       <ul className="space-y-2" data-testid="ai-research-links">
                         {researchLinks.map((link: any, index: number) => (
                           <li key={index} className="flex items-center gap-2">
-                            <ExternalLink className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                            <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                             <a
                               href={link.href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-800 underline"
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                               data-testid={`research-link-${index}`}
                             >
                               {link.title || link.href}
@@ -674,7 +674,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 disabled={isGenerating}
                 data-testid="manual-research-input"
               />
-              <p className="text-xs text-gray-500 mt-1" data-testid="manual-research-input-help">
+              <p className="text-xs text-muted-foreground mt-1" data-testid="manual-research-input-help">
                 Include all the information you want to use in your presentation. This can be research notes, data points, existing content, or any material you've prepared.
               </p>
             </div>
@@ -682,7 +682,7 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             <Button
               onClick={handleStartManualResearch}
               disabled={isGenerating || !manualResearch.trim()}
-              className="bg-primary hover:bg-primary-600 text-white flex items-center gap-2"
+              className="flex items-center gap-2"
               data-testid="save-manual-research-button"
             >
               {isGenerating ? (
@@ -702,8 +702,8 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             {researchContent && (
               <div className="mt-6" data-testid="manual-research-content-display">
                 <Label className="text-sm font-medium mb-2 block" data-testid="manual-research-content-label">Saved Research Content</Label>
-                <div className="bg-gray-50 border rounded-lg p-4 max-h-96 overflow-y-auto" data-testid="manual-research-content">
-                  <div className="prose prose-sm text-gray-700 max-w-none">
+                <div className="bg-muted/50 border rounded-lg p-4 max-h-96 overflow-y-auto" data-testid="manual-research-content">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown>{researchContent}</ReactMarkdown>
                   </div>
                 </div>
@@ -712,16 +712,16 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
                 {researchLinks && researchLinks.length > 0 && (
                   <div className="mt-4" data-testid="manual-research-links-display">
                     <Label className="text-sm font-medium mb-2 block" data-testid="manual-research-links-label">Research Sources</Label>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3">
                       <ul className="space-y-2" data-testid="manual-research-links">
                         {researchLinks.map((link: any, index: number) => (
                           <li key={index} className="flex items-center gap-2">
-                            <ExternalLink className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                            <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                             <a
                               href={link.href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-800 underline"
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                               data-testid={`manual-research-link-${index}`}
                             >
                               {link.title || link.href}

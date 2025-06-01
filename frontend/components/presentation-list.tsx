@@ -5,13 +5,23 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, Trash2, FileIcon as FilePresentation, Sparkles, FileText, Loader2 } from "lucide-react"
+import { Edit, Trash2, FileIcon as FilePresentation, Sparkles, FileText, Loader2, Grid, List, AlertTriangle } from "lucide-react"
 import type { Presentation } from "@/lib/types"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination"
 import { motion } from "framer-motion"
 import { AnimatedContainer, AnimatedItem } from "@/components/ui-elements"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function PresentationList() {
   const [presentations, setPresentations] = useState<Presentation[]>([])
@@ -24,6 +34,9 @@ export default function PresentationList() {
   const [pageSize, setPageSize] = useState(10)
   const [total, setTotal] = useState(0)
   const [statusFilter, setStatusFilter] = useState<'all' | 'finished' | 'in_progress'>('all')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteSelectedDialogOpen, setDeleteSelectedDialogOpen] = useState(false)
+  const [presentationToDelete, setPresentationToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     // Load presentations from the API
@@ -63,14 +76,19 @@ export default function PresentationList() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure")) return
+    setPresentationToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!presentationToDelete) return
 
     try {
-      const success = await api.deletePresentation(id)
+      const success = await api.deletePresentation(presentationToDelete)
 
       if (success) {
         // Remove presentation locally for snappier UI
-        setPresentations(presentations.filter((p) => p.id !== id))
+        setPresentations(presentations.filter((p) => p.id !== presentationToDelete))
         // Reload from server to ensure we stay in sync
         await loadPresentations()
         toast.success("Presentation deleted successfully")
@@ -78,21 +96,27 @@ export default function PresentationList() {
         toast.error("Failed to delete presentation")
       }
     } catch (error) {
-      console.error(`Error deleting presentation ${id}:`, error)
+      console.error(`Error deleting presentation ${presentationToDelete}:`, error)
       toast.error("Failed to delete presentation")
+    } finally {
+      setDeleteDialogOpen(false)
+      setPresentationToDelete(null)
     }
   }
 
   const handleDeleteSelected = async () => {
     if (selected.size === 0) return
-    if (!window.confirm("Delete selected presentations?")) return
+    setDeleteSelectedDialogOpen(true)
+  }
 
+  const confirmDeleteSelected = async () => {
     for (const id of selected) {
       await api.deletePresentation(id)
     }
     setSelected(new Set())
     await loadPresentations()
     toast.success("Selected presentations deleted")
+    setDeleteSelectedDialogOpen(false)
   }
 
   const toggleSelect = (id: string) => {
@@ -271,44 +295,103 @@ export default function PresentationList() {
 
   return (
     <AnimatedContainer>
-      <div className="flex justify-between items-center mb-4">
-        <div className="space-x-2 flex items-center">
-          <Button
-            variant={view === 'grid' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setView('grid')}
-            data-testid="view-grid-button"
-          >
-            Grid
-          </Button>
-          <Button
-            variant={view === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setView('list')}
-            data-testid="view-list-button"
-          >
-            List
-          </Button>
-          <label className="ml-4 text-sm flex items-center gap-1">
-            <input
-              type="checkbox"
-              onChange={(e) => selectAll(e.target.checked)}
-              checked={selected.size === presentations.length && presentations.length > 0}
-              data-testid="select-all-checkbox"
-            />
-            Select All
-          </label>
+      <div className="space-y-4 mb-6">
+        <div className="bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm border border-gray-200 dark:border-gray-700">
+                <Button
+                  variant={view === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('grid')}
+                  data-testid="view-grid-button"
+                  className={view === 'grid' ? '' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}
+                >
+                  <Grid className="w-4 h-4" />
+                  <span className="ml-1">Grid</span>
+                </Button>
+                <Button
+                  variant={view === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('list')}
+                  data-testid="view-list-button"
+                  className={view === 'list' ? '' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}
+                >
+                  <List className="w-4 h-4" />
+                  <span className="ml-1">List</span>
+                </Button>
+              </div>
+              
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
+              
+              <div className="flex items-center space-x-2">
+                <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setPage(1)
+                    setStatusFilter(e.target.value as any)
+                  }}
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                  data-testid="status-filter-select"
+                >
+                  <option value="all">All</option>
+                  <option value="finished">Finished</option>
+                  <option value="in_progress">In Progress</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <label htmlFor="page-size" className="text-sm font-medium text-gray-700 dark:text-gray-300">Show:</label>
+                <select
+                  id="page-size"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPage(1)
+                    setPageSize(parseInt(e.target.value))
+                  }}
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                  data-testid="page-size-select"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <label className="text-sm flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <input
+                  type="checkbox"
+                  onChange={(e) => selectAll(e.target.checked)}
+                  checked={selected.size === presentations.length && presentations.length > 0}
+                  data-testid="select-all-checkbox"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                Select All
+              </label>
+              {selected.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  data-testid="delete-selected-button"
+                  className="shadow-sm"
+                >
+                  <Trash2 size={16} className="mr-1" />
+                  Delete ({selected.size})
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-3 font-medium">
+            Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} of {total} presentations
+          </div>
         </div>
-        {selected.size > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDeleteSelected}
-            data-testid="delete-selected-button"
-          >
-            Delete Selected
-          </Button>
-        )}
       </div>
       {view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="presentations-grid">
@@ -421,49 +504,9 @@ export default function PresentationList() {
           </TableBody>
         </Table>
       )}
-      <div className="flex items-center justify-between mt-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1)
-                setStatusFilter(e.target.value as any)
-              }}
-              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              data-testid="status-filter-select"
-            >
-              <option value="all">All</option>
-              <option value="finished">Finished</option>
-              <option value="in_progress">In Progress</option>
-            </select>
-          </div>
-          <div className="flex items-center space-x-2">
-            <label htmlFor="page-size" className="text-sm font-medium text-gray-700 dark:text-gray-300">Per page:</label>
-            <select
-              id="page-size"
-              value={pageSize}
-              onChange={(e) => {
-                setPage(1)
-                setPageSize(parseInt(e.target.value))
-              }}
-              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              data-testid="page-size-select"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} presentations
-          </div>
-        </div>
-        
-        {Math.ceil(total / pageSize) > 1 && (
+      
+      {Math.ceil(total / pageSize) > 1 && (
+        <div className="flex justify-center mt-6">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -491,8 +534,64 @@ export default function PresentationList() {
               </PaginationItem>
             </PaginationContent>
           </Pagination>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Delete Single Presentation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Presentation
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this presentation? This action cannot be undone.
+              {presentationToDelete && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p className="font-medium text-sm">
+                    {presentations.find(p => p.id.toString() === presentationToDelete)?.name}
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Selected Presentations Dialog */}
+      <AlertDialog open={deleteSelectedDialogOpen} onOpenChange={setDeleteSelectedDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Selected Presentations
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selected.size} selected presentation{selected.size > 1 ? 's' : ''}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteSelected}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete {selected.size} Presentation{selected.size > 1 ? 's' : ''}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AnimatedContainer>
   )
 }

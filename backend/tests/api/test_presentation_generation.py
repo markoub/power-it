@@ -149,8 +149,8 @@ class TestPresentationGeneration:
             mock_research.assert_called_once_with(topic)
             mock_slides.assert_called_once_with(
                 mock_research_data,
-                target_slides=target_slides,
-                author=author
+                target_slides,
+                author
             )
             
             # Verify result

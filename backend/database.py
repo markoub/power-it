@@ -36,6 +36,8 @@ class PromptModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     text = Column(Text)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 class StepStatus(enum.Enum):
     PENDING = "pending"

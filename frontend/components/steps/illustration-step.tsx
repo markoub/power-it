@@ -11,7 +11,7 @@ import { Loader2, RefreshCw, Wand2, ImageIcon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import { api } from "@/lib/api"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 
 // Define API_URL to match the one used in the api.ts file
 const API_URL = 'http://localhost:8000';

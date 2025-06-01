@@ -22,7 +22,7 @@ class TestPresentationAPI:
     async def test_create_presentation_invalid_data(self, api_client, clean_db):
         """Test creation with invalid data."""
         response = api_client.post("/presentations", json={})
-        assert_api_error(response, 422, "validation error")
+        assert_api_error(response, 422, "Field required")
 
     async def test_get_presentation_success(self, api_client, create_presentation):
         """Test retrieving an existing presentation."""
@@ -112,7 +112,7 @@ class TestPresentationSteps:
         presentation_id = presentation["id"]
         
         response = api_client.post(f"/presentations/{presentation_id}/steps/invalid_step/run")
-        assert_api_error(response, 404, "not found")
+        assert_api_error(response, 400, "Invalid step")
 
     async def test_step_on_nonexistent_presentation(self, api_client, clean_db):
         """Test running a step on non-existent presentation."""

@@ -13,6 +13,7 @@ except ImportError:
 from PIL import Image as PILImage
 from io import BytesIO
 from typing import Dict, Any, List, Optional
+from prompts import get_prompt
 import concurrent.futures
 import time
 
@@ -86,7 +87,7 @@ def image_bytes_to_base64(image_bytes: bytes) -> str:
     """Convert image bytes to base64 encoded string."""
     return base64.b64encode(image_bytes).decode()
 
-def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGeneration]:
+async def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGeneration]:
     """
     Generate images for a slide based on its type using Gemini Imagen 3.
     In offline mode, returns mock images using the dummy image file.
@@ -145,19 +146,14 @@ def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGenera
             print(f"Successfully generated dummy image for slide {index}, field {image_field}")
             continue
 
-        # Create a prompt based on the specific field content
-        prompt = f"""Create an illustrative image for a presentation slide representing: {specific_content}
-
-Context: This image is for the field '{image_field}' of a slide titled '{slide_title}' (type: '{slide_type}').
-
-Important guidelines:
-- Create a SIMPLE, CLEAN illustration that represents the main concept: {specific_content}
-- Focus on VISUAL representation rather than text-heavy elements
-- Use vibrant colors and clear imagery
-- Avoid complex diagrams or dense information
-- Illustration should be immediately understandable at a glance
-- Aim for an elegant, professional style suitable for a business presentation
-"""
+        # Get the prompt template from the centralized prompt system
+        prompt_template = await get_prompt("image_generation")
+        prompt = prompt_template.format(
+            specific_content=specific_content,
+            image_field=image_field,
+            slide_title=slide_title,
+            slide_type=slide_type
+        )
         
         # Create Gemini client
         client = genai.Client(api_key=GEMINI_API_KEY)
@@ -249,7 +245,7 @@ async def generate_slide_images_gemini(slides: SlidePresentation, presentation_i
         all_generated_images = []
         for slide_obj, index in tasks:
             # Generate dummy images for this slide
-            result = _generate_image_for_slide(slide_obj, index, presentation_id)
+            result = await _generate_image_for_slide(slide_obj, index, presentation_id)
             all_generated_images.extend(result)
             
         print(f"OFFLINE MODE: Generated {len(all_generated_images)} dummy images")
@@ -265,12 +261,8 @@ async def generate_slide_images_gemini(slides: SlidePresentation, presentation_i
         batch_futures = []
         
         for slide_obj, index in batch:
-            # Submit the task to the executor
-            future = asyncio.get_event_loop().run_in_executor(
-                image_executor,
-                _generate_image_for_slide,
-                slide_obj, index, presentation_id
-            )
+            # Since _generate_image_for_slide is now async, we run it directly
+            future = _generate_image_for_slide(slide_obj, index, presentation_id)
             batch_futures.append(future)
         
         try:

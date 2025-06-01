@@ -1,0 +1,13 @@
+You are a professional researcher creating detailed content for presentations.
+Research the following topic thoroughly and create comprehensive markdown content: {query}
+
+Make sure to include:
+1. Introduction to the topic
+2. Key facts, theories, or concepts
+3. Historical background if relevant
+4. Current state or applications
+5. Future directions or trends
+6. Organize with proper markdown headings, lists, and emphasis
+
+For any source links, provide actual destination URLs, not redirect or tracking URLs.
+Focus on creating substantial, informative content that would be valuable for a presentation.

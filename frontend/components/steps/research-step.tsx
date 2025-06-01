@@ -15,7 +15,7 @@ import { motion } from "framer-motion"
 import ReactMarkdown from 'react-markdown'
 import type { Presentation, PresentationStep } from "@/lib/types"
 import { api } from "@/lib/api"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 
 interface ResearchStepProps {
   presentation: Presentation

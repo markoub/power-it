@@ -1,18 +1,4 @@
-DEFAULT_RESEARCH_PROMPT = """You are a professional researcher creating detailed content for presentations.
-Research the following topic thoroughly and create comprehensive markdown content: {query}
-
-Make sure to include:
-1. Introduction to the topic
-2. Key facts, theories, or concepts
-3. Historical background if relevant
-4. Current state or applications
-5. Future directions or trends
-6. Organize with proper markdown headings, lists, and emphasis
-
-For any source links, provide actual destination URLs, not redirect or tracking URLs.
-Focus on creating substantial, informative content that would be valuable for a presentation."""
-
-DEFAULT_SLIDES_PROMPT = """You are tasked with creating a professional presentation based on the following research:
+You are tasked with creating a professional presentation based on the following research:
 
 {research_content}
 
@@ -35,7 +21,11 @@ IMPORTANT: You MUST use MULTIPLE DIFFERENT slide types. DO NOT default to using 
 PRIORITIZE using 'ContentImage', 'ImageFull', and '3Images' slides wherever possible to make the presentation visually engaging.
 AIM for no more than 30-40% of the main content slides (excluding Welcome/TOC/Section) to be of the plain 'Content' type.
 
-REQUIRED SLIDE TYPES (these MUST be included):\n- 'Welcome' as the FIRST slide with title, subtitle, and author\n- At least 2-3 'Section' slides to divide your content into logical sections\n- A mix of 'Content' and 'ContentImage' slides (prefer 'ContentImage')\n- At least one '3Images' or 'ImageFull' slide if the content suits visual presentation
+REQUIRED SLIDE TYPES (these MUST be included):
+- 'Welcome' as the FIRST slide with title, subtitle, and author
+- At least 2-3 'Section' slides to divide your content into logical sections
+- A mix of 'Content' and 'ContentImage' slides (prefer 'ContentImage')
+- At least one '3Images' or 'ImageFull' slide if the content suits visual presentation
 
 Available slide types:
 {slide_types_info}
@@ -78,4 +68,4 @@ Note: Include the "notes" field for each slide. Do not include any "visual_sugge
 Format your response as a valid JSON object where:
 1. The root object has "title", "author", and "slides" properties
 2. Each slide has "type" and "fields" properties
-3. The "fields" property contains only the fields allowed for that slide type, AND the "content" field, when present, MUST be a JSON array of strings."""
+3. The "fields" property contains only the fields allowed for that slide type, AND the "content" field, when present, MUST be a JSON array of strings.

@@ -49,7 +49,11 @@ class TestStructuredOutput:
         """Test that the model is configured with structured output schema."""
         # Mock the model and response
         mock_response = {
-            "content": "# Test Topic\n\nThis is test content.",
+            "content": "# Test Topic\n\nThis is comprehensive test content for research validation. " +
+                      "It includes multiple sections and detailed information to ensure the " +
+                      "research data meets the minimum length requirements for proper validation. " +
+                      "This content is structured to provide meaningful research output that can " +
+                      "be used for generating high-quality presentation slides.",
             "links": [{"href": "https://example.com", "title": "Example"}]
         }
         
@@ -90,7 +94,12 @@ class TestStructuredOutput:
         """Test that structured output JSON is parsed correctly."""
         # Mock response with valid JSON
         test_data = {
-            "content": "# AI in Healthcare\n\n## Introduction\n\nAI is transforming healthcare...",
+            "content": "# AI in Healthcare\n\n## Introduction\n\nAI is transforming healthcare " +
+                      "through advanced machine learning algorithms, predictive analytics, and " +
+                      "automated diagnostic systems. These technologies are revolutionizing patient " +
+                      "care, medical research, and healthcare administration by providing more " +
+                      "accurate diagnoses, personalized treatment plans, and efficient resource " +
+                      "management across healthcare institutions worldwide.",
             "links": [
                 {"href": "https://healthcare.ai", "title": "Healthcare AI"},
                 {"href": "https://medical.research", "title": "Medical Research"}
@@ -184,7 +193,11 @@ class TestStructuredOutput:
         """Test structured output with empty links array."""
         # Mock response with empty links
         test_data = {
-            "content": "# Test Content\n\nThis is a test with no external sources.",
+            "content": "# Test Content\n\nThis is comprehensive test content that demonstrates " +
+                      "research capabilities without requiring external sources. It includes " +
+                      "detailed analysis, multiple perspectives, and thorough explanations that " +
+                      "provide value even without reference links. This content serves as an " +
+                      "example of self-contained research that meets quality standards.",
             "links": []
         }
         
@@ -242,7 +255,11 @@ class TestStructuredOutput:
         """Test handling of invalid link objects."""
         # Mock response with invalid links
         test_data = {
-            "content": "# Test Content",
+            "content": "# Test Content\n\nThis is comprehensive test content that includes " +
+                      "detailed research analysis with mixed quality reference links. The content " +
+                      "itself provides substantial value through thorough examination of the topic, " +
+                      "comprehensive coverage of key points, and detailed explanations that meet " +
+                      "the minimum content length requirements for proper validation testing.",
             "links": [
                 {"href": "https://valid.com", "title": "Valid Link"},
                 {"missing": "href field"},  # Invalid link

@@ -114,14 +114,14 @@ def test_in_memory_download():
 @pytest.fixture
 def mock_gemini_load_fixture():
     """Create a mock for the GeminiVCR instance's load_recording method."""
-    with patch('tests.test_gemini_vcr.GeminiVCR.load_recording') as mock_load:
+    with patch('tests.unit.vcr.test_gemini_vcr.GeminiVCR.load_recording') as mock_load:
         mock_load.return_value = MICROSOFT_LOGO_INFO
         yield mock_load
 
 @pytest.fixture
 def mock_gemini_save_fixture():
     """Create a mock for the GeminiVCR instance's save_recording method."""
-    with patch('tests.test_gemini_vcr.GeminiVCR.save_recording') as mock_save:
+    with patch('tests.unit.vcr.test_gemini_vcr.GeminiVCR.save_recording') as mock_save:
         yield mock_save
 
 def test_search_logo_vcr(gemini_vcr, mock_gemini_load_fixture, mock_gemini_save_fixture, temp_logo_dir):

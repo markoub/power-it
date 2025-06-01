@@ -63,9 +63,21 @@ def generate_offline_slides(
         "fields": {"title": presentation_title, "subtitle": "Professional Business Presentation", "author": author},
     })
 
+    # Calculate how many sections we can fit (reserve space for Welcome + TableOfContents)
+    remaining_slides = target_slides - 2
+    max_sections = min(4, max(1, remaining_slides))
+    
+    # Add TableOfContents slide with only the sections that will be created
+    section_titles = [section[0] for section in content_sections[:max_sections]]
+    slides.append({
+        "type": "TableOfContents",
+        "fields": {"title": "Agenda", "sections": section_titles},
+    })
+
     section_count = 0
-    slide_count = 1
-    for section_data in content_sections[:4]:
+    slide_count = 2  # Start at 2 because we now have Welcome + TableOfContents
+    
+    for section_data in content_sections[:max_sections]:
         section_title = section_data[0] if section_data else f"Section {section_count + 1}"
         section_content = section_data[1:] if len(section_data) > 1 else ["Content for this section"]
         slides.append({"type": "Section", "fields": {"title": section_title}})

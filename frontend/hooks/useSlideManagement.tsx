@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Slide, Presentation } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { api } from '@/lib/api';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 
 interface UseSlideManagementOptions {

@@ -117,6 +117,20 @@ class GeminiVCR(BaseVCR):
         
         return self.record_or_replay(fixture_name, api_call, response_processor)
 
+    def mock_generate_content(self, original_method):
+        """
+        Factory method to create a mock for generate_content.
+        This is the method expected by conftest.py.
+        """
+        return self.generate_content_mock
+
+    def mock_generate_content_async(self, original_method):
+        """
+        Factory method to create a mock for generate_content_async.
+        This is the method expected by conftest.py.
+        """
+        return self.generate_content_async_mock
+
 
 class TestGeminiVCR:
     """Test cases for GeminiVCR functionality."""

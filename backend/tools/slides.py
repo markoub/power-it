@@ -8,12 +8,11 @@ from typing import Dict, Any, List, Optional
 
 # Use absolute imports
 from config import SLIDES_MODEL, SLIDES_CONFIG
-from utils import extract_json_from_text
+from utils.gemini import extract_json_from_text
 from models import ResearchData, SlidePresentation, Slide
 from tools.slide_config import SLIDE_TYPES, PRESENTATION_STRUCTURE
 from tools.logo_fetcher import search_logo, download_logo
 from offline_responses.slides import generate_offline_slides
-from default_prompts import DEFAULT_SLIDES_PROMPT
 from prompts import get_prompt
 
 # Check for offline mode
@@ -44,6 +43,17 @@ async def generate_slides(
     Returns:
         A SlidePresentation object with slide content
     """
+    # Input validation
+    if research is None:
+        raise ValueError("Research data cannot be None")
+    
+    if not hasattr(research, 'content') or not research.content or research.content.strip() == "":
+        raise ValueError("Research data must contain non-empty content")
+    
+    # Validate target_slides
+    if not isinstance(target_slides, int) or target_slides <= 0:
+        raise ValueError("Target slides must be a positive integer")
+    
     if OFFLINE_MODE:
         print(f"OFFLINE MODE: Generating dynamic slides response based on research content")
         offline_response = generate_offline_slides(research, target_slides, author, target_audience, content_density, presentation_duration, custom_prompt)
@@ -120,7 +130,7 @@ CUSTOMIZATION REQUIREMENTS:
 """
     
     # Create the prompt for slide generation with updated format for the new Slide model
-    prompt_template = await get_prompt("slides_prompt", DEFAULT_SLIDES_PROMPT)
+    prompt_template = await get_prompt("slides")
     prompt = prompt_template.format(
         research_content=research_content, 
         target_slides=target_slides, 

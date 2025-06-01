@@ -4,26 +4,14 @@ General wizard for handling general questions and guidance.
 
 from typing import Dict, Any, Optional
 from .base_wizard import BaseWizard, OFFLINE_MODE
+from prompts import get_prompt
 
 
 class GeneralWizard(BaseWizard):
     """Wizard for general assistance and guidance."""
     
-    def get_system_prompt(self) -> str:
-        return """
-        You are a helpful presentation creation assistant. You help users:
-        
-        1. Understand the presentation creation process
-        2. Navigate between different steps
-        3. Provide general guidance on presentations
-        4. Answer questions about the application features
-        5. Suggest next steps in the workflow
-        
-        You provide guidance but cannot modify content directly on steps other than Research and Slides.
-        You can suggest when users should go back to previous steps or move forward.
-        
-        Be helpful, encouraging, and provide clear direction on how to proceed.
-        """
+    async def get_system_prompt(self) -> str:
+        return await get_prompt("wizard_general_system")
     
     def get_capabilities(self) -> Dict[str, Any]:
         return {
@@ -58,40 +46,28 @@ class GeneralWizard(BaseWizard):
             # Analyze the presentation state
             presentation_state = self._analyze_presentation_state(presentation_data)
             
-            input_prompt = f"""
-            # Current Step
-            {current_step}
+            prompt_template = await get_prompt("wizard_general_guidance")
+            input_prompt = prompt_template.format(
+                current_step=current_step,
+                topic=presentation_data.get('topic', 'Not set'),
+                research_status=presentation_state['research_status'],
+                slides_status=presentation_state['slides_status'],
+                images_status=presentation_state['images_status'],
+                pptx_status=presentation_state['pptx_status'],
+                prompt=prompt
+            )
             
-            # Presentation State
-            Topic: {presentation_data.get('topic', 'Not set')}
-            Research Status: {presentation_state['research_status']}
-            Slides Status: {presentation_state['slides_status']}
-            Images Status: {presentation_state['images_status']}
-            PPTX Status: {presentation_state['pptx_status']}
-            
-            # User Question
-            {prompt}
-
-            Please provide helpful guidance to the user. You can:
-            - Answer questions about the presentation creation process
-            - Suggest which step to go to next
-            - Explain what each step does
-            - Provide general presentation advice
-            - Help troubleshoot issues
-            
-            If the user needs to modify content, direct them to the appropriate step.
-            Respond conversationally and be encouraging.
-            """
-            
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help guide you through the presentation creation process."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
             )
             
             return {
+                "type": "explanation",
                 "response": response.text,
                 "suggestions": None,
                 "capabilities": self.get_capabilities()
@@ -100,10 +76,28 @@ class GeneralWizard(BaseWizard):
         except Exception as e:
             print(f"Error in general wizard: {str(e)}")
             return {
+                "type": "explanation",
                 "response": "I'm here to help! I can answer questions about the presentation creation process, guide you through the steps, and provide general assistance. What would you like to know?",
                 "suggestions": None,
                 "capabilities": self.get_capabilities()
             }
+    
+    def _create_offline_response(self, prompt: str) -> Dict[str, Any]:
+        """Create offline response for testing."""
+        if not prompt or not prompt.strip():
+            return {
+                "type": "error",
+                "error": "Empty request received. Please provide a question or instruction.",
+                "suggestions": None,
+                "capabilities": self.get_capabilities()
+            }
+        
+        return {
+            "type": "explanation",
+            "response": f"Offline mode: I understand your request '{prompt}'. In full mode, I would provide detailed assistance about the presentation creation process.",
+            "suggestions": None,
+            "capabilities": self.get_capabilities()
+        }
     
     def _analyze_presentation_state(self, presentation_data: Dict[str, Any]) -> Dict[str, str]:
         """Analyze the current state of the presentation."""

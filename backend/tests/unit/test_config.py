@@ -27,6 +27,7 @@ class TestConfigurationLoading:
     def test_environment_variable_loading(self):
         """Test that environment variables are loaded correctly."""
         with EnvironmentManager.temporary_env(
+            POWERIT_OFFLINE="0",  # Disable offline mode for this test
             GEMINI_API_KEY="test-gemini-key",
             OPENAI_API_KEY="test-openai-key",
             RESEARCH_MODEL="gemini-test-model",

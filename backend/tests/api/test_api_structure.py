@@ -72,8 +72,8 @@ class TestEndpointRegistration:
         
         # Check for step execution endpoints
         step_patterns = [
-            "/presentations/{presentation_id}/steps/{step}/run",
-            "/presentations/{presentation_id}/steps/{step}",
+            "/presentations/{presentation_id}/steps/{step_name}/run",
+            "/presentations/{presentation_id}/steps/{step_name}",
         ]
         
         for pattern in step_patterns:
@@ -98,9 +98,9 @@ class TestEndpointRegistration:
         assert "/logos/search" in paths
         assert "/logos/{term}" in paths
         
-        # Check HTTP methods
+        # Check HTTP methods - search uses POST, term uses GET
         logos_search_path = paths["/logos/search"]
-        assert "get" in logos_search_path
+        assert "post" in logos_search_path
         
         logos_term_path = paths["/logos/{term}"]
         assert "get" in logos_term_path
@@ -109,10 +109,12 @@ class TestEndpointRegistration:
         """Test that PPTX-related endpoints are registered."""
         paths = api_schema["paths"]
         
-        # Check for PPTX endpoints
+        # Check for actual PPTX endpoints in the router
         pptx_patterns = [
-            "/presentations/{presentation_id}/download",
-            "/presentations/{presentation_id}/pptx",
+            "/presentations/{presentation_id}/download-pptx",
+            "/presentations/{presentation_id}/download-pdf",
+            "/presentations/{presentation_id}/pptx-slides",
+            "/presentations/{presentation_id}/pptx-slides/{filename}",
         ]
         
         # At least one PPTX endpoint should exist
@@ -123,7 +125,7 @@ class TestEndpointRegistration:
         ("/presentations", ["get", "post"]),
         ("/presentations/{presentation_id}", ["get", "delete"]),
         ("/images", ["post"]),
-        ("/logos/search", ["get"]),
+        ("/logos/search", ["post"]),
         ("/logos/{term}", ["get"]),
     ])
     async def test_endpoint_methods(self, api_schema, endpoint, methods):

@@ -10,6 +10,7 @@ import concurrent.futures
 import time
 import contextlib
 import shutil
+from prompts import get_prompt
 
 # Use absolute imports
 from config import OPENAI_IMAGE_CONFIG, PRESENTATIONS_STORAGE_DIR, STORAGE_DIR
@@ -97,7 +98,7 @@ def load_image_from_file(file_path: str) -> Optional[str]:
         image_data = f.read()
         return base64.b64encode(image_data).decode()
 
-def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGeneration]:
+async def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGeneration]:
     """
     Generate images for a slide based on its type.
     In offline mode, returns mock images using the dummy image file.
@@ -157,19 +158,14 @@ def _generate_image_for_slide(slide, index, presentation_id) -> List[ImageGenera
             print(f"Successfully generated dummy image for slide {index}, field {image_field}")
             continue
 
-        # Create a prompt based on the specific field content
-        prompt = f"""Create an illustrative image for a presentation slide representing: {specific_content}
-
-Context: This image is for the field '{image_field}' of a slide titled '{slide_title}' (type: '{slide_type}').
-
-Important guidelines:
-- Create a SIMPLE, CLEAN illustration that represents the main concept: {specific_content}
-- Focus on VISUAL representation rather than text-heavy elements
-- Use vibrant colors and clear imagery
-- Avoid complex diagrams or dense information
-- Illustration should be immediately understandable at a glance
-- Aim for an elegant, professional style suitable for a business presentation
-"""
+        # Get the prompt template from the centralized prompt system
+        prompt_template = await get_prompt("image_generation")
+        prompt = prompt_template.format(
+            specific_content=specific_content,
+            image_field=image_field,
+            slide_title=slide_title,
+            slide_type=slide_type
+        )
         
         # Create a fresh client instance for each request to avoid gRPC issues
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=REQUEST_TIMEOUT)
@@ -253,7 +249,7 @@ async def generate_slide_images(slides: SlidePresentation, presentation_id: Opti
         all_generated_images = []
         for slide_obj, index in tasks:
             # Generate dummy images for this slide
-            result = _generate_image_for_slide(slide_obj, index, presentation_id)
+            result = await _generate_image_for_slide(slide_obj, index, presentation_id)
             all_generated_images.extend(result)
             
         print(f"OFFLINE MODE: Generated {len(all_generated_images)} dummy images")
@@ -269,12 +265,8 @@ async def generate_slide_images(slides: SlidePresentation, presentation_id: Opti
         batch_futures = []
         
         for slide_obj, index in batch:
-            # Submit the task to the executor
-            future = asyncio.get_event_loop().run_in_executor(
-                image_executor,
-                _generate_image_for_slide, # This now returns List[ImageGeneration]
-                slide_obj, index, presentation_id
-            )
+            # Since _generate_image_for_slide is now async, we run it directly
+            future = _generate_image_for_slide(slide_obj, index, presentation_id)
             batch_futures.append(future)
         
         try:

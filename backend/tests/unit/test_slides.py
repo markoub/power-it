@@ -383,13 +383,18 @@ class TestSlidesGeneration:
     
     @pytest.mark.asyncio
     async def test_error_handling_invalid_input(self):
-        """Test handling of invalid input - should return fallback slides."""
-        result = await generate_slides(research=None)
+        """Test handling of invalid input - should raise ValueError."""
+        import pytest
         
-        # Should return fallback slides instead of raising exception
-        assert result is not None
-        assert isinstance(result, SlidePresentation)
-        assert len(result.slides) >= 1  # Should have at least one fallback slide
+        # Should raise ValueError for None research
+        with pytest.raises(ValueError, match="Research data cannot be None"):
+            await generate_slides(research=None)
+        
+        # Should raise ValueError for empty research content
+        from models import ResearchData
+        empty_research = ResearchData(content="", links=[])
+        with pytest.raises(ValueError, match="Research data must contain non-empty content"):
+            await generate_slides(research=empty_research)
     
     @pytest.mark.asyncio
     async def test_error_handling_api_failure(self, sample_research_data):

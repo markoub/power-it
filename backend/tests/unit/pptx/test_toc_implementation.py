@@ -9,7 +9,7 @@ import os
 @pytest.fixture
 def template_presentation():
     """Fixture to provide a template presentation for tests."""
-    template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template.pptx")
+    template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "template.pptx")
     return Presentation(template_path)
 
 def test_create_toc_slide(template_presentation):

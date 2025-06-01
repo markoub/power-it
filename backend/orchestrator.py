@@ -26,6 +26,16 @@ async def create_presentation(
     Returns:
         A FullPresentation object containing both research data, slide proposals, and optionally images
     """
+    # Input validation
+    if not topic or not isinstance(topic, str) or not topic.strip():
+        raise ValueError("Topic must be a non-empty string")
+    
+    if not isinstance(target_slides, int) or target_slides <= 0:
+        raise ValueError("Target slides must be a positive integer")
+    
+    if target_slides > 100:  # reasonable upper limit
+        raise ValueError("Target slides cannot exceed 100")
+    
     # Step 1: Research the topic
     research_data = await research_topic(topic)
     

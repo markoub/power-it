@@ -13,7 +13,7 @@ import base64
 class TestImageSizeConfiguration:
     """Test suite for image size configuration based on slide types."""
     
-    def test_generate_image_for_slide_default_size(self, mock_openai_responses, temp_storage_dir):
+    async def test_generate_image_for_slide_default_size(self, mock_openai_responses, temp_storage_dir):
         """Test that the default size is used when slide type is not ContentImage."""
         # Create a slide with image field but not ContentImage type
         slide = Slide(
@@ -26,7 +26,7 @@ class TestImageSizeConfiguration:
         )
         
         # Call the function
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         
         # Verify the result
         assert isinstance(result, list)
@@ -34,7 +34,7 @@ class TestImageSizeConfiguration:
         assert result[0].slide_index == 0
         assert result[0].slide_title == "Test Slide"
     
-    def test_generate_image_for_slide_content_image_size(self, mock_openai_responses, temp_storage_dir):
+    async def test_generate_image_for_slide_content_image_size(self, mock_openai_responses, temp_storage_dir):
         """Test that the 3:4 size is used when slide type is ContentImage."""
         # Create a slide with image field and ContentImage type
         slide = Slide(
@@ -47,7 +47,7 @@ class TestImageSizeConfiguration:
         )
         
         # Call the function
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         
         # Verify the result
         assert isinstance(result, list)
@@ -59,7 +59,7 @@ class TestImageSizeConfiguration:
 class TestImageFieldValidation:
     """Test suite for image field validation and edge cases."""
     
-    def test_generate_image_missing_image_field(self, mock_openai_responses):
+    async def test_generate_image_missing_image_field(self, mock_openai_responses):
         """Test that no image is generated when image field is missing."""
         # Create a slide without image field
         slide = Slide(
@@ -72,13 +72,13 @@ class TestImageFieldValidation:
         )
         
         # Call the function
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         
         # Verify no image was generated
         assert isinstance(result, list)
         assert len(result) == 0
     
-    def test_generate_image_false_image_field(self, mock_openai_responses):
+    async def test_generate_image_false_image_field(self, mock_openai_responses):
         """Test that no image is generated when image field is False."""
         # Create a slide with image field set to False
         slide = Slide(
@@ -91,13 +91,13 @@ class TestImageFieldValidation:
         )
         
         # Call the function
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         
         # Verify no image was generated
         assert isinstance(result, list)
         assert len(result) == 0
     
-    def test_multiple_image_fields_in_slide(self, mock_openai_responses):
+    async def test_multiple_image_fields_in_slide(self, mock_openai_responses):
         """Test handling of slides with multiple image fields."""
         slide = Slide(
             type="3Images",
@@ -109,7 +109,7 @@ class TestImageFieldValidation:
             }
         )
         
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         
         # Should only generate 2 images (image1 and image3)
         assert len(result) == 2
@@ -120,7 +120,7 @@ class TestImageFieldValidation:
 class TestImageStorage:
     """Test suite for image storage functionality."""
     
-    def test_generate_image_save_to_file(self, mock_openai_responses, temp_storage_dir):
+    async def test_generate_image_save_to_file(self, mock_openai_responses, temp_storage_dir):
         """Test that image is saved to file when presentation_id is provided."""
         # Create a slide with image field
         slide = Slide(
@@ -133,7 +133,7 @@ class TestImageStorage:
         )
         
         # Call the function with presentation_id
-        result = _generate_image_for_slide(slide, 0, 999)
+        result = await _generate_image_for_slide(slide, 0, 999)
         
         # Verify the result includes an image path
         assert isinstance(result, list)
@@ -161,7 +161,7 @@ class TestImageStorage:
         assert "test_slide" in file_path
         assert_file_exists_and_valid(file_path, min_size=5)
     
-    def test_image_storage_directory_creation(self, temp_storage_dir):
+    async def test_image_storage_directory_creation(self, temp_storage_dir):
         """Test that storage directories are created automatically."""
         # Use a non-existent presentation ID
         slide = Slide(
@@ -169,7 +169,7 @@ class TestImageStorage:
             fields={"title": "Test", "image": True}
         )
         
-        result = _generate_image_for_slide(slide, 0, 99999)
+        result = await _generate_image_for_slide(slide, 0, 99999)
         
         assert len(result) > 0
         assert result[0].image_path is not None
@@ -238,7 +238,7 @@ class TestPromptBasedImageGeneration:
 class TestErrorHandling:
     """Test suite for error handling in image generation."""
     
-    def test_invalid_image_data(self, mock_openai_responses):
+    async def test_invalid_image_data(self, mock_openai_responses):
         """Test handling of invalid image data from API."""
         # This would need custom mock to return invalid data
         # For now, we'll test that the function handles None gracefully
@@ -247,7 +247,7 @@ class TestErrorHandling:
             fields={"title": "Test", "image": None}
         )
         
-        result = _generate_image_for_slide(slide, 0, None)
+        result = await _generate_image_for_slide(slide, 0, None)
         assert len(result) == 0  # Should not generate image for None
     
     @pytest.mark.asyncio

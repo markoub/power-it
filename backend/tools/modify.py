@@ -7,10 +7,11 @@ from typing import Dict, Any, Optional, List, Union
 import json
 import re
 import os
+from prompts import get_prompt
 
 # Use absolute imports
 from config import MODIFY_MODEL, MODIFY_CONFIG
-from utils import extract_json_from_text
+from utils.gemini import extract_json_from_text
 import google.generativeai as genai
 from models import CompiledPresentation, CompiledSlide, ResearchData
 from .wizard.wizard_factory import WizardFactory
@@ -75,26 +76,8 @@ async def modify_single_slide(
     
     target_slide = compiled_data["slides"][slide_index]
     
-    # Create the system prompt that explains how to modify a single slide
-    system_prompt = """
-    You are an expert presentation assistant that can modify and improve individual slides in PowerPoint-style presentations.
-    
-    You will be given:
-    1. The current slide content to modify
-    2. The full presentation context (for reference)
-    3. Research data for context
-    4. User instructions for how to modify the slide
-    
-    Analyze the content and modify ONLY the specified slide according to the user's instructions.
-    Do not change any other slides or the presentation structure.
-    
-    Return ONLY the modified slide in the EXACT SAME FORMAT as the input slide,
-    with any necessary changes applied. The response should be a JSON object representing 
-    just the single slide - not the full presentation.
-    
-    IMPORTANT: Preserve all original fields in your response, even if you don't modify them.
-    This includes 'title', 'content', 'type', 'notes', 'image' and any other fields present in the original slide.
-    """
+    # Get the system prompt from the centralized prompt system
+    system_prompt = await get_prompt("modify_slide")
     
     # Create the input prompt with context
     try:
@@ -208,25 +191,8 @@ async def modify_presentation(
         generation_config=MODIFY_CONFIG
     )
     
-    # Create the system prompt that explains how to modify presentations
-    system_prompt = """
-    You are an expert presentation assistant that can modify and improve PowerPoint-style presentations.
-    You will be given:
-    1. A compiled presentation (with slides and images combined)
-    2. Research data for context
-    3. User instructions for how to modify the presentation
-    
-    Analyze the content and structure, then modify it according to the user's instructions.
-    You can:
-    - Add, remove, or reorder slides
-    - Change slide content, titles, or image descriptions
-    - Restructure presentations for better flow
-    - Simplify or expand content
-    - Change tone or style
-    
-    Return the modified presentation in the EXACT SAME FORMAT as the input compiled presentation,
-    with any necessary changes applied.
-    """
+    # Get the system prompt from the centralized prompt system
+    system_prompt = await get_prompt("modify_presentation")
     
     # Create the input prompt with context
     try:

@@ -54,26 +54,26 @@ class TestWizardFactory:
         factory = WizardFactory()
         
         # Test research routing
-        response = await factory.process_request(
-            "research", 
-            {"id": 1}, 
-            "Add more information about AI"
+        response = await factory.process_wizard_request(
+            "Add more information about AI",
+            {"id": 1},
+            "research"
         )
         assert response["type"] == "research_modification"
         
         # Test slides routing
-        response = await factory.process_request(
-            "slides",
+        response = await factory.process_wizard_request(
+            "Add a new slide",
             {"id": 1},
-            "Add a new slide"
+            "slides"
         )
         assert response["type"] in ["slide_modification", "presentation_modification"]
         
         # Test general routing
-        response = await factory.process_request(
-            "pptx",
+        response = await factory.process_wizard_request(
+            "What is this step?",
             {"id": 1},
-            "What is this step?"
+            "pptx"
         )
         assert response["type"] == "explanation"
 
@@ -149,8 +149,8 @@ class TestResearchWizard:
         }
         
         response = await wizard.process_request(
-            presentation_data,
-            "Add more information about machine learning applications"
+            "Add more information about machine learning applications",
+            presentation_data
         )
         
         assert response["type"] == "research_modification"
@@ -174,8 +174,8 @@ class TestResearchWizard:
         }
         
         response = await wizard.process_request(
-            presentation_data,
-            "What are the main benefits mentioned?"
+            "What are the main benefits mentioned?",
+            presentation_data
         )
         
         assert response["type"] == "explanation"
@@ -233,8 +233,8 @@ class TestSlidesWizard:
         presentation_data["selectedSlide"] = 3
         
         response = await wizard.process_request(
-            presentation_data,
-            "Make this slide more engaging"
+            "Make this slide more engaging",
+            presentation_data
         )
         
         assert response["type"] == "slide_modification"
@@ -257,8 +257,8 @@ class TestSlidesWizard:
         }
         
         response = await wizard.process_request(
-            presentation_data,
-            "Add a new slide about future trends"
+            "Add a new slide about future trends",
+            presentation_data
         )
         
         assert response["type"] == "presentation_modification"
@@ -292,8 +292,8 @@ class TestGeneralWizard:
         }
         
         response = await wizard.process_request(
-            presentation_data,
-            "What does this step do?"
+            "What does this step do?",
+            presentation_data
         )
         
         assert response["type"] == "explanation"
@@ -305,7 +305,7 @@ class TestGeneralWizard:
         """Test error handling with empty request."""
         wizard = GeneralWizard()
         
-        response = await wizard.process_request({}, "")
+        response = await wizard.process_request("", {})
         
         assert response["type"] == "error"
         assert "error" in response

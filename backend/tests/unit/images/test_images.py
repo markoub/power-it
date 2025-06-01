@@ -65,7 +65,7 @@ class TestSlideImageGeneration:
             assert img.image is not None
             assert img.prompt is not None
 
-    def test_generate_image_for_slide_with_image(self, mock_openai_responses, temp_storage_dir):
+    async def test_generate_image_for_slide_with_image(self, mock_openai_responses, temp_storage_dir):
         """Test the _generate_image_for_slide function directly using OpenAI VCR."""
         # Create test slides with valid slide types
         slide_with_image = Slide(
@@ -78,7 +78,7 @@ class TestSlideImageGeneration:
         )
         
         # Test slide with image field - will use VCR fixture
-        results_with_image = _generate_image_for_slide(slide_with_image, 0, None)
+        results_with_image = await _generate_image_for_slide(slide_with_image, 0, None)
         assert results_with_image is not None
         assert isinstance(results_with_image, list)
         assert len(results_with_image) > 0
@@ -89,7 +89,7 @@ class TestSlideImageGeneration:
         assert image_result.slide_title == "Slide With Image"
         assert image_result.image is not None, "Should have an image"
 
-    def test_generate_image_for_slide_without_image(self, mock_openai_responses):
+    async def test_generate_image_for_slide_without_image(self, mock_openai_responses):
         """Test that slides without image field return empty list."""
         # Create a valid slide without image component
         slide_without_image = Slide(
@@ -101,12 +101,12 @@ class TestSlideImageGeneration:
         )
         
         # Test slide without image field
-        results_without_image = _generate_image_for_slide(slide_without_image, 1, None)
+        results_without_image = await _generate_image_for_slide(slide_without_image, 1, None)
         assert results_without_image is not None
         assert isinstance(results_without_image, list)
         assert len(results_without_image) == 0  # Should be empty list
     
-    def test_generate_image_for_slide_with_presentation_id(self, mock_openai_responses, temp_storage_dir):
+    async def test_generate_image_for_slide_with_presentation_id(self, mock_openai_responses, temp_storage_dir):
         """Test image generation saves to file when presentation_id is provided."""
         slide = Slide(
             type="ContentImage",
@@ -118,7 +118,7 @@ class TestSlideImageGeneration:
         )
         
         # Generate with presentation_id
-        results = _generate_image_for_slide(slide, 0, 123)
+        results = await _generate_image_for_slide(slide, 0, 123)
         
         assert len(results) > 0
         result = results[0]
@@ -191,7 +191,7 @@ class TestImagePromptGeneration:
 class TestSlideTypeImageGeneration:
     """Test suite for slide type specific image generation."""
     
-    def test_three_images_slide_generation(self, mock_openai_responses):
+    async def test_three_images_slide_generation(self, mock_openai_responses):
         """Test image generation for 3Images slide type."""
         slide = Slide(
             type="3Images",
@@ -206,7 +206,7 @@ class TestSlideTypeImageGeneration:
             }
         )
         
-        results = _generate_image_for_slide(slide, 0, None)
+        results = await _generate_image_for_slide(slide, 0, None)
         
         # Should generate 3 images
         assert len(results) == 3
@@ -217,7 +217,7 @@ class TestSlideTypeImageGeneration:
             assert result.slide_title == "Three Images"
             assert result.image is not None
     
-    def test_image_full_slide_generation(self, mock_openai_responses):
+    async def test_image_full_slide_generation(self, mock_openai_responses):
         """Test image generation for ImageFull slide type."""
         slide = Slide(
             type="ImageFull",
@@ -227,13 +227,13 @@ class TestSlideTypeImageGeneration:
             }
         )
         
-        results = _generate_image_for_slide(slide, 0, None)
+        results = await _generate_image_for_slide(slide, 0, None)
         
         assert len(results) == 1
         assert results[0].slide_title == "Full Image Slide"
         assert results[0].image_field_name == "image"
     
-    def test_invalid_slide_type(self, mock_openai_responses):
+    async def test_invalid_slide_type(self, mock_openai_responses):
         """Test handling of invalid slide type."""
         slide = Slide(
             type="InvalidType",
@@ -243,7 +243,7 @@ class TestSlideTypeImageGeneration:
             }
         )
         
-        results = _generate_image_for_slide(slide, 0, None)
+        results = await _generate_image_for_slide(slide, 0, None)
         
         # Should return empty list for invalid slide type
         assert isinstance(results, list)

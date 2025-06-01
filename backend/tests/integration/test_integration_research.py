@@ -93,14 +93,14 @@ AI will continue to evolve and impact our lives."""
         """Test ResearchData model validation."""
         # Valid research data
         valid_data = ResearchData(
-            content="# Test Research\n\nThis is valid research content with sufficient length.",
+            content="# Test Research\n\nThis is valid research content with sufficient length and details to meet the minimum character requirements for validation.",
             links=[]
         )
         assert_valid_research_data(valid_data)
         
         # Research data with links
         valid_data_with_links = ResearchData(
-            content="# Test Research\n\nThis research includes links for further reading.",
+            content="# Test Research\n\nThis research includes links for further reading and contains enough content to meet validation requirements.",
             links=[
                 {"href": "https://example.com", "title": "Example Link"},
                 {"href": "https://test.com", "title": "Test Link"}

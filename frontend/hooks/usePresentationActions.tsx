@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Presentation } from '@/lib/types';
 import { api } from '@/lib/api';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 
 interface UsePresentationActionsOptions {

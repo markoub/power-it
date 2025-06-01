@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Presentation, Slide } from "@/lib/types";
 import SlideRenderer from "@/components/slides/SlideRenderer";
 import { api } from "@/lib/api";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface SlidesStepProps {
   presentation: Presentation;

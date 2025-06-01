@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+from sqlalchemy.future import select
 from database import SessionLocal, Presentation, PresentationStepModel, PresentationStep, StepStatus
 from tests.utils import assert_api_error, wait_for_condition
 
@@ -94,9 +95,12 @@ class TestTopicUpdate:
             
             # Check that research step is now processing or completed
             research_step = await db.execute(
-                f"SELECT * FROM presentation_steps WHERE presentation_id = {presentation_id} AND step = '{PresentationStep.RESEARCH.value}'"
+                select(PresentationStepModel).where(
+                    (PresentationStepModel.presentation_id == presentation_id) &
+                    (PresentationStepModel.step == PresentationStep.RESEARCH.value)
+                )
             )
-            step_result = research_step.fetchone()
+            step_result = research_step.scalars().first()
             assert step_result.status in [StepStatus.PROCESSING.value, StepStatus.COMPLETED.value]
 
     async def test_topic_update_resets_downstream_steps(self, api_client, presentation_with_steps):
@@ -116,30 +120,42 @@ class TestTopicUpdate:
         async with SessionLocal() as db:
             # Check slides step is processing or completed
             slides_result = await db.execute(
-                f"SELECT * FROM presentation_steps WHERE presentation_id = {presentation_id} AND step = '{PresentationStep.SLIDES.value}'"
+                select(PresentationStepModel).where(
+                    (PresentationStepModel.presentation_id == presentation_id) &
+                    (PresentationStepModel.step == PresentationStep.SLIDES.value)
+                )
             )
-            slides_step = slides_result.fetchone()
+            slides_step = slides_result.scalars().first()
             assert slides_step.status in [StepStatus.PROCESSING.value, StepStatus.COMPLETED.value]
             
             # Check that images step is now set to pending
             images_result = await db.execute(
-                f"SELECT * FROM presentation_steps WHERE presentation_id = {presentation_id} AND step = '{PresentationStep.IMAGES.value}'"
+                select(PresentationStepModel).where(
+                    (PresentationStepModel.presentation_id == presentation_id) &
+                    (PresentationStepModel.step == PresentationStep.IMAGES.value)
+                )
             )
-            images_step = images_result.fetchone()
+            images_step = images_result.scalars().first()
             assert images_step.status == StepStatus.PENDING.value
             
             # Check that compiled step is now set to pending
             compiled_result = await db.execute(
-                f"SELECT * FROM presentation_steps WHERE presentation_id = {presentation_id} AND step = '{PresentationStep.COMPILED.value}'"
+                select(PresentationStepModel).where(
+                    (PresentationStepModel.presentation_id == presentation_id) &
+                    (PresentationStepModel.step == PresentationStep.COMPILED.value)
+                )
             )
-            compiled_step = compiled_result.fetchone()
+            compiled_step = compiled_result.scalars().first()
             assert compiled_step.status == StepStatus.PENDING.value
             
             # Check that PPTX step is now set to pending
             pptx_result = await db.execute(
-                f"SELECT * FROM presentation_steps WHERE presentation_id = {presentation_id} AND step = '{PresentationStep.PPTX.value}'"
+                select(PresentationStepModel).where(
+                    (PresentationStepModel.presentation_id == presentation_id) &
+                    (PresentationStepModel.step == PresentationStep.PPTX.value)
+                )
             )
-            pptx_step = pptx_result.fetchone()
+            pptx_step = pptx_result.scalars().first()
             assert pptx_step.status == StepStatus.PENDING.value
 
     async def test_update_topic_validation_errors(self, api_client, presentation_with_steps):
@@ -153,7 +169,7 @@ class TestTopicUpdate:
         )
         
         # Check response status code is 422 (validation error)
-        assert_api_error(response, 422, "topic")
+        assert_api_error(response, 422, "Field required")
 
     async def test_update_topic_nonexistent_presentation(self, api_client, clean_db):
         """Test updating topic for non-existent presentation."""

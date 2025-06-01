@@ -53,12 +53,18 @@ class BaseVCR(ABC):
         Generate a deterministic fixture name based on identifier and data.
         
         Args:
-            identifier: Base identifier for the fixture
+            identifier: Base identifier for the fixture (string or list will be joined)
             data: Data to include in hash (will be converted to string)
             
         Returns:
             A deterministic fixture name
         """
+        # Handle list identifiers by joining them
+        if isinstance(identifier, list):
+            identifier = "_".join(str(item) for item in identifier)
+        else:
+            identifier = str(identifier)
+        
         # Create a hash of the identifier and data
         combined = f"{identifier}_{str(data)}"
         hash_str = hashlib.md5(combined.encode()).hexdigest()

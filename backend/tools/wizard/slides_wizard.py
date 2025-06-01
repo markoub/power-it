@@ -5,31 +5,16 @@ Slides wizard for handling slide-related requests.
 import json
 from typing import Dict, Any, Optional, List
 from .base_wizard import BaseWizard, OFFLINE_MODE
-from utils import extract_json_from_text
+from utils.gemini import extract_json_from_text
 from models import CompiledPresentation, CompiledSlide
+from prompts import get_prompt
 
 
 class SlidesWizard(BaseWizard):
     """Wizard specialized for slides step assistance."""
     
-    def get_system_prompt(self) -> str:
-        return """
-        You are an expert presentation slides assistant. You help users:
-        
-        1. Modify individual slide content (title, content, structure)
-        2. Add new slides to presentations
-        3. Remove slides from presentations
-        4. Reorder slides for better flow
-        5. Improve slide design and content quality
-        6. Provide guidance on slide best practices
-        
-        You can work in two modes:
-        - Single slide mode: Modify one specific slide
-        - Presentation mode: Add/remove/reorder slides across the entire presentation
-        
-        When modifying slides, preserve the original format and structure.
-        When adding slides, create them in the same format as existing slides.
-        """
+    async def get_system_prompt(self) -> str:
+        return await get_prompt("wizard_slides_system")
     
     def get_capabilities(self) -> Dict[str, Any]:
         return {
@@ -65,7 +50,7 @@ class SlidesWizard(BaseWizard):
         research_data = self._extract_research_data(presentation_data)
         
         # Determine the type of request
-        request_type = self._analyze_request_type(prompt, context)
+        request_type = self._analyze_request_type(prompt, context, presentation_data)
         
         if request_type == "single_slide":
             return await self._handle_single_slide_modification(
@@ -100,7 +85,7 @@ class SlidesWizard(BaseWizard):
         
         return {"content": "", "links": []}
     
-    def _analyze_request_type(self, prompt: str, context: Optional[Dict[str, Any]]) -> str:
+    def _analyze_request_type(self, prompt: str, context: Optional[Dict[str, Any]], presentation_data: Optional[Dict[str, Any]] = None) -> str:
         """Analyze what type of request this is."""
         prompt_lower = prompt.lower()
         
@@ -117,11 +102,16 @@ class SlidesWizard(BaseWizard):
         
         # Check for modification keywords
         modification_keywords = [
-            "improve", "modify", "change", "update", "enhance", "refine", "edit"
+            "improve", "modify", "change", "update", "enhance", "refine", "edit", "engaging", "better", "more"
         ]
         
         if any(keyword in prompt_lower for keyword in modification_keywords):
-            return "single_slide" if context and context.get("slide_index") is not None else "presentation_level"
+            # Check if there's a selected slide in presentation_data or context
+            has_selected_slide = (
+                (context and context.get("slide_index") is not None) or
+                (presentation_data and presentation_data.get("selectedSlide") is not None)
+            )
+            return "single_slide" if has_selected_slide else "presentation_level"
         
         return "general_question"
     
@@ -188,9 +178,10 @@ class SlidesWizard(BaseWizard):
             Preserve all original fields, even if you don't modify them.
             """
             
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help you modify the specific slide according to your instructions."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
@@ -209,10 +200,11 @@ class SlidesWizard(BaseWizard):
             CompiledSlide(**modified_slide)
             
             return {
+                "type": "slide_modification",
                 "response": "I've created improvements for this slide. You can preview the changes below.",
-                "suggestions": {
+                "changes": {
                     "slide": self._format_slide_for_frontend(modified_slide),
-                    "slide_index": slide_index
+                    "index": slide_index
                 },
                 "capabilities": self.get_capabilities()
             }
@@ -262,9 +254,10 @@ class SlidesWizard(BaseWizard):
             Return the complete modified presentation in the same format.
             """
             
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help you modify the entire presentation according to your instructions."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
@@ -284,8 +277,9 @@ class SlidesWizard(BaseWizard):
             ]
             
             return {
+                "type": "presentation_modification",
                 "response": f"I've modified your presentation with {len(formatted_slides)} slides. You can preview the changes below.",
-                "suggestions": {
+                "changes": {
                     "presentation": {
                         **presentation_data,
                         "slides": formatted_slides
@@ -328,9 +322,10 @@ class SlidesWizard(BaseWizard):
             Respond conversationally - do not return JSON for this type of request.
             """
             
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help answer questions about slides and provide guidance."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
@@ -354,27 +349,32 @@ class SlidesWizard(BaseWizard):
         """Create an offline response with mock suggestions for testing."""
         
         # Determine request type for mock suggestions
-        request_type = self._analyze_request_type(prompt, context) if context else "general_question"
+        request_type = self._analyze_request_type(prompt, context, presentation_data)
         
         base_response = {
+            "type": "presentation_modification" if request_type == "presentation_level" else "slide_modification" if request_type == "single_slide" else "explanation",
             "response": f"Offline mode: I understand your request '{prompt}'. In full mode, I would provide detailed assistance.",
             "capabilities": self.get_capabilities()
         }
         
         # Add mock suggestions for modification requests
-        if request_type == "single_slide" and context and context.get("slide_index") is not None:
+        if request_type == "single_slide":
             # Mock single slide suggestion - get the current slide and modify it
-            slide_index = context.get("slide_index")
+            slide_index = None
+            if context and context.get("slide_index") is not None:
+                slide_index = context.get("slide_index")
+            elif presentation_data and presentation_data.get("selectedSlide") is not None:
+                slide_index = presentation_data.get("selectedSlide")
             
             # Try to get the current slide from presentation data using the same extraction method
             current_slide = None
-            if presentation_data:
+            if presentation_data and slide_index is not None:
                 slides_data = self._extract_slides_data(presentation_data)
                 slides = slides_data.get("slides", [])
                 if 0 <= slide_index < len(slides):
                     current_slide = slides[slide_index]
             
-            if current_slide:
+            if current_slide and slide_index is not None:
                 # Create a modified version of the current slide with substantial changes
                 current_title = current_slide.get("title", "Slide Title")
                 current_content = current_slide.get("content", "Slide content")
@@ -397,27 +397,29 @@ Additional engaging elements:
                 else:
                     suggested_content = f"IMPROVED CONTENT: {current_content}\n\nAdditional enhancements:\n- Better structure\n- More engaging language\n- Clearer messaging"
                 
-                base_response["suggestions"] = {
+                base_response["changes"] = {
                     "slide": {
                         "title": suggested_title,
                         "content": suggested_content,
                         "type": current_slide.get("type", "content"),
-                        "imagePrompt": "Professional illustration that enhances the slide message"
+                        "imagePrompt": "Professional illustration that enhances the slide message",
+                        "index": slide_index
                     }
                 }
-            else:
-                # Fallback if no current slide found
-                base_response["suggestions"] = {
+            # Always provide a response for single_slide requests, even if no current slide found
+            if "changes" not in base_response:
+                base_response["changes"] = {
                     "slide": {
                         "title": "Enhanced Slide Title",
                         "content": "• Improved bullet point 1\n• Enhanced bullet point 2\n• Engaging call-to-action",
                         "type": "content",
-                        "imagePrompt": "Professional illustration"
+                        "imagePrompt": "Professional illustration",
+                        "index": slide_index if slide_index is not None else 0
                     }
                 }
         elif request_type == "presentation_level":
             # Mock presentation-level suggestion
-            base_response["suggestions"] = {
+            base_response["changes"] = {
                 "presentation": {
                     "slides": [
                         {
@@ -446,7 +448,7 @@ Additional engaging elements:
                 }
             }
         else:
-            base_response["suggestions"] = None
+            base_response["changes"] = None
             
         return base_response
 

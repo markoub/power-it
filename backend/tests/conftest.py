@@ -43,11 +43,11 @@ FIXTURES_DIR.mkdir(exist_ok=True)
 @pytest.fixture(scope="session", autouse=True)
 def configure_test_environment():
     """Configure test environment once for all tests."""
-    # Import test config module
-    ModuleManager.import_test_config()
+    # Ensure backend is in path for imports
+    ModuleManager.ensure_parent_in_path()
     yield
-    # Cleanup
-    ModuleManager.cleanup_imports("tests.", "tools.", "routers.", "services.")
+    # Cleanup test modules only
+    ModuleManager.cleanup_imports("tests.")
 
 @pytest.fixture
 def temp_storage_dir():

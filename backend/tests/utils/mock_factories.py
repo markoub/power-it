@@ -204,18 +204,29 @@ class MockFactory:
                 ]
             }
         
-        # Response iterator
-        response_iter = iter(responses) if responses else None
+        # Track response index for both sync and async
+        response_index = [0]  # Use list to make it mutable in nested functions
         
-        async def generate_content_async(*args, **kwargs):
+        def get_next_response():
             # Get next response or use default
-            if response_iter:
-                try:
-                    response_data = next(response_iter)
-                except StopIteration:
-                    response_data = default_response
+            if responses and response_index[0] < len(responses):
+                response_data = responses[response_index[0]]
+                response_index[0] += 1
             else:
                 response_data = default_response
+            return response_data
+        
+        async def generate_content_async(*args, **kwargs):
+            response_data = get_next_response()
+            
+            # Create mock response
+            mock_response = MagicMock()
+            mock_response.text = json.dumps(response_data)
+            
+            return mock_response
+        
+        def generate_content_sync(*args, **kwargs):
+            response_data = get_next_response()
             
             # Create mock response
             mock_response = MagicMock()
@@ -224,9 +235,7 @@ class MockFactory:
             return mock_response
         
         model.generate_content_async = generate_content_async
-        model.generate_content = MagicMock(
-            side_effect=lambda *args, **kwargs: MagicMock(text=json.dumps(default_response))
-        )
+        model.generate_content = generate_content_sync
         
         return model
     

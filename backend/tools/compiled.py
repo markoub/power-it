@@ -23,6 +23,10 @@ async def generate_compiled_presentation(
     images_by_index_and_field = {}
     images_by_title_and_field = {}
     
+    # Handle None or empty images_data
+    if images_data is None:
+        images_data = []
+    
     for image in images_data:
         # Extract the field name (default to 'image' if not specified)
         field_name = getattr(image, 'image_field_name', 'image')
@@ -91,6 +95,9 @@ async def generate_compiled_presentation(
                     # For backward compatibility, also set the main image_url if this is the primary image
                     if field_name == 'image' and image_url is None:
                         image_url = image_url_for_field
+                    # For multi-image slides like three_images, set the main image_url to the first image
+                    elif field_name == 'image1' and image_url is None:
+                        image_url = image_url_for_field
         
         # Fallback to title matching if no images found by index
         elif slide_title in images_by_title_and_field:
@@ -122,6 +129,9 @@ async def generate_compiled_presentation(
                     
                     # For backward compatibility, also set the main image_url if this is the primary image
                     if field_name == 'image' and image_url is None:
+                        image_url = image_url_for_field
+                    # For multi-image slides like three_images, set the main image_url to the first image
+                    elif field_name == 'image1' and image_url is None:
                         image_url = image_url_for_field
         
         # Create compiled slide with updated structure

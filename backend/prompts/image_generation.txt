@@ -1,0 +1,11 @@
+Create an illustrative image for a presentation slide representing: {specific_content}
+
+Context: This image is for the field '{image_field}' of a slide titled '{slide_title}' (type: '{slide_type}').
+
+Important guidelines:
+- Create a SIMPLE, CLEAN illustration that represents the main concept: {specific_content}
+- Focus on VISUAL representation rather than text-heavy elements
+- Use vibrant colors and clear imagery
+- Avoid complex diagrams or dense information
+- Illustration should be immediately understandable at a glance
+- Aim for an elegant, professional style suitable for a business presentation

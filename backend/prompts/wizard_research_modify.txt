@@ -1,0 +1,10 @@
+# Current Research Content
+```json
+{research_json}
+```
+
+# User Instructions
+{prompt}
+
+Please modify the research according to the instructions. Return only JSON with 'content' and 'links' fields.
+The 'content' should be the updated research text, and 'links' should be an array of relevant URLs.

@@ -1,0 +1,22 @@
+# Current Step
+{current_step}
+
+# Presentation State
+Topic: {topic}
+Research Status: {research_status}
+Slides Status: {slides_status}
+Images Status: {images_status}
+PPTX Status: {pptx_status}
+
+# User Question
+{prompt}
+
+Please provide helpful guidance to the user. You can:
+- Answer questions about the presentation creation process
+- Suggest which step to go to next
+- Explain what each step does
+- Provide general presentation advice
+- Help troubleshoot issues
+
+If the user needs to modify content, direct them to the appropriate step.
+Respond conversationally and be encouraging.

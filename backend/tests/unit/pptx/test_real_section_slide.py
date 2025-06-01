@@ -14,7 +14,9 @@ from tools.pptx_utils import format_section_number
 def test_real_section_slide():
     """Test that the section slide is created correctly with proper title and number using the real template."""
     # Get the template file path
-    template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template.pptx")
+    # Template is in the backend root directory, not in tests
+    # Template is in the backend root directory
+    template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "template.pptx")
     assert os.path.exists(template_path), f"Template file does not exist at {template_path}"
     
     # Load the template

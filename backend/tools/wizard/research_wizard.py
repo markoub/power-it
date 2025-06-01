@@ -5,33 +5,16 @@ Research wizard for handling research-related requests.
 import json
 from typing import Dict, Any, Optional
 from .base_wizard import BaseWizard, OFFLINE_MODE
-from utils import extract_json_from_text
+from utils.gemini import extract_json_from_text
 from models import ResearchData
+from prompts import get_prompt
 
 
 class ResearchWizard(BaseWizard):
     """Wizard specialized for research step assistance."""
     
-    def get_system_prompt(self) -> str:
-        return """
-        You are an expert research assistant for presentation creation. You help users:
-        
-        1. Refine and improve research content
-        2. Answer questions about research topics
-        3. Suggest additional research directions
-        4. Help with research methodology
-        5. Provide guidance on research quality and completeness
-        
-        You can:
-        - Modify existing research content based on user feedback
-        - Add new information to research
-        - Restructure research for better presentation flow
-        - Suggest additional research questions or topics
-        - Provide general research guidance
-        
-        When modifying research, return JSON with 'content' and 'links' fields.
-        When providing guidance, return conversational responses.
-        """
+    async def get_system_prompt(self) -> str:
+        return await get_prompt("wizard_research_system")
     
     def get_capabilities(self) -> Dict[str, Any]:
         return {
@@ -102,22 +85,16 @@ class ResearchWizard(BaseWizard):
         try:
             research_json = json.dumps(research_data, indent=2)
             
-            input_prompt = f"""
-            # Current Research Content
-            ```json
-            {research_json}
-            ```
-
-            # User Instructions
-            {prompt}
-
-            Please modify the research according to the instructions. Return only JSON with 'content' and 'links' fields.
-            The 'content' should be the updated research text, and 'links' should be an array of relevant URLs.
-            """
+            prompt_template = await get_prompt("wizard_research_modify")
+            input_prompt = prompt_template.format(
+                research_json=research_json,
+                prompt=prompt
+            )
             
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help you modify research content according to your instructions."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
@@ -175,9 +152,10 @@ class ResearchWizard(BaseWizard):
             Respond conversationally - do not return JSON for this type of request.
             """
             
+            system_prompt = await self.get_system_prompt()
             response = await self.model.generate_content_async(
                 contents=[
-                    {"role": "user", "parts": [{"text": self.get_system_prompt()}]},
+                    {"role": "user", "parts": [{"text": system_prompt}]},
                     {"role": "model", "parts": [{"text": "I understand. I'll help answer questions about research and provide guidance."}]},
                     {"role": "user", "parts": [{"text": input_prompt}]}
                 ]
@@ -319,8 +297,9 @@ The integration of artificial intelligence in healthcare represents one of the m
                 new_links = current_links
             
             return {
+                "type": "research_modification",
                 "response": "I've updated the research content based on your request. The changes include the specific information you asked for.",
-                "suggestions": {
+                "changes": {
                     "research": {
                         "content": modified_content,
                         "links": new_links
@@ -377,6 +356,7 @@ To provide more specific assistance, I can help you:
 What specific aspect would you like to focus on?"""
             
             return {
+                "type": "explanation",
                 "response": response,
                 "suggestions": None,
                 "capabilities": self.get_capabilities()

@@ -299,6 +299,12 @@ The integration of artificial intelligence in healthcare represents one of the m
             return {
                 "type": "research_modification",
                 "response": "I've updated the research content based on your request. The changes include the specific information you asked for.",
+                "suggestions": {
+                    "research": {
+                        "content": modified_content,
+                        "links": new_links
+                    }
+                },
                 "changes": {
                     "research": {
                         "content": modified_content,

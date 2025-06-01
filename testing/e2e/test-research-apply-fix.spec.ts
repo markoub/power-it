@@ -1,25 +1,21 @@
 import { test, expect } from '@playwright/test';
+import {
+  createPresentation,
+  startAIResearch,
+  waitForResearchCompletion
+} from './utils';
 
 test.describe('Test Research Apply Fix', () => {
   test('manually test research apply functionality', async ({ page }) => {
     // Set viewport to ensure wizard is visible
     await page.setViewportSize({ width: 1400, height: 900 });
+
+    // Create a new presentation and generate research content
+    await createPresentation(page, 'Research Apply Fix', 'AI for Testing');
+    await startAIResearch(page);
+    await waitForResearchCompletion(page);
     
-    // Navigate to an existing presentation that has research
-    await page.goto('http://localhost:3000/edit/52');
-    
-    // Wait for page to load
-    await page.waitForSelector('[data-testid="wizard-input"]', { timeout: 10000 });
-    
-    // Click on research step to navigate to it
-    const researchStep = page.locator('[data-testid="step-nav-research"]');
-    await expect(researchStep).toBeVisible();
-    await researchStep.click();
-    
-    // Wait for research step to load
-    await page.waitForTimeout(2000);
-    
-    // Check that research content is loaded
+    // Ensure the research content is visible
     const researchContent = page.locator('[data-testid="ai-research-content"]');
     await expect(researchContent).toBeVisible();
     

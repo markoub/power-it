@@ -14,8 +14,10 @@ test.describe('Research Wizard Context', () => {
 
     // Complete research step
     console.log('🔍 Running research...');
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     console.log('✅ Research completed');
 
     // Test research refinement
@@ -29,7 +31,7 @@ test.describe('Research Wizard Context', () => {
     await sendButton.click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check for suggestion or response
     const hasSuggestion = await page.locator('[data-testid="wizard-suggestion"]').isVisible();
@@ -42,7 +44,11 @@ test.describe('Research Wizard Context', () => {
     await wizardInput.fill('What are the main challenges in AI healthcare implementation?');
     await sendButton.click();
     
-    await page.waitForTimeout(3000);
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      await page.locator('[data-testid="wizard-message-assistant"]').count(),
+      { timeout: 10000 }
+    );
     
     // Should get a conversational response
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -57,15 +63,18 @@ test.describe('Research Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete research step
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
 
     // Test guidance request
     const wizardInput = page.getByTestId('wizard-input');
     await wizardInput.fill('How can I improve the quality of this research?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(3000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Should get helpful guidance
     const lastMessage = page.locator('[data-testid="wizard-message-assistant"]').last();

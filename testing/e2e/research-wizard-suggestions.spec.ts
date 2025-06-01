@@ -53,7 +53,7 @@ test.describe('Research Wizard Suggestions', () => {
       
       // Wait for suggestion to be generated (using data-testid instead of specific text)
       // Be more flexible - wait for any wizard response
-      await page.waitForTimeout(5000); // Give time for processing
+      await page.waitForLoadState('networkidle');
       
       // Check if a suggestion was generated OR if there's a response message
       const hasSuggestion = await page.locator('[data-testid="wizard-suggestion"]').isVisible();
@@ -112,7 +112,7 @@ test.describe('Research Wizard Suggestions', () => {
     await wizardInput.press('Enter');
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await expect(page.locator('[data-testid="wizard-message-assistant"]').nth(1)).toBeVisible({ timeout: 15000 });
     
     // Should not crash and wizard should remain functional
     await expect(wizardInput).toBeVisible();

@@ -66,7 +66,7 @@ test.describe('Debug Research Apply', () => {
     
     // Wait for response
     console.log('⏳ Waiting for wizard response...');
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if suggestion appeared
     const wizardSuggestion = page.locator('[data-testid="wizard-suggestion"]');
@@ -93,7 +93,7 @@ test.describe('Debug Research Apply', () => {
         await applyButton.click();
         
         // Wait for changes
-        await page.waitForTimeout(3000);
+        await page.waitForLoadState('networkidle');
         
         // Check if research content changed
         const researchContentAfter = await page.locator('[data-testid="ai-research-content"]').textContent();
@@ -132,7 +132,7 @@ test.describe('Debug Research Apply', () => {
     console.log('📊 Final wizard response:', wizardResponse);
     
     // Wait a bit more to see if anything updates
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
     
     // Check one more time for suggestions
     const finalSuggestionCheck = await page.locator('[data-testid="wizard-suggestion"]').isVisible();

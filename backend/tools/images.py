@@ -22,7 +22,7 @@ from offline_responses.images import (
 )
 
 # Check for offline mode
-OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes", "on"}
 
 if OFFLINE_MODE:
     ensure_dummy_image_exists()

@@ -28,9 +28,6 @@ test.describe('Presentations List Page', () => {
     await page.waitForSelector('[data-testid="presentations-loading"]', { state: 'detached', timeout: 10000 })
       .catch(() => console.log('Loading indicator not found or already gone'));
     
-    // Wait for network requests to complete
-    await waitForNetworkIdle(page);
-    
     // One of these three elements should be visible depending on the state
     await Promise.race([
       page.getByTestId('presentations-grid').waitFor({ timeout: 5000 }),
@@ -38,8 +35,8 @@ test.describe('Presentations List Page', () => {
       page.getByTestId('presentations-error').waitFor({ timeout: 5000 })
     ]);
     
-    // Wait additional time for animations to complete
-    await page.waitForTimeout(1000);
+    // Wait for UI to stabilize
+    await page.waitForLoadState('networkidle');
     
     // Get the visibility status of key elements
     const hasGrid = await page.getByTestId('presentations-grid').isVisible();
@@ -115,7 +112,7 @@ test.describe('Presentations List Page', () => {
     await goToPresentationsPage(page);
     
     // Wait for the page to load completely
-    await waitForNetworkIdle(page);
+    await page.waitForLoadState('networkidle');
     
     // Check if we have no presentations and need to use that button
     const hasNoPresMessage = await page.getByTestId('no-presentations-message').isVisible().catch(() => false);
@@ -138,7 +135,7 @@ test.describe('Presentations List Page', () => {
 
   test('should switch between grid and list views', async ({ page }) => {
     await goToPresentationsPage(page);
-    await waitForNetworkIdle(page);
+    await page.waitForLoadState('networkidle');
     
     // Wait for loading to complete
     await page.waitForSelector('[data-testid="presentations-loading"]', { state: 'detached', timeout: 10000 })
@@ -164,7 +161,7 @@ test.describe('Presentations List Page', () => {
 
   test('should display all presentations with proper aspect ratio', async ({ page }) => {
     await goToPresentationsPage(page);
-    await waitForNetworkIdle(page);
+    await page.waitForLoadState('networkidle');
     
     // Wait for loading to complete
     await page.waitForSelector('[data-testid="presentations-loading"]', { state: 'detached', timeout: 10000 })

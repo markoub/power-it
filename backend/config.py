@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 # Check for offline mode
-OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+OFFLINE_MODE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes", "on"}
 
 if OFFLINE_MODE:
     # Ensure VCR fixtures are used

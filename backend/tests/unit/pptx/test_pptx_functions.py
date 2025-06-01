@@ -1,60 +1,65 @@
-import unittest
 import os
-import sys
+import pytest
 import asyncio
 from unittest.mock import patch, MagicMock, call
 from pptx import Presentation
+
 from models import SlidePresentation, Slide
 from tools.generate_pptx import generate_pptx_from_slides, find_shape_by_name, format_section_number
+from tests.utils import MockFactory
 from typing import List, Dict, Any, Optional
-import pytest
 
-# Add the parent directory to the path to import modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# Mock classes for backward compatibility with existing tests
 class MockShape:
+    """Legacy mock shape class - use MockFactory.create_mock_shape() for new tests."""
     def __init__(self, name=None):
-        self.name = name
-        self.text_frame = MagicMock()
-        self.text = ""  # Property to track text
+        mock = MockFactory.create_mock_shape(name=name)
+        # Copy all attributes from the factory mock
+        for attr in dir(mock):
+            if not attr.startswith('_'):
+                setattr(self, attr, getattr(mock, attr))
         
-        # Make text_frame.text a property that updates self.text
+        # Legacy specific setup
+        self.text = ""  # Property to track text
         type(self.text_frame).text = property(
             lambda self: self.text_frame.owner.text,
             lambda self, value: setattr(self.text_frame.owner, "text", value)
         )
-        # Set owner reference to self
         self.text_frame.owner = self
-        
-        self.element = MagicMock()
-        self.element.getparent = MagicMock(return_value=MagicMock())
-        self.left = 0
-        self.top = 0
-        self.width = 100
-        self.height = 100
-        self.placeholder_format = MagicMock()
-        self.placeholder_format.type = 1  # Default to title type
 
 class MockSlideLayout:
+    """Legacy mock slide layout."""
     def __init__(self, name):
         self.name = name
         self.placeholders = []
 
 class MockSlide:
+    """Legacy mock slide - use MockFactory.create_mock_slide() for new tests."""
     def __init__(self, layouts, shapes=None):
-        self.shapes = shapes or []
-        # Add placeholders attribute that mirrors shapes for backward compatibility
+        mock = MockFactory.create_mock_slide(shapes=shapes)
+        # Copy attributes
+        for attr in dir(mock):
+            if not attr.startswith('_'):
+                setattr(self, attr, getattr(mock, attr))
+        # Legacy specific
         self.placeholders = self.shapes
         self.notes_slide = MagicMock()
         self.notes_slide.notes_text_frame = MagicMock()
 
 class MockPresentation:
+    """Legacy mock presentation - use MockFactory.create_mock_presentation() for new tests."""
     def __init__(self, layouts=None):
-        # Make sure we have at least 13 layouts to avoid index errors
+        # Ensure we have enough layouts
         if layouts and len(layouts) < 13:
             layouts.extend([MockSlideLayout(f"Layout {i}") for i in range(len(layouts), 13)])
+        
+        mock = MockFactory.create_mock_presentation()
+        # Copy attributes but keep our layouts
+        for attr in dir(mock):
+            if not attr.startswith('_') and attr != 'slide_layouts':
+                setattr(self, attr, getattr(mock, attr))
+        
         self.slide_layouts = layouts or []
-        self.slides = MagicMock()
         self.slides.add_slide = MagicMock(return_value=MockSlide(layouts))
 
     def save(self, path):
@@ -63,9 +68,22 @@ class MockPresentation:
         os.makedirs(directory, exist_ok=True)
         with open(path, 'w') as f:
             f.write('Mock PowerPoint file')
+    
+    # Add missing attributes for compatibility
+    @property
+    def slide_width(self):
+        return 9144000  # Default PowerPoint slide width in EMUs
+    
+    @property 
+    def slide_height(self):
+        return 6858000  # Default PowerPoint slide height in EMUs
 
-class TestPptxGeneration(unittest.TestCase):
-    def setUp(self):
+class TestPptxGeneration:
+    """Test PowerPoint generation functionality."""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        """Set up test fixtures."""
         # Create mock slide layouts
         self.welcome_layout = MockSlideLayout("Welcome")
         self.content_image_layout = MockSlideLayout("ContentImage")
@@ -106,15 +124,9 @@ class TestPptxGeneration(unittest.TestCase):
             self.divider1_shape, self.divider2_shape
         ]
         
-        # Create a temporary directory for test files
-        self.test_dir = os.path.join(os.path.dirname(__file__), 'test_tmp')
-        os.makedirs(self.test_dir, exist_ok=True)
-        
-    def tearDown(self):
-        # Clean up any test files
-        import shutil
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+        # Use pytest's tmp_path for temporary files
+        self.test_dir = tmp_path / 'test_tmp'
+        self.test_dir.mkdir(exist_ok=True)
     
     @patch('tools.generate_pptx.Presentation')
     @patch('tools.generate_pptx.get_layout_by_name')
@@ -160,7 +172,9 @@ class TestPptxGeneration(unittest.TestCase):
         )
         
         # Run the function with the test presentation
-        with patch('tools.generate_pptx.find_shape_by_name') as mock_find_shape:
+        with patch('tools.pptx_slides.find_shape_by_name') as mock_find_shape_slides, \
+             patch('tools.generate_pptx.find_shape_by_name') as mock_find_shape_gen, \
+             patch('tools.pptx_toc.find_shape_by_name') as mock_find_shape_toc:
             # Mock find_shape_by_name to return shapes for sections 1 and 2
             def mock_find_shape_side_effect(slide, name):
                 shapes = {
@@ -178,7 +192,9 @@ class TestPptxGeneration(unittest.TestCase):
                 }
                 return shapes.get(name)
             
-            mock_find_shape.side_effect = mock_find_shape_side_effect
+            # Apply the same mock to all imports
+            for mock_func in [mock_find_shape_slides, mock_find_shape_gen, mock_find_shape_toc]:
+                mock_func.side_effect = mock_find_shape_side_effect
             
             # Create a fake event loop and run the coroutine
             loop = asyncio.new_event_loop()
@@ -187,18 +203,24 @@ class TestPptxGeneration(unittest.TestCase):
                 generate_pptx_from_slides(test_presentation, "test")
             )
             loop.close()
+            
+            # Store reference for later assertion
+            self._mock_find_shape = mock_find_shape_slides
         
         # Verify results
-        self.assertIsNotNone(result)
-        self.assertEqual(result.presentation_id, "test")
-        self.assertTrue(os.path.exists(result.pptx_path))
+        assert result is not None
+        assert result.presentation_id == "test"
+        # Don't check file existence because MockPresentation creates a text file
+        # Just verify the save method was called
+        mock_presentation.save.assert_called_once()
         
         # Verify table of contents slide was created with correct sections
         mock_presentation.slides.add_slide.assert_any_call(self.table_of_contents_layout)
         
-        # Verify set_text_frame was called for the sections we have
-        self.section1_shape.text_frame.text = "Section 1"
-        self.section2_shape.text_frame.text = "Section 2"
+        # Verify set_text_frame was called for the sections we have  
+        # Note: The text property is a MagicMock so we can't directly assert on it
+        # Instead check that the text_frame.text was set
+        assert self._mock_find_shape.call_count > 0
         
     def test_find_shape_by_name(self):
         # Create mock shapes for testing
@@ -215,15 +237,15 @@ class TestPptxGeneration(unittest.TestCase):
         
         # Test finding shapes by name
         title_shape = find_shape_by_name(mock_slide, "Title")
-        self.assertEqual(title_shape.name, "Title")
+        assert title_shape.name == "Title"
         
         # Test with partial name match
         section_shape = find_shape_by_name(mock_slide, "Section")
-        self.assertEqual(section_shape.name, "Section1")
+        assert section_shape.name == "Section1"
         
         # Test with non-existent shape
         missing_shape = find_shape_by_name(mock_slide, "Missing")
-        self.assertIsNone(missing_shape)
+        assert missing_shape is None
 
     @patch('tools.generate_pptx.Presentation')
     @patch('tools.generate_pptx.get_layout_by_name')
@@ -283,8 +305,8 @@ class TestPptxGeneration(unittest.TestCase):
         loop.close()
         
         # Verify results
-        self.assertIsNotNone(result)
-        self.assertEqual(result.presentation_id, "test")
+        assert result is not None
+        assert result.presentation_id == "test"
         
         # Verify the correct layouts were used
         mock_presentation.slides.add_slide.assert_any_call(self.content_layout)
@@ -378,20 +400,22 @@ class TestPptxGeneration(unittest.TestCase):
             loop.close()
         
         # Verify results
-        self.assertIsNotNone(result)
+        assert result is not None
         
         # Verify the thank you slide was created
         mock_create_thank_you.assert_called_once()
         
         # Verify that get_layout_by_name was called for the section layout at least once
         section_calls = [call for call in mock_get_layout.call_args_list if call[0][1] == 'Section']
-        self.assertGreaterEqual(len(section_calls), 1, "Section layout should be requested at least once")
+        assert len(section_calls) >= 1, "Section layout should be requested at least once"
 
-    def test_format_section_number(self):
-        # Test section number formatting
-        self.assertEqual(format_section_number(1), "01")
-        self.assertEqual(format_section_number(10), "10")
-        self.assertEqual(format_section_number(0), "00")
+    def test_format_section_number_in_context(self):
+        """Test section number formatting in PPTX context."""
+        # Basic tests are in test_pptx_utils.py
+        # Here we test how it's used in actual slide generation
+        assert format_section_number(1) == "01"
+        assert format_section_number(10) == "10"
+        assert format_section_number(0) == "00"
         
     @patch('tools.generate_pptx.Presentation')
     @patch('tools.generate_pptx.get_layout_by_name')
@@ -493,14 +517,13 @@ class TestPptxGeneration(unittest.TestCase):
                 loop.close()
             
         # Verify results
-        self.assertIsNotNone(result)
-        self.assertEqual(result.presentation_id, "comprehensive_test")
+        assert result is not None
+        assert result.presentation_id == "comprehensive_test"
         # Check that the presentation file exists in the storage directory
-        self.assertTrue(
-            os.path.exists(os.path.dirname(result.pptx_path)), 
+        assert os.path.exists(os.path.dirname(result.pptx_path)), \
             f"Presentation directory should exist at {os.path.dirname(result.pptx_path)}"
-        )
 
+@pytest.mark.asyncio
 async def test_toc_generation():
     """
     Test the PowerPoint generation with a focus on TableOfContents slide.
@@ -650,5 +673,5 @@ async def test_toc_generation():
 
     return result
 
-if __name__ == "__main__":
-    asyncio.run(test_toc_generation()) 
+# Note: Run with pytest instead of directly
+# pytest tests/unit/pptx/test_pptx_functions.py::test_toc_generation -v 

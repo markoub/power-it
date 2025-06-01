@@ -14,23 +14,27 @@ test.describe('Wizard Slide Modification', () => {
 
     // 1. Run research using the proven working pattern
     console.log('🔍 Running research...');
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(3000); // Same timing as working tests
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     console.log('✅ Research completed');
 
     // 2. Navigate to slides and run using the exact working pattern
     console.log('🔍 Running slides...');
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000); // Same timing as working tests
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     const slidesButtonExists = await runSlidesButton.count() > 0;
     console.log(`Slides button exists: ${slidesButtonExists}`);
     
     if (slidesButtonExists) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(3000); // Same timing as working tests
-      console.log('✅ Slides clicked');
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      console.log('✅ Slides generation started');
     } else {
       throw new Error("❌ Slides button not found");
     }

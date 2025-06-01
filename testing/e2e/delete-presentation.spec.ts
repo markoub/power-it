@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, goToPresentationsPage, waitForNetworkIdle } from './utils';
+import { createPresentation, goToPresentationsPage } from './utils';
 
 test.describe('Delete Presentation', () => {
   test('should delete a presentation from the list', async ({ page }) => {
@@ -9,7 +9,6 @@ test.describe('Delete Presentation', () => {
     const id = await createPresentation(page, name, topic);
 
     await goToPresentationsPage(page);
-    await waitForNetworkIdle(page);
 
     // All presentations should be visible on the homepage now
     const card = page.getByTestId(`presentation-card-${id}`);
@@ -21,9 +20,13 @@ test.describe('Delete Presentation', () => {
       await dialog.accept();
     });
 
-    await card.getByTestId('delete-presentation-button').click();
+    // Click delete and wait for the API response
+    const [deleteResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}`) && resp.request().method() === 'DELETE'),
+      card.getByTestId('delete-presentation-button').click()
+    ]);
 
-    await expect(card).not.toBeVisible({ timeout: 5000 });
+    await expect(card).not.toBeVisible();
   });
 
   test('should delete multiple presentations at once', async ({ page }) => {
@@ -31,7 +34,6 @@ test.describe('Delete Presentation', () => {
     const id2 = await createPresentation(page, `Multi Delete 2 ${Date.now()}`, 'Topic B');
 
     await goToPresentationsPage(page);
-    await waitForNetworkIdle(page);
 
     // All presentations should be visible and view controls should be available
     await expect(page.getByTestId('view-list-button')).toBeVisible();
@@ -49,9 +51,13 @@ test.describe('Delete Presentation', () => {
       await dialog.accept();
     });
 
-    await page.getByTestId('delete-selected-button').click();
+    // Click delete and wait for the delete response
+    const [deleteResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/presentations') && resp.request().method() === 'DELETE'),
+      page.getByTestId('delete-selected-button').click()
+    ]);
 
-    await expect(row1).not.toBeVisible({ timeout: 5000 });
-    await expect(row2).not.toBeVisible({ timeout: 5000 });
+    await expect(row1).not.toBeVisible();
+    await expect(row2).not.toBeVisible();
   });
 });

@@ -13,20 +13,29 @@ test.describe('Wizard Improvements Demo', () => {
 
     // Complete research step
     console.log('🔍 Running research...');
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     console.log('✅ Research completed');
 
     // Navigate to slides step
     console.log('📊 Navigating to slides...');
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Generate slides
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000); // Wait for slides generation
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
       console.log('✅ Slides generated');
     }
 
@@ -60,7 +69,7 @@ test.describe('Wizard Improvements Demo', () => {
     console.log('✅ Send button shows loading state');
     
     // Wait for response and check for message completion
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]', { timeout: 10000 });
     
     // First, check that we have messages in the wizard
     const wizardMessages = page.getByTestId('wizard-message-user');
@@ -118,7 +127,7 @@ test.describe('Wizard Improvements Demo', () => {
     console.log('✅ Apply changes clicked');
     
     // Wait for changes to be applied
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
     
     // Check that suggestion box disappeared
     await expect(suggestionBox).not.toBeVisible();
@@ -139,7 +148,8 @@ test.describe('Wizard Improvements Demo', () => {
     // Send another request
     await wizardInput.fill('Add more engaging bullet points');
     await sendButton.click();
-    await page.waitForTimeout(5000);
+    // Wait for assistant response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Wait for new suggestion
     const newSuggestionBox = page.locator('text=Suggested Changes');
@@ -181,7 +191,9 @@ test.describe('Wizard Improvements Demo', () => {
     for (const message of messages) {
       await wizardInput.fill(message);
       await sendButton.click();
-      await page.waitForTimeout(1500);
+      // Wait for message to appear before sending next
+      const messageLocator = page.getByTestId('wizard-message-user').filter({ hasText: message });
+      await expect(messageLocator).toBeVisible({ timeout: 5000 });
     }
     
     // Check that latest message is visible (specifically the user message)
@@ -224,7 +236,7 @@ test.describe('Wizard Improvements Demo', () => {
     await expect(wizardHeader).toContainText('Research');
     await wizardInput.fill('Help me with research methodology');
     await sendButton.click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]', { timeout: 10000 });
     
     const researchResponse = page.locator('text=research, text=Research, text=help, text=methodology');
     const hasResearchResponse = await researchResponse.first().isVisible().catch(() => false);
@@ -235,16 +247,18 @@ test.describe('Wizard Improvements Demo', () => {
     }
     
     // Complete research and test Slides context
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchApiResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     await expect(wizardHeader).toContainText('Slides');
     await wizardInput.fill('Help me create better slides');
     await sendButton.click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     const slidesResponse = page.locator('text=slide, text=generate, text=Slides, text=help, text=create');
     const hasSlidesResponse = await slidesResponse.first().isVisible().catch(() => false);

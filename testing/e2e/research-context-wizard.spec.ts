@@ -56,8 +56,8 @@ test.describe('Research Context in Wizard', () => {
         // Click the first section header
         await sectionHeaders.first().click();
         
-        // Wait a bit for animation
-        await page.waitForTimeout(500);
+        // Wait for animation to complete
+        await page.waitForLoadState('networkidle');
         
         console.log('✅ Section expansion works');
       }
@@ -69,8 +69,8 @@ test.describe('Research Context in Wizard', () => {
       await wizardInput.fill('Add more information about solar panel efficiency');
       await wizardInput.press('Enter');
       
-      // Wait for response
-      await page.waitForTimeout(3000);
+      // Wait for wizard response
+      await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-child(2)', { timeout: 10000 });
       
       // Research context should still be visible
       await expect(page.locator('text="Research Context"').first()).toBeVisible();

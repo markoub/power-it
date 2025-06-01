@@ -1,9 +1,8 @@
-"""
-Tests for the new wizard system.
-"""
+"""Tests for the wizard system functionality."""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from tests.utils import MockFactory, assert_valid_research_data
 from tools.wizard.wizard_factory import WizardFactory
 from tools.wizard.research_wizard import ResearchWizard
 from tools.wizard.slides_wizard import SlidesWizard
@@ -48,6 +47,35 @@ class TestWizardFactory:
         for step in ["illustrations", "pptx", "unknown", "other"]:
             wizard_type = factory._determine_wizard_type(step, {})
             assert wizard_type == "general"
+    
+    @pytest.mark.asyncio
+    async def test_process_request_routing(self):
+        """Test that requests are routed to correct wizard."""
+        factory = WizardFactory()
+        
+        # Test research routing
+        response = await factory.process_request(
+            "research", 
+            {"id": 1}, 
+            "Add more information about AI"
+        )
+        assert response["type"] == "research_modification"
+        
+        # Test slides routing
+        response = await factory.process_request(
+            "slides",
+            {"id": 1},
+            "Add a new slide"
+        )
+        assert response["type"] in ["slide_modification", "presentation_modification"]
+        
+        # Test general routing
+        response = await factory.process_request(
+            "pptx",
+            {"id": 1},
+            "What is this step?"
+        )
+        assert response["type"] == "explanation"
 
 
 class TestResearchWizard:
@@ -103,6 +131,56 @@ class TestResearchWizard:
         assert wizard._is_modification_request("what is this about?") is False
         assert wizard._is_modification_request("explain the topic") is False
         assert wizard._is_modification_request("how does this work?") is False
+    
+    @pytest.mark.asyncio
+    async def test_process_research_modification(self, sample_research_data):
+        """Test processing research modification requests."""
+        wizard = ResearchWizard()
+        
+        presentation_data = {
+            "id": 1,
+            "topic": "AI in Healthcare",
+            "steps": [
+                {
+                    "step": "research",
+                    "result": sample_research_data.model_dump()
+                }
+            ]
+        }
+        
+        response = await wizard.process_request(
+            presentation_data,
+            "Add more information about machine learning applications"
+        )
+        
+        assert response["type"] == "research_modification"
+        assert "research" in response["changes"]
+        assert "content" in response["changes"]["research"]
+    
+    @pytest.mark.asyncio
+    async def test_process_research_question(self):
+        """Test processing research questions."""
+        wizard = ResearchWizard()
+        
+        presentation_data = {
+            "id": 1,
+            "topic": "AI in Healthcare",
+            "steps": [
+                {
+                    "step": "research",
+                    "result": {"content": "AI is transforming healthcare...", "links": []}
+                }
+            ]
+        }
+        
+        response = await wizard.process_request(
+            presentation_data,
+            "What are the main benefits mentioned?"
+        )
+        
+        assert response["type"] == "explanation"
+        assert "response" in response
+        assert len(response["response"]) > 0
 
 
 class TestSlidesWizard:
@@ -135,6 +213,57 @@ class TestSlidesWizard:
         assert wizard._is_presentation_level_request("improve this content") is False
         assert wizard._is_presentation_level_request("make it better") is False
         assert wizard._is_presentation_level_request("what is this about?") is False
+    
+    @pytest.mark.asyncio
+    async def test_process_slide_modification(self, sample_slide_presentation):
+        """Test processing single slide modification."""
+        wizard = SlidesWizard()
+        
+        presentation_data = {
+            "id": 1,
+            "steps": [
+                {
+                    "step": "slides",
+                    "result": sample_slide_presentation.model_dump()
+                }
+            ]
+        }
+        
+        # Add selectedSlide to simulate UI selection
+        presentation_data["selectedSlide"] = 3
+        
+        response = await wizard.process_request(
+            presentation_data,
+            "Make this slide more engaging"
+        )
+        
+        assert response["type"] == "slide_modification"
+        assert "slide" in response["changes"]
+        assert response["changes"]["slide"]["index"] == 3
+    
+    @pytest.mark.asyncio
+    async def test_process_presentation_modification(self, sample_slide_presentation):
+        """Test processing presentation-level modification."""
+        wizard = SlidesWizard()
+        
+        presentation_data = {
+            "id": 1,
+            "steps": [
+                {
+                    "step": "slides",
+                    "result": sample_slide_presentation.model_dump()
+                }
+            ]
+        }
+        
+        response = await wizard.process_request(
+            presentation_data,
+            "Add a new slide about future trends"
+        )
+        
+        assert response["type"] == "presentation_modification"
+        assert "presentation" in response["changes"]
+        assert "slides" in response["changes"]["presentation"]
 
 
 class TestGeneralWizard:
@@ -150,4 +279,34 @@ class TestGeneralWizard:
         assert caps["can_provide_guidance"] is True
         assert caps["can_answer_questions"] is True
         assert "answer_questions" in caps["supported_actions"]
-        assert "provide_guidance" in caps["supported_actions"] 
+        assert "provide_guidance" in caps["supported_actions"]
+    
+    @pytest.mark.asyncio
+    async def test_process_general_request(self):
+        """Test processing general requests."""
+        wizard = GeneralWizard()
+        
+        presentation_data = {
+            "id": 1,
+            "topic": "Test Topic"
+        }
+        
+        response = await wizard.process_request(
+            presentation_data,
+            "What does this step do?"
+        )
+        
+        assert response["type"] == "explanation"
+        assert "response" in response
+        assert len(response["response"]) > 0
+    
+    @pytest.mark.asyncio
+    async def test_error_handling_empty_request(self):
+        """Test error handling with empty request."""
+        wizard = GeneralWizard()
+        
+        response = await wizard.process_request({}, "")
+        
+        assert response["type"] == "error"
+        assert "error" in response
+        assert "empty" in response["error"].lower()

@@ -4,14 +4,14 @@ from unittest.mock import patch, MagicMock
 import base64
 import json
 
-OFFLINE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes"}
+OFFLINE = os.environ.get("POWERIT_OFFLINE", "0").lower() in {"1", "true", "yes", "on"}
 
 if OFFLINE:
     print("Offline mode enabled - using recorded fixtures")
 
     base_dir = os.path.dirname(__file__)
-    gemini_path = os.path.join(base_dir, "tests", "test_gemini_vcr.py")
-    openai_path = os.path.join(base_dir, "tests", "test_openai_vcr.py")
+    gemini_path = os.path.join(base_dir, "tests", "unit", "vcr", "test_gemini_vcr.py")
+    openai_path = os.path.join(base_dir, "tests", "unit", "vcr", "test_openai_vcr.py")
 
     spec_g = importlib.util.spec_from_file_location("gemini_vcr", gemini_path)
     gemini_vcr_module = importlib.util.module_from_spec(spec_g)
@@ -35,16 +35,12 @@ if OFFLINE:
     patch.object(
         genai.GenerativeModel,
         "generate_content_async",
-        side_effect=gemini_vcr.mock_generate_content_async(
-            genai.GenerativeModel.generate_content_async
-        ),
+        side_effect=gemini_vcr.generate_content_async_mock,
     ).start()
     patch.object(
         genai.GenerativeModel,
         "generate_content",
-        side_effect=gemini_vcr.mock_generate_content(
-            genai.GenerativeModel.generate_content
-        ),
+        side_effect=gemini_vcr.generate_content_mock,
     ).start()
 
     # Create a more comprehensive mock for OpenAI
@@ -53,7 +49,7 @@ if OFFLINE:
 
     # Setup the mock image generation
     def mock_images_generate(**kwargs):
-        response = openai_vcr.mock_openai_images_generate(**kwargs)
+        response = openai_vcr.images_generate_mock(**kwargs)
         print(f"Mock OpenAI images.generate called with prompt: {kwargs.get('prompt', 'no prompt')}")
         return response
 

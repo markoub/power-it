@@ -6,13 +6,13 @@ test.describe('Markdown Rendering in Slides', () => {
     // Navigate to a presentation with slides already created
     await page.goto('http://localhost:3000/create');
     
-    // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    // Wait for create form to be ready
+    await expect(page.getByTestId('create-presentation-form')).toBeVisible();
   });
 
   test('should properly render bullet points from array content', async ({ page }) => {
-    // Increase test timeout to handle slower API responses
-    test.setTimeout(60000);
+    // Standard timeout for offline mode
+    test.setTimeout(30000);
     
     // Create a new presentation to test with using the utility function
     const name = `Markdown Test ${Date.now()}`;
@@ -34,7 +34,6 @@ test.describe('Markdown Rendering in Slides', () => {
     
     // Navigate to slides and generate
     await page.click('[data-testid="step-nav-slides"]');
-    await page.waitForTimeout(1000);
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
@@ -57,7 +56,6 @@ test.describe('Markdown Rendering in Slides', () => {
       
       // Check preview mode first to see how content is rendered
       await page.getByRole('tab', { name: 'Preview' }).click();
-      await page.waitForTimeout(1000);
       
       // Verify that content is displayed with proper bullet points
       const slidePreview = page.locator('.prose.prose-lg');
@@ -94,7 +92,6 @@ test.describe('Markdown Rendering in Slides', () => {
       
       // Switch to edit mode to test editing
       await page.getByRole('tab', { name: 'Edit' }).click();
-      await page.waitForTimeout(1000);
       
       // Add some custom markdown content
       const customMarkdown = `# Custom Heading
@@ -119,7 +116,9 @@ This is a code block
       
       // Switch back to preview to verify rendering
       await page.getByRole('tab', { name: 'Preview' }).click();
-      await page.waitForTimeout(1000);
+      
+      // Wait for markdown to render
+      await expect(slidePreview.locator('h1')).toBeVisible();
       
       // Verify all markdown elements are rendered correctly
       await expect(slidePreview.locator('h1').first()).toContainText('Custom Heading');

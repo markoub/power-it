@@ -12,14 +12,18 @@ test.describe('Step Navigation Debug', () => {
     await createPresentation(page, name, topic);
     
     // Run research quickly
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(3000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/steps/research/run') && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     // Run slides quickly
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
-    await page.getByTestId('run-slides-button').click();
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
+    const [slidesResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/steps/slides/run') && resp.status() === 200),
+      page.getByTestId('run-slides-button').click()
+    ]);
 
     // Now check what step nav elements exist
     console.log('🔍 Checking what step navigation elements exist...');

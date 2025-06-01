@@ -14,29 +14,33 @@ test.describe('PPTX Quick Debug', () => {
 
     // 1. Quick research
     console.log('🔍 Running research...');
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(3000);
-    console.log('✅ Research clicked');
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
+    console.log('✅ Research completed');
 
     // 2. Navigate to slides and run
     console.log('🔍 Running slides...');
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     const slidesButtonExists = await runSlidesButton.count() > 0;
     console.log(`Slides button exists: ${slidesButtonExists}`);
     
     if (slidesButtonExists) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(3000);
-      console.log('✅ Slides clicked');
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      console.log('✅ Slides completed');
     }
 
     // 3. Navigate to illustration and check what's available
     console.log('🔍 Checking illustration step...');
     await page.getByTestId('step-nav-illustration').click({ force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runIllustrationButton = page.getByTestId('run-illustration-button');
     const illustrationButtonExists = await runIllustrationButton.count() > 0;
@@ -47,16 +51,18 @@ test.describe('PPTX Quick Debug', () => {
       console.log(`Illustration button disabled: ${isDisabled}`);
       
       if (!isDisabled) {
-        await runIllustrationButton.click();
-        await page.waitForTimeout(3000);
-        console.log('✅ Illustration clicked');
+        const [illustrationResponse] = await Promise.all([
+          page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/illustration/run`) && resp.status() === 200),
+          runIllustrationButton.click()
+        ]);
+        console.log('✅ Illustration completed');
       }
     }
 
     // 4. Navigate to compiled and check what's available
     console.log('🔍 Checking compiled step...');
     await page.getByTestId('step-nav-compiled').click({ force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runCompiledButton = page.getByTestId('run-compiled-button');
     const compiledButtonExists = await runCompiledButton.count() > 0;
@@ -65,7 +71,7 @@ test.describe('PPTX Quick Debug', () => {
     // 5. Navigate to PPTX and check what's available
     console.log('🔍 Checking PPTX step...');
     await page.getByTestId('step-nav-pptx').click({ force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runPptxButton = page.getByTestId('run-pptx-button');
     const pptxButtonExists = await runPptxButton.count() > 0;

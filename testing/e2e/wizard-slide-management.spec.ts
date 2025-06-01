@@ -13,17 +13,26 @@ test.describe('Wizard Slide Management', () => {
     presentationId = await createPresentation(page, name, topic);
     
     // Complete research step
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     // Navigate to slides and generate slides
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000); // Wait for slides generation
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
     }
   });
 
@@ -38,7 +47,7 @@ test.describe('Wizard Slide Management', () => {
     await page.getByTestId('wizard-send-button').click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if a suggestion appears
     const suggestionBox = page.locator('text=Suggested Changes');
@@ -47,7 +56,7 @@ test.describe('Wizard Slide Management', () => {
       const applyButton = page.locator('button:has-text("Apply Changes")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
       }
     }
     
@@ -68,7 +77,7 @@ test.describe('Wizard Slide Management', () => {
     await page.getByTestId('wizard-send-button').click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if a suggestion appears
     const suggestionBox = page.locator('text=Suggested Changes');
@@ -77,7 +86,7 @@ test.describe('Wizard Slide Management', () => {
       const applyButton = page.locator('button:has-text("Apply Changes")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
       }
     }
     
@@ -94,7 +103,7 @@ test.describe('Wizard Slide Management', () => {
     await page.getByTestId('wizard-send-button').click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if a suggestion appears
     const suggestionBox = page.locator('text=Suggested Changes');
@@ -103,7 +112,7 @@ test.describe('Wizard Slide Management', () => {
       const applyButton = page.locator('button:has-text("Apply Changes")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
       }
     }
     
@@ -119,7 +128,7 @@ test.describe('Wizard Slide Management', () => {
     await page.getByTestId('wizard-send-button').click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if a suggestion appears and apply it
     const suggestionBox = page.locator('text=Suggested Changes');
@@ -127,7 +136,7 @@ test.describe('Wizard Slide Management', () => {
       const applyButton = page.locator('button:has-text("Apply Changes")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
       }
     }
     
@@ -143,7 +152,7 @@ test.describe('Wizard Slide Management', () => {
     await page.getByTestId('wizard-send-button').click();
     
     // Wait for response
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if a suggestion appears
     const suggestionBox = page.locator('text=Suggested Changes');
@@ -152,7 +161,7 @@ test.describe('Wizard Slide Management', () => {
       const applyButton = page.locator('button:has-text("Apply Changes")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
       }
     }
     

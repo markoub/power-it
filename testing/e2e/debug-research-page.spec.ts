@@ -11,11 +11,14 @@ test.describe('Debug Research Page', () => {
     await page.getByTestId('presentation-title-input').fill(uniqueName);
     await page.getByTestId('presentation-author-input').fill('Test Author');
     
-    // Submit the form
-    await page.getByTestId('submit-presentation-button').click();
+    // Submit the form and wait for navigation
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/presentations') && resp.status() === 200),
+      page.getByTestId('submit-presentation-button').click()
+    ]);
     
-    // Wait for navigation to edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
+    // Verify navigation to edit page
+    await expect(page).toHaveURL(/\/edit\/\d+/);
     
     // Check if method selection is visible
     const methodSelection = page.locator('[data-testid="research-method-selection"]');
@@ -30,11 +33,9 @@ test.describe('Debug Research Page', () => {
       await expect(continueButton).toBeEnabled();
       await continueButton.click();
       
-      // Wait for method selection to disappear
-      await expect(methodSelection).not.toBeVisible({ timeout: 10000 });
-      
-      // Wait for AI research interface
-      await expect(page.getByTestId('ai-research-interface')).toBeVisible({ timeout: 10000 });
+      // Wait for method selection to disappear and AI interface to appear
+      await expect(methodSelection).not.toBeVisible();
+      await expect(page.getByTestId('ai-research-interface')).toBeVisible();
       
       // Fill in topic
       await page.getByTestId('topic-input').fill('Test Topic');

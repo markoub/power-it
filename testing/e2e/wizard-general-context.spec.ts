@@ -12,11 +12,13 @@ test.describe('General Wizard Context', () => {
     console.log(`✅ Created presentation with ID: ${id}`);
 
     // Complete research and slides steps
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
@@ -32,7 +34,7 @@ test.describe('General Wizard Context', () => {
 
     // Navigate to illustrations step
     await page.getByTestId('step-nav-illustration').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     console.log('✅ Navigated to illustrations step');
 
     // Test general guidance on illustrations step
@@ -40,7 +42,8 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('How can I improve the visual appeal of my presentation?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(5000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
     
     // Should get helpful guidance
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -51,7 +54,12 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('I want to modify slide content');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(3000);
+    // Wait for new response
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      responseMessages,
+      { timeout: 10000 }
+    );
     
     // Should suggest going back to slides step
     const lastMessage = page.locator('[data-testid="wizard-message-assistant"]').last();
@@ -66,11 +74,13 @@ test.describe('General Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete all previous steps
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
@@ -86,19 +96,21 @@ test.describe('General Wizard Context', () => {
 
     // Complete illustration step first
     await page.getByTestId('step-nav-illustration').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Complete the illustration step by running it
     const runIllustrationButton = page.getByTestId('run-illustration-button');
     if (await runIllustrationButton.count() > 0) {
-      await runIllustrationButton.click();
-      await page.waitForTimeout(5000);
+      const [illustrationResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/images/run`) && resp.status() === 200),
+        runIllustrationButton.click()
+      ]);
       console.log('✅ Illustration step completed');
     }
 
     // Navigate to PPTX step (force click since it might be disabled in offline mode)
     await page.getByTestId('step-nav-pptx').click({ force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     console.log('✅ Navigated to PPTX step');
 
     // Test guidance on PPTX step
@@ -106,7 +118,8 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('Can I still make changes to my presentation?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(5000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
     
     // Should get guidance about going back to previous steps
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -125,7 +138,8 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('Can you explain the presentation creation process?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(5000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
     
     // Should get explanation of the process
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -136,7 +150,12 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('What should I do next?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(3000);
+    // Wait for new response
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      responseMessages,
+      { timeout: 10000 }
+    );
     
     // Should get next steps guidance
     const lastMessage = page.locator('[data-testid="wizard-message-assistant"]').last();
@@ -155,7 +174,8 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('What features are available in this application?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(5000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
     
     // Should get feature explanation
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -166,7 +186,12 @@ test.describe('General Wizard Context', () => {
     await wizardInput.fill('I am having trouble with the application');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(3000);
+    // Wait for new response
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      responseMessages,
+      { timeout: 10000 }
+    );
     
     // Should get troubleshooting help
     const lastMessage = page.locator('[data-testid="wizard-message-assistant"]').last();
@@ -185,19 +210,21 @@ test.describe('General Wizard Context', () => {
     // Test on research step
     await wizardInput.fill('Hello, can you help me?');
     await wizardInput.press('Enter');
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
     
     let responseCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
     expect(responseCount).toBeGreaterThan(1);
     console.log('✅ Helpful response on research step');
 
     // Complete research step first
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
 
     // Navigate to slides step and test
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Generate slides first
     const runSlidesButton = page.getByTestId('run-slides-button');
@@ -216,7 +243,12 @@ test.describe('General Wizard Context', () => {
     await wizardInput.press('Enter');
     
     // Wait for the new response to appear with a more flexible approach
-    await page.waitForTimeout(5000);
+    const prevCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      prevCount,
+      { timeout: 10000 }
+    );
     
     responseCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
     expect(responseCount).toBeGreaterThan(1); // More flexible expectation
@@ -224,13 +256,18 @@ test.describe('General Wizard Context', () => {
 
     // Navigate to illustrations step and test
     await page.getByTestId('step-nav-illustration').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     await wizardInput.fill('Thank you for your help');
     await wizardInput.press('Enter');
     
     // Wait for the new response to appear with a more flexible approach
-    await page.waitForTimeout(5000);
+    const finalPrevCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
+    await page.waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
+      finalPrevCount,
+      { timeout: 10000 }
+    );
     
     responseCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
     expect(responseCount).toBeGreaterThan(1); // More flexible expectation

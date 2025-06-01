@@ -153,7 +153,10 @@ export default function SlidesStep({
 
         while (!slidesReady && attempts < maxAttempts) {
           attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 3000));
+          // Use shorter polling interval in offline/test mode for faster tests
+          const pollInterval = process.env.NEXT_PUBLIC_POWERIT_OFFLINE === '1' || 
+                              process.env.NODE_ENV === 'test' ? 500 : 3000;
+          await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
           const updatedPresentation = await api.getPresentation(presentationId);
 

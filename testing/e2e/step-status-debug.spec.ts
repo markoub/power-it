@@ -105,7 +105,9 @@ test.describe('Step Status Debug', () => {
         await runSlidesButton.click();
         
         // Wait for slides to appear or button to change state
-        await page.waitForTimeout(5000);
+        await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { timeout: 30000 }).catch(() => {
+          console.log('No slides appeared within timeout');
+        });
         
         // Check if slides were generated
         const slideExists = await page.getByTestId('slide-thumbnail-0').count() > 0;

@@ -19,8 +19,8 @@ test.describe('Step Pending States', () => {
     const presentationId = await createPresentation(page, name, topic);
     console.log(`Created presentation ID: ${presentationId}`);
 
-    // Wait a moment for initial state
-    await page.waitForTimeout(2000);
+    // Wait for initial state to stabilize
+    await page.waitForLoadState('networkidle');
 
     // Check initial backend state
     const apiUrl = getApiUrl();
@@ -51,8 +51,8 @@ test.describe('Step Pending States', () => {
     await expect(page.getByTestId('ai-research-content')).toBeVisible({ timeout: 30000 });
     console.log('✅ Research content is visible');
 
-    // Wait a moment for UI to update
-    await page.waitForTimeout(2000);
+    // Wait for UI to update
+    await page.waitForLoadState('networkidle');
 
     // Check if research step now shows as completed (check icon)
     const researchStep = page.getByTestId('step-nav-research');
@@ -82,7 +82,7 @@ test.describe('Step Pending States', () => {
     await runSlidesButton.click();
     
     // Check if slides step shows as processing (yellow with spinner) immediately after click
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     const slidesStepClassAfterRun = await slidesStep.getAttribute('class');
     console.log('Slides step classes after clicking run:', slidesStepClassAfterRun);
     
@@ -100,7 +100,7 @@ test.describe('Step Pending States', () => {
     }
     
     // Wait for slides to complete
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { timeout: 30000 });
     
     // Check final state - should have check icon
     const slidesHasCheck = await slidesStep.locator('[data-lucide="check-circle-2"]').count() > 0;

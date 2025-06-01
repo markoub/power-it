@@ -132,13 +132,36 @@ This is code block
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
       await runSlidesButton.click();
+      console.log("✅ Clicked run slides button");
       
-      // Wait for slides to be generated (this is already correct)
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
-      console.log("✅ Slides generated");
+      // Wait for either:
+      // 1. Slides to appear (success case)
+      // 2. Button to become enabled again (generation complete)
+      // Use race condition to handle both cases
+      await Promise.race([
+        // Wait for slides thumbnails to appear
+        page.waitForSelector('[data-testid^="slide-thumbnail-"]', { 
+          timeout: 60000 
+        }),
+        // OR wait for the button to not be disabled anymore
+        page.waitForFunction(() => {
+          const button = document.querySelector('[data-testid="run-slides-button"]');
+          return button && !button.hasAttribute('disabled') && !button.textContent?.includes('Generating');
+        }, { 
+          polling: 500, // Poll every 500ms
+          timeout: 60000 
+        })
+      ]);
+      
+      // Extra check to ensure slides are actually there
+      const slidesCount = await page.locator('[data-testid^="slide-thumbnail-"]').count();
+      if (slidesCount === 0) {
+        // If no slides yet, wait a bit more
+        await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { 
+          timeout: 10000 
+        });
+      }
+      console.log(`✅ Slides generated (${slidesCount} slides)`);
       
       // First, let's add some markdown content to the first slide to test
       console.log("🔍 Adding markdown content to first slide for testing...");

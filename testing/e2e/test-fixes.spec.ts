@@ -25,7 +25,7 @@ test.describe('Bug Fixes Verification', () => {
     console.log(`Created presentation ID: ${presentationId}`);
 
     // Wait for initial load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're on research step
     const researchStep = page.getByTestId('step-nav-research');
@@ -39,8 +39,8 @@ test.describe('Bug Fixes Verification', () => {
       await wizardInput.fill('Can you help improve this presentation?');
       await sendButton.click();
       
-      // Wait a moment for any potential API calls
-      await page.waitForTimeout(2000);
+      // Wait for any potential API calls
+      await page.waitForLoadState('networkidle');
     } else {
       console.log('Wizard not available during research step - this is expected behavior');
     }
@@ -109,7 +109,8 @@ test.describe('Bug Fixes Verification', () => {
     const presentationId = await createPresentation(page, name, topic);
 
     // Wait for initial polling to stabilize
-    await page.waitForTimeout(10000);
+    await page.waitForLoadState('networkidle');
+    await new Promise(resolve => setTimeout(resolve, 5000)); // Need some time for polling pattern to establish
 
     const initialRequestCount = apiRequests.length;
     console.log(`Initial request count: ${initialRequestCount}`);
@@ -121,7 +122,8 @@ test.describe('Bug Fixes Verification', () => {
     await expect(page.getByTestId('ai-research-content')).toBeVisible({ timeout: 30000 });
 
     // Wait for polling to slow down after completion
-    await page.waitForTimeout(15000);
+    await page.waitForLoadState('networkidle');
+    await new Promise(resolve => setTimeout(resolve, 10000)); // Need time to observe polling adaptation
 
     const finalRequestCount = apiRequests.length;
     console.log(`Final request count: ${finalRequestCount}`);

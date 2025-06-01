@@ -14,30 +14,31 @@ test.describe("Slides Display", () => {
     
     // 1. Run research using the working pattern
     console.log("🔍 Running research...");
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(3000); // Same timing as working test
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     console.log("✅ Research completed");
 
     // 2. Navigate to slides and run using the exact working pattern
     console.log("🔍 Running slides...");
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000); // Same timing as working test
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     const slidesButtonExists = await runSlidesButton.count() > 0;
     console.log(`Slides button exists: ${slidesButtonExists}`);
     
     if (slidesButtonExists) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(3000); // Same timing as working test
-      console.log("✅ Slides clicked");
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      console.log("✅ Slides generation started");
       
       // Wait for slides to be generated
       console.log("⏳ Waiting for slides to be generated...");
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
+      await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { timeout: 30000 });
       
       // Verify first slide thumbnail is visible
       await expect(page.getByTestId("slide-thumbnail-0")).toBeVisible();

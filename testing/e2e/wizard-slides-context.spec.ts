@@ -14,19 +14,28 @@ test.describe('Slides Wizard Context', () => {
 
     // Complete research step
     console.log('🔍 Running research...');
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     console.log('✅ Research completed');
 
     // Navigate to slides and generate slides
     console.log('📊 Generating slides...');
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000);
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
       console.log('✅ Slides generated');
     }
 
@@ -58,7 +67,7 @@ test.describe('Slides Wizard Context', () => {
     await wizardInput.press('Enter');
     
     // Wait for suggestion to be generated
-    await page.waitForTimeout(10000);
+    await page.waitForSelector('[data-testid="wizard-suggestion"]', { timeout: 15000 });
     
     // Check if suggestion was generated
     const suggestionBox = page.locator('[data-testid="wizard-suggestion"]');
@@ -78,7 +87,7 @@ test.describe('Slides Wizard Context', () => {
 
     // Test back to overview functionality
     await backButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Verify context changed back to all slides
     await expect(wizardHeader).toContainText('All Slides');
@@ -92,16 +101,25 @@ test.describe('Slides Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete research and slides steps
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000);
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
     }
 
     // Should start in overview mode
@@ -116,7 +134,8 @@ test.describe('Slides Wizard Context', () => {
     await wizardInput.fill('Add a new slide about renewable energy costs and benefits');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(10000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Should get a presentation-level suggestion
     const suggestionBox = page.locator('[data-testid="wizard-suggestion"]');
@@ -142,16 +161,25 @@ test.describe('Slides Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete research and slides steps
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000);
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
     }
 
     // Test general slides guidance
@@ -159,7 +187,8 @@ test.describe('Slides Wizard Context', () => {
     await wizardInput.fill('What are some best practices for slide design?');
     await wizardInput.press('Enter');
     
-    await page.waitForTimeout(5000);
+    // Wait for wizard response
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Should get helpful guidance
     const responseMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -174,16 +203,25 @@ test.describe('Slides Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete setup
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000);
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
     }
 
     const wizardHeader = page.locator('[data-testid="wizard-header"]').first();
@@ -218,7 +256,7 @@ test.describe('Slides Wizard Context', () => {
 
     // Click back to overview button to return to overview mode
     await backButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Verify context changed back to all slides
     await expect(wizardHeader).toContainText('All Slides');
@@ -236,16 +274,25 @@ test.describe('Slides Wizard Context', () => {
     const id = await createPresentation(page, name, topic);
     
     // Complete setup
-    await page.getByTestId('start-ai-research-button').click();
-    await page.waitForTimeout(5000);
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
     
     await page.getByTestId('step-nav-slides').click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     const runSlidesButton = page.getByTestId('run-slides-button');
     if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      await page.waitForTimeout(15000);
+      const [slidesResponse] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
+        runSlidesButton.click()
+      ]);
+      // Wait for slides to be generated
+      await page.waitForFunction(() => {
+        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
+        return thumbnails.length > 0;
+      }, {}, { timeout: 30000 });
     }
 
     // Select first slide

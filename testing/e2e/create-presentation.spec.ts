@@ -18,11 +18,14 @@ test.describe('Presentation Creation', () => {
     await page.getByTestId('presentation-title-input').fill(testTitle);
     await page.getByTestId('presentation-author-input').fill('Test Author');
     
-    // Submit the form
-    await page.getByTestId('submit-presentation-button').click();
+    // Submit the form and wait for navigation
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/presentations') && resp.status() === 200),
+      page.getByTestId('submit-presentation-button').click()
+    ]);
     
-    // Verify we are redirected to the edit page with longer timeout
-    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
+    // Verify we are redirected to the edit page
+    await expect(page).toHaveURL(/\/edit\/\d+/);
     
     // On the edit page, we should see the research method selection interface
     await expect(page.getByTestId('research-method-selection')).toBeVisible();
@@ -43,10 +46,13 @@ test.describe('Presentation Creation', () => {
     const duplicateName = `Duplicate Test ${Date.now()}`;
     await page.getByTestId('presentation-title-input').fill(duplicateName);
     await page.getByTestId('presentation-author-input').fill('Test Author');
-    await page.getByTestId('submit-presentation-button').click();
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/presentations') && resp.status() === 200),
+      page.getByTestId('submit-presentation-button').click()
+    ]);
     
-    // Should redirect to edit page with longer timeout
-    await expect(page).toHaveURL(/\/edit\/\d+/, { timeout: 15000 });
+    // Should redirect to edit page
+    await expect(page).toHaveURL(/\/edit\/\d+/);
     
     // Now go back to create page and try to create another with the same name
     await page.goto('http://localhost:3000/create');

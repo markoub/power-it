@@ -112,6 +112,9 @@ class ResearchWizard(BaseWizard):
                 "suggestions": {
                     "research": modified_research
                 },
+                "changes": {
+                    "research": modified_research
+                },
                 "capabilities": self.get_capabilities()
             }
             

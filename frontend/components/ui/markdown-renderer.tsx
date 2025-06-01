@@ -57,7 +57,7 @@ export default function MarkdownRenderer({
   
   const baseClass = mini 
     ? "prose prose-xs max-w-none prose-headings:text-xs prose-p:text-[8px] prose-p:leading-tight prose-ul:text-[8px] prose-li:text-[8px] prose-strong:text-[8px] prose-em:text-[8px]"
-    : "prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-primary-600 prose-strong:text-gray-900 prose-em:text-gray-600";
+    : "prose prose-lg max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground prose-em:text-muted-foreground";
 
   const combinedClassName = `${baseClass} ${className}`;
 

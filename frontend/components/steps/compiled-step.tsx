@@ -121,7 +121,7 @@ export default function CompiledStep({
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl font-bold mb-4 gradient-text">Compiling Presentation</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             Combining slides and illustrations into a complete presentation.
           </p>
 
@@ -130,7 +130,7 @@ export default function CompiledStep({
               <div className="h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
               <h3 className="text-xl font-semibold">Compiling...</h3>
             </div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Finalizing your presentation structure and preparing all elements.
             </p>
             <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
@@ -152,7 +152,7 @@ export default function CompiledStep({
         <h2 className="text-2xl font-bold mb-4 gradient-text">
           Compiled Presentation
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Preview your complete presentation with slides and illustrations
           combined.
         </p>

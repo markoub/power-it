@@ -236,22 +236,28 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   }
 
   return (
-    <Card className="h-[calc(100vh-200px)] flex flex-col bg-white/90 backdrop-blur-sm">
-      <CardHeader className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-t-xl">
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" />
-          AI Presentation Wizard
-        </CardTitle>
-        <CardDescription className="text-white/90 text-sm" data-testid="wizard-header">
-          Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
-        </CardDescription>
+    <Card className="h-[calc(100vh-200px)] flex flex-col bg-card/95 backdrop-blur-sm border-border">
+      <CardHeader className="relative bg-gradient-to-r from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/10 border-b border-border rounded-t-xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
+        <div className="absolute right-0 top-0 w-24 h-24 opacity-20 dark:opacity-10">
+          <img src="/wizard.png" alt="AI Wizard" className="object-contain w-full h-full" />
+        </div>
+        <div className="relative z-10">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI Presentation Wizard
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm" data-testid="wizard-header">
+            Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
+          </CardDescription>
+        </div>
       </CardHeader>
       
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-3 mx-4 mt-2 rounded">
+        <div className="bg-destructive/10 border-l-4 border-destructive p-3 mx-4 mt-2 rounded">
           <div className="flex items-center">
             <AlertCircle className="h-4 w-4 text-red-400 mr-2" />
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         </div>
       )}

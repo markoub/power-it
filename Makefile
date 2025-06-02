@@ -186,6 +186,27 @@ test-e2e-list:
 	$(call print_info,Available E2E tests:)
 	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort
 
+# Run E2E tests by group
+test-e2e-core:
+	$(call print_info,Running core features E2E tests...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/core-features/
+	$(call print_info,Core features tests complete.)
+
+test-e2e-steps:
+	$(call print_info,Running steps E2E tests...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/steps/
+	$(call print_info,Steps tests complete.)
+
+test-e2e-wizard:
+	$(call print_info,Running wizard E2E tests...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/wizard/
+	$(call print_info,Wizard tests complete.)
+
+test-e2e-regression:
+	$(call print_info,Running regression E2E tests...)
+	@cd $(TESTING_DIR) && npx playwright test e2e/regression/
+	$(call print_info,Regression tests complete.)
+
 # ==========================================
 # Combined Testing
 # ==========================================
@@ -211,7 +232,7 @@ test-all-failures:
 	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh 2>&1 | grep -E "(FAILED|ERROR|AssertionError)" >> ../test-failures.log || true
 	@printf "\n" >> test-failures.log
 	@printf "🌐 E2E Tests:\n" >> test-failures.log
-	@cd $(TESTING_DIR) && npx playwright test --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
+	@cd $(TESTING_DIR) && npx playwright test --max-failures=0 --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
 	@printf "\n" >> test-failures.log
 	@printf "=== SUMMARY ===\n" >> test-failures.log
 	@if [ -s test-failures.log ] && grep -q -E "(FAILED|ERROR|✘|failed|AssertionError|TimeoutError)" test-failures.log; then \

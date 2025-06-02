@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { goToPresentationsPage, waitForNetworkIdle } from './utils';
+import { goToPresentationsPage, waitForNetworkIdle } from '../utils';
 
 test.describe('Presentations List Page', () => {
   test('should display the presentations page correctly', async ({ page }) => {

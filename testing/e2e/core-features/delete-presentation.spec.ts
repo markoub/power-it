@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, goToPresentationsPage } from './utils';
+import { createPresentation, goToPresentationsPage } from '../utils';
 
 test.describe('Delete Presentation', () => {
   test('should delete a presentation from the list', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, waitForStepCompletion } from './utils';
+import { createPresentation, waitForStepCompletion } from '../utils';
 
 // Standard timeout for offline mode
 test.setTimeout(60000);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { createPresentation } from '../utils';
 
 test.describe('Research Content Display', () => {
   test.setTimeout(120000);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForNetworkIdle, createPresentation } from './utils';
+import { waitForNetworkIdle, createPresentation } from '../utils';
 
 test.describe('Presentation Creation', () => {
 

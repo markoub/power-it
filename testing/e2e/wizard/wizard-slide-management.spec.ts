@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { createPresentation } from '../utils';
 
 test.setTimeout(120000); // 2 minutes
 

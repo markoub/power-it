@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, goToPresentationsPage } from './utils';
+import { createPresentation, goToPresentationsPage } from '../utils';
 
 test.describe('Delete Presentation', () => {
   test('should delete a presentation from the list', async ({ page }) => {
@@ -14,16 +14,21 @@ test.describe('Delete Presentation', () => {
     const card = page.getByTestId(`presentation-card-${id}`);
     await expect(card).toBeVisible();
 
-    // Accept the confirmation dialog
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Are you sure');
-      await dialog.accept();
-    });
-
-    // Click delete and wait for the API response
+    // Click delete button
+    await card.getByTestId('delete-presentation-button').click();
+    
+    // Wait for the AlertDialog to appear
+    const deleteDialog = page.getByRole('alertdialog');
+    await expect(deleteDialog).toBeVisible();
+    
+    // Verify the dialog content
+    await expect(deleteDialog.getByText('Delete Presentation')).toBeVisible();
+    await expect(deleteDialog.getByText('Are you sure you want to delete this presentation?')).toBeVisible();
+    
+    // Click the Delete button in the dialog and wait for the API response
     const [deleteResponse] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes(`/presentations/${id}`) && resp.request().method() === 'DELETE'),
-      card.getByTestId('delete-presentation-button').click()
+      deleteDialog.getByRole('button', { name: 'Delete' }).click()
     ]);
 
     await expect(card).not.toBeVisible();
@@ -47,14 +52,21 @@ test.describe('Delete Presentation', () => {
     await row1.getByTestId('select-presentation-checkbox').check();
     await row2.getByTestId('select-presentation-checkbox').check();
 
-    page.once('dialog', async (dialog) => {
-      await dialog.accept();
-    });
-
-    // Click delete and wait for the delete response
+    // Click delete selected button
+    await page.getByTestId('delete-selected-button').click();
+    
+    // Wait for the AlertDialog to appear
+    const deleteDialog = page.getByRole('alertdialog');
+    await expect(deleteDialog).toBeVisible();
+    
+    // Verify the dialog content
+    await expect(deleteDialog.getByText('Delete Selected Presentations')).toBeVisible();
+    await expect(deleteDialog.getByText('Are you sure you want to delete 2 selected presentations?')).toBeVisible();
+    
+    // Click the Delete button in the dialog and wait for the API response
     const [deleteResponse] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/presentations') && resp.request().method() === 'DELETE'),
-      page.getByTestId('delete-selected-button').click()
+      deleteDialog.getByRole('button', { name: 'Delete 2 Presentations' }).click()
     ]);
 
     await expect(row1).not.toBeVisible();

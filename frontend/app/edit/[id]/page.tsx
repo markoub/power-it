@@ -333,7 +333,7 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
 
               {/* Main Content Area */}
               <div className="lg:col-span-3">
-                <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="bg-card/90 backdrop-blur-sm p-6 rounded-xl shadow-sm border border-border">
                   {currentStep === 0 && (
                     <ResearchStep
                       presentation={presentation}

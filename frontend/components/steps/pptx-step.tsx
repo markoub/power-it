@@ -101,7 +101,7 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
             </div>
           </div>
           <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               Ready to generate your PowerPoint presentation from the compiled slides and images.
             </p>
             <Button 
@@ -185,7 +185,7 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
             </Button>
           </div>
         </div>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Your presentation, "{presentation.name}", is structured and ready. You can export it as a PowerPoint file using the "Export PPTX" button in the header.
           {slideCount !== null && <span className="font-medium"> (Preview shows {slideCount} slides)</span>}
         </p>

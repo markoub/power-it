@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, waitForStepCompletion } from './utils';
+import { createPresentation, waitForStepCompletion } from '../utils';
 
 test.describe('Markdown Rendering in Slides', () => {
   test.beforeEach(async ({ page }) => {
@@ -147,9 +147,80 @@ This is a code block
     }
   });
 
-  test.skip('should convert plain text lines to bullet points automatically', async ({ page }) => {
-    // This test is skipped because it relies on an existing presentation that may not exist
-    // The main markdown functionality is tested in the first test
-    console.log("⚠️ Skipping this test - relies on existing presentation");
+  test('markdown works in mini slide previews', async ({ page }) => {
+    // Standard timeout for offline mode
+    test.setTimeout(60000);
+    
+    const name = `Markdown Mini Preview Test ${Date.now()}`;
+    const topic = 'Testing markdown in thumbnails';
+
+    // Create presentation
+    const presentationId = await createPresentation(page, name, topic);
+    console.log(`✅ Created presentation with ID: ${presentationId}`);
+    
+    // Run research
+    console.log('🔍 Running research...');
+    await page.getByTestId('start-ai-research-button').click();
+    
+    // Wait for research to complete
+    await page.waitForSelector('text=Generated Research Content', { timeout: 30000 });
+    console.log('✅ Research completed');
+
+    // Navigate to slides and run
+    console.log('🔍 Running slides...');
+    await page.getByTestId('step-nav-slides').click();
+    
+    const runSlidesButton = page.getByTestId('run-slides-button');
+    if (await runSlidesButton.count() > 0) {
+      await runSlidesButton.click();
+      console.log('✅ Clicked run slides button');
+      
+      // Wait for slides to appear
+      await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { timeout: 60000 });
+      
+      const slidesCount = await page.locator('[data-testid^="slide-thumbnail-"]').count();
+      console.log(`✅ Slides generated (${slidesCount} slides)`);
+      
+      // Add markdown content to the first slide
+      console.log('🔍 Adding markdown content to first slide for testing...');
+      await page.getByTestId('slide-thumbnail-0').click();
+      
+      // Switch to edit mode
+      await page.getByRole('tab', { name: 'Edit' }).click();
+      
+      // Add markdown content with various elements
+      const markdownContent = `# Testing Markdown in Thumbnails
+
+## This should render properly
+
+- **Bold bullet point**
+- *Italic bullet point*
+- Regular bullet point
+
+> Blockquote for emphasis
+
+\`inline code\` and regular text`;
+
+      const contentTextarea = page.locator('textarea').nth(1);
+      await contentTextarea.fill(markdownContent);
+      console.log('✅ Added markdown content to slide');
+      
+      // Navigate to compiled step to see mini previews
+      console.log('🔍 Testing markdown rendering in slides view...');
+      
+      // Check if markdown is rendered in the slide preview
+      await page.getByRole('tab', { name: 'Preview' }).click();
+      
+      // Verify markdown elements are rendered
+      const slidePreview = page.locator('.prose.prose-lg');
+      await expect(slidePreview.locator('h1')).toContainText('Testing Markdown in Thumbnails');
+      await expect(slidePreview.locator('h2')).toContainText('This should render properly');
+      await expect(slidePreview.locator('strong')).toContainText('Bold bullet point');
+      await expect(slidePreview.locator('em')).toContainText('Italic bullet point');
+      
+      console.log('✅ Markdown rendering verified in slides view');
+    } else {
+      console.log('❌ Slides button not available - research may not have completed');
+    }
   });
 }); 

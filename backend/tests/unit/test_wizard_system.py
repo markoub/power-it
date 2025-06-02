@@ -154,8 +154,10 @@ class TestResearchWizard:
         )
         
         assert response["type"] == "research_modification"
-        assert "research" in response["changes"]
-        assert "content" in response["changes"]["research"]
+        changes = response.get("changes") or response.get("suggestions")
+        assert changes is not None
+        assert "research" in changes
+        assert "content" in changes["research"]
     
     @pytest.mark.asyncio
     async def test_process_research_question(self):

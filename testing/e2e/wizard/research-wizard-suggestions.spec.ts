@@ -6,7 +6,7 @@ import {
   fillResearchTopic,
   startAIResearch,
   waitForResearchCompletion
-} from './utils';
+} from '../utils';
 
 test.describe('Research Wizard Suggestions', () => {
   test('should allow wizard to modify research content with suggestions', async ({ page }) => {

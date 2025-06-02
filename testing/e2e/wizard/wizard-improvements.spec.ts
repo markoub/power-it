@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { createPresentation } from '../utils';
 
 test.setTimeout(180000); // 3 minutes for comprehensive testing
 
@@ -95,7 +95,7 @@ test.describe('Enhanced Wizard Functionality', () => {
     console.log('👁️ Testing suggestion preview functionality...');
     
     // Wait for suggestion box to appear
-    const suggestionBox = page.locator('text=Suggested Changes');
+    const suggestionBox = page.getByTestId('wizard-suggestion');
     await expect(suggestionBox).toBeVisible({ timeout: 15000 });
     console.log('✅ Suggestion box appeared');
     
@@ -184,7 +184,7 @@ test.describe('Enhanced Wizard Functionality', () => {
     await sendButton.click();
     
     // Wait for new suggestion
-    const newSuggestionBox = page.locator('text=Suggested Changes');
+    const newSuggestionBox = page.getByTestId('wizard-suggestion');
     await expect(newSuggestionBox).toBeVisible({ timeout: 15000 });
     
     // Click dismiss button

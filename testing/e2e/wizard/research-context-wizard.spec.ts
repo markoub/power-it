@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, startAIResearch, waitForResearchCompletion } from './utils';
+import { createPresentation, startAIResearch, waitForResearchCompletion } from '../utils';
 
 test.describe('Research Context in Wizard', () => {
   test('should display research context in wizard on Research step', async ({ page }) => {

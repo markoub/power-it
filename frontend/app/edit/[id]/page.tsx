@@ -166,7 +166,7 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
     return () => {
       stopPolling();
     };
-  }, [unwrappedParams.id]); // Only depend on ID change
+  }, [unwrappedParams.id]); // Only depend on ID to prevent infinite loops
 
   const handleWizardContextChange = (context: "all" | "single") => {
     setWizardContext(context);
@@ -292,10 +292,6 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
           <div className="container mx-auto p-4">
             <PresentationHeader
               presentationName={presentation.name}
-              isSaving={isSaving}
-              isExporting={isExporting}
-              onSave={savePresentation}
-              onExport={handleExport}
             />
 
             <WorkflowSteps

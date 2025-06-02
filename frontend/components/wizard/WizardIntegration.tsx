@@ -26,10 +26,10 @@ export function WizardIntegration({
   steps,
   onContextChange
 }: WizardIntegrationProps) {
-  const [wizardContext, setWizardContext] = useState<"all" | "single">("all");
+  // Determine wizard context based on current slide selection
+  const wizardContext = currentSlide ? "single" : "all";
 
   const handleWizardContextChange = useCallback((context: "all" | "single") => {
-    setWizardContext(context);
     onContextChange?.(context);
   }, [onContextChange]);
 

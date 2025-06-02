@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download, ExternalLink, Play } from "lucide-react"
+import { RefreshCw, Download, Play } from "lucide-react"
 import type { Presentation } from "@/lib/types"
 import PptxPreview from "../pptx-preview"
 import { api } from "@/lib/api"
@@ -69,16 +69,12 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
   }
 
   const downloadPptx = () => {
-    // Create a direct download link to bypass any frontend processing
-    const downloadUrl = `http://localhost:8000/presentations/${presentation.id}/download-pptx`
+    // Create a direct download link with proper filename
+    const fileName = presentation.name
+      ? `${presentation.name.replace(/[^a-z0-9_-\s\.]/gi, "_")}.pptx`
+      : "presentation.pptx";
+    const downloadUrl = `http://localhost:8000/presentations/${presentation.id}/download-pptx?filename=${encodeURIComponent(fileName)}`
     window.open(downloadUrl, "_blank")
-  }
-
-  // Link to debug compiled step
-  const viewCompiledStep = () => {
-    // Open the compiled step in a new tab for debugging
-    const apiUrl = `http://localhost:8000/presentations/${presentation.id}`
-    window.open(apiUrl, "_blank")
   }
 
   // Show generate button if PPTX hasn't been generated yet
@@ -88,17 +84,6 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold gradient-text">Generate PPTX</h2>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={viewCompiledStep}
-                data-testid="view-compiled-step-button"
-              >
-                <ExternalLink size={16} className="mr-2" />
-                View API Data
-              </Button>
-            </div>
           </div>
           <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100">
             <p className="text-muted-foreground mb-6">
@@ -155,15 +140,6 @@ export default function PptxStep({ presentation, refreshPresentation }: PptxStep
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold gradient-text">Presentation Ready</h2>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={viewCompiledStep}
-              data-testid="view-compiled-step-button"
-            >
-              <ExternalLink size={16} className="mr-2" />
-              View API Data
-            </Button>
             <Button 
               variant="outline" 
               size="sm" 

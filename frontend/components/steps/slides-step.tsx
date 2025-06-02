@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -126,6 +126,60 @@ export default function SlidesStep({
     }
   }, [currentSlide, onContextChange]);
 
+  const handleSlideClick = (slide: Slide) => {
+    setCurrentSlide(slide);
+    setSlideView("single");
+  };
+
+  const handleBackToOverview = () => {
+    setCurrentSlide(null);
+    setSlideView("overview");
+  };
+
+  // Keyboard navigation for slides
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!presentation.slides || presentation.slides.length === 0) return;
+    
+    // Only handle arrow keys when in single slide view
+    if (slideView !== "single" || !currentSlide) return;
+    
+    const currentIndex = presentation.slides.findIndex(s => s.id === currentSlide.id);
+    if (currentIndex === -1) return;
+    
+    switch (e.key) {
+      case "ArrowLeft":
+        // Go to previous slide
+        if (currentIndex > 0) {
+          e.preventDefault();
+          const prevSlide = presentation.slides[currentIndex - 1];
+          setCurrentSlide(prevSlide);
+        }
+        break;
+      case "ArrowRight":
+        // Go to next slide
+        if (currentIndex < presentation.slides.length - 1) {
+          e.preventDefault();
+          const nextSlide = presentation.slides[currentIndex + 1];
+          setCurrentSlide(nextSlide);
+        }
+        break;
+      case "Escape":
+        // Return to overview
+        e.preventDefault();
+        handleBackToOverview();
+        break;
+    }
+  }, [slideView, currentSlide, presentation.slides, setCurrentSlide, handleBackToOverview]);
+
+  useEffect(() => {
+    // Add keyboard event listener
+    window.addEventListener("keydown", handleKeyDown);
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   // Function to generate slides with AI
   const handleGenerateSlides = async () => {
     try {
@@ -193,16 +247,6 @@ export default function SlidesStep({
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handleSlideClick = (slide: Slide) => {
-    setCurrentSlide(slide);
-    setSlideView("single");
-  };
-
-  const handleBackToOverview = () => {
-    setCurrentSlide(null);
-    setSlideView("overview");
   };
 
   const noSlides = presentation.slides.length === 0;
@@ -484,26 +528,38 @@ export default function SlidesStep({
         transition={{ duration: 0.5 }}
       >
         {/* Header with back button */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="outline"
-            onClick={handleBackToOverview}
-            className="flex items-center gap-2"
-            data-testid="back-to-overview-button"
-          >
-            <ArrowLeft size={16} />
-            Back to Overview
-          </Button>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold gradient-text">
-              {currentSlide?.title || "Untitled Slide"}
-            </h2>
-            <Badge 
-              className={`${getSlideTypeInfo(detectSlideType(currentSlide!)).color}`}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button
               variant="outline"
+              onClick={handleBackToOverview}
+              className="flex items-center gap-2"
+              data-testid="back-to-overview-button"
             >
-              {getSlideTypeInfo(detectSlideType(currentSlide!)).label}
-            </Badge>
+              <ArrowLeft size={16} />
+              Back to Overview
+            </Button>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold gradient-text">
+                {currentSlide?.title || "Untitled Slide"}
+              </h2>
+              <Badge 
+                className={`${getSlideTypeInfo(detectSlideType(currentSlide!)).color}`}
+                variant="outline"
+              >
+                {getSlideTypeInfo(detectSlideType(currentSlide!)).label}
+              </Badge>
+            </div>
+          </div>
+          
+          {/* Slide navigation info */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Slide {presentation.slides.findIndex(s => s.id === currentSlide?.id) + 1} of {presentation.slides.length}
+            </span>
+            <span className="text-xs">
+              (Use ← → arrows to navigate)
+            </span>
           </div>
         </div>
 

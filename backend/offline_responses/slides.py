@@ -58,106 +58,136 @@ def generate_offline_slides(
         ]
 
     slides = []
+    
+    # 1. Welcome slide (always first)
     slides.append({
         "type": "Welcome",
-        "fields": {"title": presentation_title, "subtitle": "Professional Business Presentation", "author": author},
+        "fields": {
+            "title": presentation_title, 
+            "subtitle": "Professional Business Presentation", 
+            "author": author,
+            "notes": "Welcome everyone to this presentation. Today we'll explore key concepts and insights."
+        },
     })
 
-    # Calculate how many sections we can fit (reserve space for Welcome + TableOfContents)
-    remaining_slides = target_slides - 2
-    max_sections = min(4, max(1, remaining_slides))
-    
-    # Add TableOfContents slide with only the sections that will be created
-    section_titles = [section[0] for section in content_sections[:max_sections]]
+    # 2. TableOfContents slide 
+    section_titles = ["Introduction", "Core Concepts", "Technical Details", "Business Applications", 
+                     "Market Analysis", "Implementation Strategy", "Future Outlook", "Conclusion"]
     slides.append({
         "type": "TableOfContents",
-        "fields": {"title": "Agenda", "sections": section_titles},
+        "fields": {
+            "sections": section_titles[:8],  # Ensure we have exactly up to 8 sections
+            "notes": "Here's our agenda for today. We'll cover these key areas in detail."
+        },
     })
 
-    section_count = 0
-    slide_count = 2  # Start at 2 because we now have Welcome + TableOfContents
-    
-    for section_data in content_sections[:max_sections]:
-        section_title = section_data[0] if section_data else f"Section {section_count + 1}"
-        section_content = section_data[1:] if len(section_data) > 1 else ["Content for this section"]
-        slides.append({"type": "Section", "fields": {"title": section_title}})
-        slide_count += 1
-        section_count += 1
-        slides_in_section = 0
-        max_slides_per_section = min(3, max(1, (target_slides - len(content_sections) - 1) // len(content_sections)))
-        for i, content_item in enumerate(section_content[:max_slides_per_section]):
-            if slide_count >= target_slides:
-                break
-            if slides_in_section == 0 and len(content_item) > 20:
-                slides.append({
-                    "type": "ContentImage",
-                    "fields": {
-                        "title": f"{section_title} Overview",
-                        "subtitle": "Key Points and Insights",
-                        "content": [content_item, f"Important aspects of {section_title.lower()}", "Supporting details and context"],
-                        "image": f"Professional illustration representing {section_title.lower()} concepts and applications in business environment",
-                    },
-                })
-            elif slides_in_section == 1 and section_count <= 2:
-                slides.append({
-                    "type": "ImageFull",
-                    "fields": {
-                        "title": f"{section_title} in Detail",
-                        "image": f"Detailed visual representation of {content_item[:50]}... showing modern business applications and innovative solutions",
-                        "explanation": f"This image illustrates the key concepts and practical applications related to {section_title.lower()}, demonstrating real-world implementation and benefits",
-                    },
-                })
-            elif slides_in_section == 2 and section_count == 2:
-                slides.append({
-                    "type": "3Images",
-                    "fields": {
-                        "title": f"Three Aspects of {section_title}",
-                        "image1": f"Modern technology solutions for {section_title.lower()} showing digital transformation",
-                        "image2": f"Business processes and workflows related to {section_title.lower()} in corporate environment",
-                        "image3": f"Future trends and innovations in {section_title.lower()} with growth projections",
-                        "image1subtitle": "Technology Solutions",
-                        "image2subtitle": "Business Processes",
-                        "image3subtitle": "Future Innovations",
-                    },
-                })
-            elif "company" in content_item.lower() or "business" in content_item.lower() or any(word in content_item.lower() for word in ["google", "microsoft", "amazon", "apple", "meta"]):
-                slides.append({
-                    "type": "ContentWithLogos",
-                    "fields": {
-                        "title": f"Leading Companies in {section_title}",
-                        "content": [
-                            content_item,
-                            "Industry leaders and innovators",
-                            "Key players driving innovation",
-                            "Market leaders setting industry standards",
-                        ],
-                        "logo1": "Google",
-                        "logo2": "Microsoft",
-                        "logo3": "Amazon",
-                    },
-                })
-            else:
-                slides.append({
-                    "type": "Content",
-                    "fields": {
-                        "title": content_item if len(content_item) < 60 else f"{section_title} Details",
-                        "content": [
-                            content_item,
-                            f"Key insights about {section_title.lower()}",
-                            "Supporting information and context",
-                            "Practical implications and applications",
-                        ],
-                    },
-                })
-            slides_in_section += 1
-            slide_count += 1
+    # 3. First Section slide
+    slides.append({
+        "type": "Section", 
+        "fields": {
+            "title": "Introduction",
+            "notes": "Let's begin with an introduction to set the context."
+        }
+    })
 
-    if slide_count < target_slides:
+    # 4. Content slide (basic bullet points with markdown)
+    slides.append({
+        "type": "Content",
+        "fields": {
+            "title": "Key Concepts Overview",
+            "content": [
+                "Understanding the **fundamental principles** of modern systems",
+                "Core components and their *relationships*",
+                "Essential **terminology** and *definitions*",
+                "Industry **best practices** and _standards_"
+            ],
+            "notes": "These are the fundamental concepts we need to understand before diving deeper."
+        },
+    })
+
+    # 5. ContentImage slide with markdown
+    slides.append({
+        "type": "ContentImage",
+        "fields": {
+            "title": "System Architecture",
+            "subtitle": "Modern Technology Stack",
+            "content": [
+                "**Cloud-native** infrastructure design with *auto-scaling*",
+                "Microservices and **containerization** using _Docker_ and _Kubernetes_", 
+                "**API-first** development approach with *RESTful* services",
+                "Scalable and **resilient** systems with _99.99% uptime_"
+            ],
+            "image": "Professional illustration of modern cloud architecture with interconnected services, APIs, and data flows in a corporate technology environment",
+            "notes": "This slide shows our comprehensive system architecture and how components interact."
+        },
+    })
+
+    # 6. Section slide
+    slides.append({
+        "type": "Section",
+        "fields": {
+            "title": "Technical Implementation", 
+            "notes": "Now let's dive into the technical details of our solution."
+        }
+    })
+
+    # 7. ImageFull slide
+    slides.append({
+        "type": "ImageFull",
+        "fields": {
+            "title": "Data Flow Visualization",
+            "image": "Detailed technical diagram showing data flow from ingestion through processing to analytics, with modern database systems and real-time streaming",
+            "explanation": "This comprehensive diagram illustrates how data moves through our system, from initial collection through various processing stages to final analytics and reporting. Each component is optimized for performance and reliability.",
+            "notes": "Take a moment to observe the complete data flow. Notice how we ensure data integrity at each stage."
+        },
+    })
+
+    # 8. 3Images slide
+    slides.append({
+        "type": "3Images",
+        "fields": {
+            "title": "Three Pillars of Success",
+            "image1": "Modern office environment with professionals collaborating on digital transformation initiatives",
+            "image2": "Advanced technology dashboard showing real-time analytics and performance metrics", 
+            "image3": "Future-oriented visualization of AI and automation in business processes",
+            "subtitleimage1": "People & Culture",
+            "subtitleimage2": "Technology & Innovation",
+            "subtitleimage3": "Future Vision",
+            "notes": "These three pillars form the foundation of our strategic approach."
+        },
+    })
+
+    # 9. ContentWithLogos slide with markdown
+    slides.append({
+        "type": "ContentWithLogos",
+        "fields": {
+            "title": "Industry Leaders & Partners",
+            "content": [
+                "Strategic partnerships with **technology giants** for _innovation_",
+                "**Collaborative** innovation initiatives with *global reach*",
+                "Shared commitment to **excellence** and _quality_",
+                "Integrated solutions and **platforms** across *multiple domains*"
+            ],
+            "logo1": "Google",
+            "logo2": "Microsoft", 
+            "logo3": "Amazon",
+            "notes": "We work with the best in the industry to deliver exceptional results."
+        },
+    })
+
+    # 10. Additional Content slide with markdown to reach target
+    if len(slides) < target_slides:
         slides.append({
             "type": "Content",
             "fields": {
-                "title": "Thank You & Questions",
-                "content": ["Thank you for your attention", "Questions and discussion", "Contact information available", "Additional resources provided"],
+                "title": "Next Steps & Conclusion",
+                "content": [
+                    "**Implementation roadmap** with *key milestones* and timeline",
+                    "Key **success metrics** and _KPIs_ for measurement",
+                    "Resources and **support** available through _multiple channels_",
+                    "**Thank you** for your *attention* and engagement"
+                ],
+                "notes": "Let's wrap up with clear next steps and how to move forward."
             },
         })
 

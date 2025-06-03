@@ -16,3 +16,4 @@ pytest-asyncio
 bs4
 markdown
 Pillow
+edge-tts

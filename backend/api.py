@@ -33,6 +33,7 @@ from routers.presentation_images import router as presentation_images_router
 from routers.images import router as images_router
 from routers.logos import router as logos_router
 from routers.pptx import router as pptx_router
+from routers.tts import router as tts_router
 
 # Lifespan context manager
 @asynccontextmanager
@@ -92,6 +93,7 @@ app.include_router(presentation_images_router)
 app.include_router(images_router)
 app.include_router(logos_router)
 app.include_router(pptx_router)
+app.include_router(tts_router)
 
 # Custom OpenAPI schema and documentation
 @app.get("/docs", include_in_schema=False)

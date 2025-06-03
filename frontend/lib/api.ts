@@ -608,5 +608,37 @@ export const api = {
       console.error(`Error updating topic for presentation ${id}:`, error);
       throw error;
     }
-  }
+  },
+
+  // TTS (Text-to-Speech) methods
+  async streamSlideAudio(
+    presentationId: number,
+    slideIndex: number,
+    options?: {
+      voice?: string;
+      rate?: string;
+      pitch?: string;
+      volume?: string;
+    }
+  ): Promise<Response> {
+    const params = new URLSearchParams();
+    if (options?.voice) params.append('voice', options.voice);
+    if (options?.rate) params.append('rate', options.rate);
+    if (options?.pitch) params.append('pitch', options.pitch);
+    if (options?.volume) params.append('volume', options.volume);
+    
+    const url = `${API_URL}/presentations/${presentationId}/tts/slide/${slideIndex}?${params.toString()}`;
+    return fetch(url);
+  },
+
+  async getAvailableVoices(locale?: string): Promise<{ voices: any[], total: number }> {
+    const params = new URLSearchParams();
+    if (locale) params.append('locale', locale);
+    
+    const response = await fetch(`${API_URL}/presentations/0/tts/voices?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch voices');
+    }
+    return response.json();
+  },
 };

@@ -21,15 +21,29 @@ test.describe('Markdown Rendering in Slides', () => {
     const presentationId = await createPresentation(page, name, topic);
     console.log(`✅ Created presentation with ID: ${presentationId}`);
     
-    // Run research
-    await page.click('[data-testid="start-ai-research-button"]');
+    // Check if we need to run research or if it's already there
+    const researchButton = page.getByTestId('start-ai-research-button');
+    const updateButton = page.getByTestId('update-research-button');
     
-    // Wait for research step to complete with increased timeout
-    const researchCompleted = await waitForStepCompletion(page, 'research', 90000);
-    if (!researchCompleted) {
-      console.log('⚠️ Research step did not complete within timeout, continuing anyway');
+    if (await researchButton.count() > 0 && await researchButton.isEnabled()) {
+      await researchButton.click();
+      
+      // Wait for research step to complete with increased timeout
+      const researchCompleted = await waitForStepCompletion(page, 'research', 90000);
+      if (!researchCompleted) {
+        console.log('⚠️ Research step did not complete within timeout, continuing anyway');
+      } else {
+        console.log('✅ Research completed');
+      }
+    } else if (await updateButton.count() > 0) {
+      console.log('✅ Research already exists, proceeding to slides');
     } else {
-      console.log('✅ Research completed');
+      console.log('⚠️ Neither research button found, checking if research already completed');
+      // Check if research is already done
+      const researchStatus = await getStepStatus(page, 'research');
+      if (researchStatus !== 'completed') {
+        throw new Error('Research not available and cannot start it');
+      }
     }
     
     // Navigate to slides and generate

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Loader2, RefreshCw, Wand2, ImageIcon } from "lucide-react"
@@ -12,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import type { Presentation, Slide } from "@/lib/types"
 import { api } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
+import { ImagePlaceholder, getAspectRatioFromDimensions } from "@/components/ui/image-placeholder"
 
 // Define API_URL to match the one used in the api.ts file
 const API_URL = 'http://localhost:8000';
@@ -393,10 +395,29 @@ export default function IllustrationStep({
 
                         <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
                           {slide.imageUrl ? (
-                            <img src={String(slide.imageUrl)} alt={String(slide.title)} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
-                          )}
+                            <img 
+                              src={String(slide.imageUrl)} 
+                              alt={String(slide.title)} 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                // If image fails to load, replace with placeholder
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const placeholder = target.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div 
+                            className="w-full h-full items-center justify-center" 
+                            style={{ display: slide.imageUrl ? 'none' : 'flex' }}
+                          >
+                            <ImagePlaceholder 
+                              aspectRatio="landscape" 
+                              text={slide.imagePrompt || "No image generated"}
+                              className="w-full h-full"
+                            />
+                          </div>
                           {isGenerating && generatingSlideId === slide.id && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                               <div className="text-white text-center">
@@ -435,25 +456,47 @@ export default function IllustrationStep({
           
           {currentSlide && (
             <div className="space-y-4">
-              {currentSlide.imageUrl && (
-                <div className="max-h-[500px] overflow-auto flex justify-center">
-                  <img 
-                    src={String(currentSlide.imageUrl)} 
-                    alt={currentSlide.title || "Slide image"} 
-                    className="rounded object-contain max-h-[450px] max-w-full" 
+              <div className="max-h-[500px] overflow-auto flex justify-center">
+                {currentSlide.imageUrl ? (
+                  <>
+                    <img 
+                      src={String(currentSlide.imageUrl)} 
+                      alt={currentSlide.title || "Slide image"} 
+                      className="rounded object-contain max-h-[450px] max-w-full" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const placeholder = target.nextElementSibling as HTMLElement;
+                        if (placeholder) placeholder.style.display = 'block';
+                      }}
+                    />
+                    <div style={{ display: 'none' }} className="max-h-[450px] max-w-full">
+                      <ImagePlaceholder 
+                        aspectRatio="landscape" 
+                        text={currentSlide.imagePrompt || "Image failed to load"}
+                        className="h-[450px]"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <ImagePlaceholder 
+                    aspectRatio="landscape" 
+                    text={currentSlide.imagePrompt || "No image generated"}
+                    className="h-[450px]"
                   />
-                </div>
-              )}
+                )}
+              </div>
               
               <div className="space-y-2">
                 <label htmlFor="imagePrompt" className="text-sm font-medium text-gray-700">
                   Image prompt
                 </label>
-                <Input
+                <Textarea
                   id="imagePrompt"
                   value={currentSlide.imagePrompt || ""}
                   onChange={(e) => updateSlide({ ...currentSlide, imagePrompt: e.target.value })}
-                  placeholder="Enter image prompt"
+                  placeholder="Enter a detailed description of the image you want to generate..."
+                  className="min-h-[120px] resize-y"
                 />
               </div>
               

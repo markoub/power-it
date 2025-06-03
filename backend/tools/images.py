@@ -35,7 +35,7 @@ image_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 REQUEST_TIMEOUT = 60  # seconds
 MAX_RETRIES = 2
 
-def save_image_to_file(presentation_id: int, slide_index: int, image_field_name: str, image_data: str = None) -> str:
+def save_image_to_file(presentation_id: int, slide_index: int, image_field_name: str, image_data: str = None, prompt: str = None) -> str:
     """
     Save an image to a file for a presentation.
     In offline mode, this copies the dummy image instead of decoding base64 data.
@@ -63,12 +63,19 @@ def save_image_to_file(presentation_id: int, slide_index: int, image_field_name:
     file_path = os.path.join(images_dir, filename)
     
     if OFFLINE_MODE:
-        # In offline mode, copy the dummy image file instead of decoding base64
+        # In offline mode, generate a custom placeholder image based on prompt
         try:
-            shutil.copy(DUMMY_IMAGE_PATH, file_path)
-            print(f"Copied dummy image to: {file_path}")
+            # If we have image_data (from load_dummy_image_b64), use it
+            if image_data:
+                with open(file_path, "wb") as f:
+                    f.write(base64.b64decode(image_data))
+                print(f"Saved placeholder image to: {file_path}")
+            else:
+                # Fallback to copying dummy image
+                shutil.copy(DUMMY_IMAGE_PATH, file_path)
+                print(f"Copied dummy image to: {file_path}")
         except Exception as e:
-            print(f"Error copying dummy image: {str(e)}")
+            print(f"Error saving placeholder image: {str(e)}")
     else:
         # In online mode, decode and save the image from base64 data
         with open(file_path, "wb") as f:
@@ -136,21 +143,26 @@ async def _generate_image_for_slide(slide, index, presentation_id) -> List[Image
             specific_content = str(field_content) # Ensure it's a string
 
         if OFFLINE_MODE:
-            print(f"OFFLINE MODE: Using dummy image for slide {index}, field {image_field}")
+            # Generate a proper prompt for the placeholder
+            # Simple prompt generation for offline mode
+            prompt = f"{slide_title}: {specific_content}"
+            if image_field != "image":
+                prompt = f"{prompt} ({image_field})"
+            print(f"OFFLINE MODE: Using placeholder for slide {index}, field {image_field}")
+            
+            # Get the base64 encoded dummy image with prompt-based placeholder
+            dummy_image_b64 = load_dummy_image_b64(prompt)
             
             # Save the dummy image
             file_path = None
             if presentation_id is not None:
-                file_path = save_image_to_file(presentation_id, index, image_field)
-                
-            # Get the base64 encoded dummy image
-            dummy_image_b64 = load_dummy_image_b64()
+                file_path = save_image_to_file(presentation_id, index, image_field, dummy_image_b64, prompt)
                 
             # Add the generated image to the list
             generated_images.append(ImageGeneration(
                 slide_index=index,
                 slide_title=slide_title,
-                prompt=f"Dummy image for {specific_content}",
+                prompt=prompt,
                 image_field_name=image_field,
                 image_path=file_path,
                 image=dummy_image_b64
@@ -302,13 +314,13 @@ async def generate_image_from_prompt(prompt: str, size: str = "1024x1024", prese
     if OFFLINE_MODE:
         print(f"OFFLINE MODE: Using dummy image for prompt: {prompt}")
         
+        # Get the base64 encoded dummy image with prompt-based placeholder
+        dummy_image_b64 = load_dummy_image_b64(prompt)
+            
         # Save the dummy image
         file_path = None
         if presentation_id is not None:
-            file_path = save_image_to_file(presentation_id, -1, "image")
-            
-        # Get the base64 encoded dummy image
-        dummy_image_b64 = load_dummy_image_b64()
+            file_path = save_image_to_file(presentation_id, -1, "image", dummy_image_b64, prompt)
             
         # Return a mock ImageGeneration object
         return ImageGeneration(

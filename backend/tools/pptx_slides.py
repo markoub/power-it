@@ -64,6 +64,12 @@ def create_welcome_slide(prs, welcome_layout, presentation_title, welcome_data=N
         if hasattr(shape, "name") and shape.name and "author" in shape.name.lower():
             author_placeholder = shape
             print(f"  Found welcome slide author placeholder by name: {shape_name}")
+        # Also check for BODY placeholder with idx=10 (Author placeholder in template)
+        elif (hasattr(shape, "placeholder_format") and 
+              shape.placeholder_format.type == 2 and  # 2 is BODY
+              shape.placeholder_format.idx == 10):
+            author_placeholder = shape
+            print(f"  Found welcome slide author placeholder by type/idx: {shape_name}")
     
     # Set the presentation title on the welcome slide
     if title_placeholder and hasattr(title_placeholder, "text_frame"):
@@ -100,6 +106,8 @@ def create_welcome_slide(prs, welcome_layout, presentation_title, welcome_data=N
     if author_placeholder and hasattr(author_placeholder, "text_frame") and welcome_data and "author" in welcome_data:
         author_placeholder.text_frame.text = welcome_data["author"]
         print(f"Set welcome slide author to: {welcome_data['author']}")
+    else:
+        print("⚠️ WARNING: Could not find Author placeholder on welcome slide.")
         
     return welcome_slide
 
@@ -263,13 +271,14 @@ def create_content_slide(prs, content_layout, slide_title, content, add_image=Fa
                 # Add a new paragraph for each subsequent item
                 p = text_frame.add_paragraph()
             
-            # Set the paragraph text
-            p.text = item
+            # Parse markdown and set the paragraph text with formatting
+            parse_markdown_to_runs(p, item)
             # Set bullet level to 0 (top level)
             p.level = 0
-            # Ensure font size is appropriate
-            if p.runs:
-                p.runs[0].font.size = Pt(18)  # Default size
+            # Ensure font size is appropriate for all runs
+            for run in p.runs:
+                if run.font.size is None:
+                    run.font.size = Pt(18)  # Default size
                 
         print(f"  Added {len(content)} content items to slide")
     else:
@@ -718,13 +727,14 @@ def create_content_with_logos_slide(prs, content_layout, slide_title, content, l
                 # Add a new paragraph for each subsequent item
                 p = content_shape.text_frame.add_paragraph()
             
-            # Set the paragraph text (no bold by default)
-            p.text = item
+            # Parse markdown and set the paragraph text with formatting
+            parse_markdown_to_runs(p, item)
             # Set bullet level to 0 (top level)
             p.level = 0
-            # Ensure font is not bold by default
-            if p.runs:
-                p.runs[0].font.bold = False
+            # Ensure font size is appropriate for all runs
+            for run in p.runs:
+                if run.font.size is None:
+                    run.font.size = Pt(18)  # Default size
         
         print(f"  Added {len(content)} content points to ContentWithLogos slide")
     else:

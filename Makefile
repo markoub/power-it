@@ -211,7 +211,7 @@ test-all-failures:
 	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh 2>&1 | grep -E "(FAILED|ERROR|AssertionError)" >> ../test-failures.log || true
 	@printf "\n" >> test-failures.log
 	@printf "🌐 E2E Tests:\n" >> test-failures.log
-	@cd $(TESTING_DIR) && npx playwright test --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
+	@cd $(TESTING_DIR) && npx playwright test --max-failures=0 --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
 	@printf "\n" >> test-failures.log
 	@printf "=== SUMMARY ===\n" >> test-failures.log
 	@if [ -s test-failures.log ] && grep -q -E "(FAILED|ERROR|✘|failed|AssertionError|TimeoutError)" test-failures.log; then \

@@ -38,9 +38,9 @@ test.describe('Step Pending States', () => {
     const initialSlidesClass = await slidesStep.getAttribute('class');
     console.log('Initial slides step classes:', initialSlidesClass);
     
-    // Should be greyed out for pending state (check for any grey background)
-    const slidesHasGreyBg = initialSlidesClass?.includes('bg-gray-100') || initialSlidesClass?.includes('bg-gray-300');
-    console.log('Slides step has grey background (pending):', slidesHasGreyBg);
+    // Should be greyed out for pending state (check for muted background)
+    const slidesHasGreyBg = initialSlidesClass?.includes('bg-muted');
+    console.log('Slides step has muted background (pending):', slidesHasGreyBg);
     expect(slidesHasGreyBg).toBe(true);
 
     // Start AI research first
@@ -133,9 +133,9 @@ test.describe('Step Pending States', () => {
 
     // Images step should be available (blue) since slides is completed
     const imagesIsAvailable = imagesClass?.includes('bg-blue-500');
-    // Compiled and PPTX should be pending (grey)
-    const compiledIsGrey = compiledClass?.includes('bg-gray-100') || compiledClass?.includes('bg-gray-200') || compiledClass?.includes('bg-gray-300');
-    const pptxIsGrey = pptxClass?.includes('bg-gray-100') || pptxClass?.includes('bg-gray-200') || pptxClass?.includes('bg-gray-300');
+    // Compiled and PPTX should be pending (muted)
+    const compiledIsGrey = compiledClass?.includes('bg-muted');
+    const pptxIsGrey = pptxClass?.includes('bg-muted');
 
     console.log('Images step is available (blue):', imagesIsAvailable);
     console.log('Compiled step is grey (pending):', compiledIsGrey);

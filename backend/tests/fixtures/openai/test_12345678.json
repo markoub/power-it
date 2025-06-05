@@ -1,9 +1,0 @@
-{
-  "_metadata": {
-    "api": "openai",
-    "recorded_at": "2025-06-01T14:36:55.852322",
-    "version": "1.0"
-  },
-  "b64_json": "testdata",
-  "prompt": "test"
-}

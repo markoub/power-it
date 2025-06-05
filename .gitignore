@@ -94,4 +94,8 @@ next-env.d.ts
 .vercel
 
 # Ignore all .DS_Store files recursively
-**/.DS_Store 
+**/.DS_Store
+
+# Test fixtures that regenerate with timestamps
+backend/tests/fixtures/gemini/test_12345678.json
+backend/tests/fixtures/openai/test_12345678.json 

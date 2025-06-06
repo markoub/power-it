@@ -1,20 +1,60 @@
+/**
+ * Delete Presentation E2E Tests
+ * 
+ * These tests verify the deletion functionality for presentations.
+ * They use pre-seeded test data from the test database.
+ * 
+ * IMPORTANT: These tests require proper setup:
+ * 1. Start the test backend: cd backend && POWERIT_ENV=test ./venv/bin/python run_api.py
+ * 2. Start the test frontend: cd frontend && NEXT_PUBLIC_API_URL=http://localhost:8001 npm run dev -- -p 3001
+ * 3. Run tests: PLAYWRIGHT_BASE_URL=http://localhost:3001 npm test e2e/delete-presentation.spec.ts
+ * 
+ * The database is reset before each test to ensure a clean state.
+ * 
+ * Test data used:
+ * - Fresh Test Presentation 1 (ID: 1) - for single deletion test
+ * - Fresh Test Presentation 3 (ID: 3) - for multiple deletion test
+ * - Fresh Test Presentation 4 (ID: 4) - for multiple deletion test
+ */
 import { test, expect } from '@playwright/test';
-import { createPresentation, goToPresentationsPage } from './utils';
+import { goToPresentationsPage, resetTestDatabase } from './utils';
+import { getTestPresentation, TEST_CATEGORIES, getApiUrl } from '../test-config';
 
 test.describe('Delete Presentation', () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    // Reset the test database to ensure all test presentations are available
+    const apiUrl = getApiUrl();
+    try {
+      const response = await page.request.post(`${apiUrl}/test/reset-database`);
+      if (!response.ok()) {
+        console.warn('Failed to reset test database:', response.status());
+      }
+    } catch (error) {
+      console.warn('Error resetting test database:', error);
+    }
+  });
   test('should delete a presentation from the list', async ({ page }) => {
-    const name = `Delete Test ${Date.now()}`;
-    const topic = 'Test Topic';
-
-    const id = await createPresentation(page, name, topic);
+    // Use Fresh Test Presentation 1 for single deletion
+    const testPresentation = getTestPresentation(TEST_CATEGORIES.FRESH, 0); // index 0 = Fresh Test Presentation 1
+    if (!testPresentation) {
+      throw new Error('Test presentation not found');
+    }
 
     await goToPresentationsPage(page);
 
-    // All presentations should be visible on the homepage now
-    const card = page.getByTestId(`presentation-card-${id}`);
+    // Navigate to page 2 where presentations 1-2 are located (since there are 12 presentations and they're shown newest first)
+    const nextPageButton = page.getByLabel('Go to next page');
+    await nextPageButton.click();
+    
+    // Wait for the page to update
+    await page.waitForLoadState('networkidle');
+
+    // Find the presentation card using data-testid
+    const card = page.getByTestId(`presentation-card-${testPresentation.id}`);
     await expect(card).toBeVisible();
 
-    // Click delete button
+    // Click delete button using data-testid
     await card.getByTestId('delete-presentation-button').click();
     
     // Wait for the AlertDialog to appear
@@ -27,32 +67,43 @@ test.describe('Delete Presentation', () => {
     
     // Click the Delete button in the dialog and wait for the API response
     const [deleteResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}`) && resp.request().method() === 'DELETE'),
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${testPresentation.id}`) && resp.request().method() === 'DELETE'),
       deleteDialog.getByRole('button', { name: 'Delete' }).click()
     ]);
 
+    // Verify the card is no longer visible
     await expect(card).not.toBeVisible();
   });
 
   test('should delete multiple presentations at once', async ({ page }) => {
-    const id1 = await createPresentation(page, `Multi Delete 1 ${Date.now()}`, 'Topic A');
-    const id2 = await createPresentation(page, `Multi Delete 2 ${Date.now()}`, 'Topic B');
+    // Use Fresh Test Presentation 3 and 4 for multiple deletion (not 1 which was deleted in previous test)
+    const testPresentation1 = getTestPresentation(TEST_CATEGORIES.FRESH, 2); // index 2 = Fresh Test Presentation 3
+    const testPresentation2 = getTestPresentation(TEST_CATEGORIES.FRESH, 3); // index 3 = Fresh Test Presentation 4
+    
+    if (!testPresentation1 || !testPresentation2) {
+      throw new Error('Test presentations not found');
+    }
 
     await goToPresentationsPage(page);
 
-    // All presentations should be visible and view controls should be available
+    // After first test deleted presentation 1, presentations 3-4 are now on page 1
+    // So no need to navigate to page 2
+
+    // Switch to list view to enable multiple selection
     await expect(page.getByTestId('view-list-button')).toBeVisible();
     await page.getByTestId('view-list-button').click();
 
-    const row1 = page.getByTestId(`presentation-row-${id1}`);
-    const row2 = page.getByTestId(`presentation-row-${id2}`);
+    // Find presentation rows using data-testid
+    const row1 = page.getByTestId(`presentation-row-${testPresentation1.id}`);
+    const row2 = page.getByTestId(`presentation-row-${testPresentation2.id}`);
     await expect(row1).toBeVisible();
     await expect(row2).toBeVisible();
 
+    // Select both presentations using data-testid
     await row1.getByTestId('select-presentation-checkbox').check();
     await row2.getByTestId('select-presentation-checkbox').check();
 
-    // Click delete selected button
+    // Click delete selected button using data-testid
     await page.getByTestId('delete-selected-button').click();
     
     // Wait for the AlertDialog to appear
@@ -69,6 +120,7 @@ test.describe('Delete Presentation', () => {
       deleteDialog.getByRole('button', { name: 'Delete 2 Presentations' }).click()
     ]);
 
+    // Verify both rows are no longer visible
     await expect(row1).not.toBeVisible();
     await expect(row2).not.toBeVisible();
   });

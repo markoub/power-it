@@ -28,7 +28,7 @@ from utils import (
 )
 
 # Background task functions
-async def execute_research_task(presentation_id: int, topic: str, author: str = None):
+async def execute_research_task(presentation_id: int, topic: str, author: str = None, clarified_topic: str = None):
     """Execute research task for a presentation"""
     # Create a new session for the background task
     async with SessionLocal() as db:
@@ -50,8 +50,8 @@ async def execute_research_task(presentation_id: int, topic: str, author: str = 
                 if presentation and presentation.author:
                     author = presentation.author
             
-            # Run research tool
-            research_data = await research_topic(topic)
+            # Run research tool with optional clarified topic
+            research_data = await research_topic(topic, clarified_query=clarified_topic)
             
             # Update step with result
             await update_step_status(
@@ -237,6 +237,22 @@ async def execute_images_task(presentation_id: int, image_provider: str = None):
             await db.commit()
             await db.close()
 
+            # Handle missing title field in slides_data (legacy compatibility)
+            if "title" not in slides_data:
+                # Extract title from the first slide's title, or use presentation name as fallback
+                presentation_title = "Presentation"
+                if "slides" in slides_data and len(slides_data["slides"]) > 0:
+                    first_slide = slides_data["slides"][0]
+                    if isinstance(first_slide, dict) and "fields" in first_slide:
+                        presentation_title = first_slide["fields"].get("title", "Presentation")
+                    elif isinstance(first_slide, dict) and "title" in first_slide:
+                        presentation_title = first_slide["title"]
+                slides_data["title"] = presentation_title
+                
+            # Handle missing author field in slides_data (legacy compatibility)
+            if "author" not in slides_data:
+                slides_data["author"] = None
+                
             slides_obj = SlidePresentation(**slides_data)
             accumulated_images: List[Dict[str, Any]] = []
 

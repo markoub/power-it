@@ -1,0 +1,9 @@
+{
+  "ambiguous_topic": "API integration",
+  "ambiguous_result": {
+    "needs_clarification": true,
+    "initial_message": "I see you're interested in APIs. To help me research better, could you tell me more about what specific aspect of APIs you'd like to explore? Are you looking for REST APIs, GraphQL, a specific service's API, or API design in general?"
+  },
+  "clear_topic": "Python programming tutorial",
+  "clear_result": null
+}

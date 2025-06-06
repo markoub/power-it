@@ -1,7 +1,10 @@
 import type { Presentation, PaginatedPresentations } from "./types";
 
-// Always use the direct backend URL to avoid redirect issues
-const API_URL = "http://localhost:8000";
+// Use environment variable for API URL, fallback to production backend
+// When running tests, NEXT_PUBLIC_API_URL should be set to http://localhost:8001
+const API_URL = typeof window !== 'undefined' 
+  ? (window.location.port === '3001' ? 'http://localhost:8001' : 'http://localhost:8000')
+  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
 
 // Helper function to ensure URL is properly formatted
 const formatImageUrl = (url: string): string => {
@@ -462,6 +465,38 @@ export const api = {
     return response.ok;
   },
 
+  async processWizardRequest(
+    presentationId: number | string,
+    query: string,
+    step: string,
+    context: any
+  ): Promise<any> {
+    try {
+      const response = await fetch(
+        `${API_URL}/presentations/${presentationId}/wizard`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            step: step.toLowerCase(),
+            context
+          }),
+          mode: "cors",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Wizard request failed: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error("Error processing wizard request:", error);
+      throw error;
+    }
+  },
+
   async runPresentationStep(id: string, step: string, params?: { 
     topic?: string; 
     research_content?: string; 
@@ -640,5 +675,30 @@ export const api = {
       throw new Error('Failed to fetch voices');
     }
     return response.json();
+  },
+
+  async checkTopicClarification(topic: string): Promise<{
+    needs_clarification: boolean;
+    initial_message: string;
+  }> {
+    try {
+      const response = await fetch(`${API_URL}/research/clarification/check`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ topic }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to check clarification: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error checking clarification:", error);
+      // Return no clarification needed on error
+      return { needs_clarification: false, initial_message: "" };
+    }
   },
 };

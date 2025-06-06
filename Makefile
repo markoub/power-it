@@ -8,6 +8,12 @@ BACKEND_DIR := backend
 FRONTEND_DIR := frontend
 E2E_DIR := $(TESTING_DIR)/e2e
 
+# Test environment variables
+TEST_BACKEND_PORT := 8001
+TEST_FRONTEND_PORT := 3001
+PROD_BACKEND_PORT := 8000
+PROD_FRONTEND_PORT := 3000
+
 # Color outputs (using printf for better compatibility)
 define print_info
 	@printf "\033[1;32m%s\033[0m\n" "$(1)"
@@ -24,8 +30,9 @@ endef
 .PHONY: help setup run clean
 .PHONY: test-backend test-backend-online test-backend-offline test-backend-unit test-backend-integration
 .PHONY: test-frontend test-e2e test-e2e-headed test-e2e-debug test-e2e-api test-e2e-specific test-e2e-list
+.PHONY: test-e2e-preseeded test-e2e-preseeded-headed test-e2e-preseeded-debug test-e2e-preseeded-specific
 .PHONY: test-all test-all-online test-all-offline test-all-failures
-.PHONY: install-deps install-browsers dev
+.PHONY: install-deps install-browsers dev reset-test-db
 
 # Default target when just running `make`
 help:
@@ -53,6 +60,13 @@ help:
 	@printf "  \033[1;33mmake test-e2e-api\033[0m        - Run API documentation tests\n"
 	@printf "  \033[1;33mmake test-e2e-specific\033[0m test=file-name - Run specific E2E test\n"
 	@printf "  \033[1;33mmake test-e2e-list\033[0m       - List all available E2E tests\n"
+	@printf "\n"
+	@printf "\033[1;32mTesting - E2E with Preseeded Database:\033[0m\n"
+	@printf "  \033[1;33mmake test-e2e-preseeded\033[0m   - Run E2E tests with preseeded test database (ports 3001/8001)\n"
+	@printf "  \033[1;33mmake test-e2e-preseeded-headed\033[0m - Run with visible browser\n"
+	@printf "  \033[1;33mmake test-e2e-preseeded-debug\033[0m  - Run with debugging enabled\n"
+	@printf "  \033[1;33mmake test-e2e-preseeded-specific\033[0m test=file - Run specific test with preseeded db\n"
+	@printf "  \033[1;33mmake reset-test-db\033[0m        - Reset the test database to initial seeded state\n"
 	@printf "\n"
 	@printf "\033[1;32mTesting - All:\033[0m\n"
 	@printf "  \033[1;33mmake test-all\033[0m            - Run all tests (backend + frontend + e2e)\n"
@@ -185,6 +199,44 @@ test-e2e-specific:
 test-e2e-list:
 	$(call print_info,Available E2E tests:)
 	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort
+
+# ==========================================
+# E2E Testing with Preseeded Database
+# ==========================================
+
+# Run E2E tests with preseeded test database
+test-e2e-preseeded:
+	$(call print_info,Running E2E tests with preseeded database on ports $(TEST_FRONTEND_PORT)/$(TEST_BACKEND_PORT)...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh
+	$(call print_info,E2E preseeded tests complete.)
+
+# Run E2E tests with preseeded database and visible browser
+test-e2e-preseeded-headed:
+	$(call print_info,Running E2E tests with preseeded database (headed)...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed
+	$(call print_info,E2E preseeded headed tests complete.)
+
+# Run E2E tests with preseeded database and debugging enabled
+test-e2e-preseeded-debug:
+	$(call print_info,Running E2E tests with preseeded database (debug mode)...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed --debug
+	$(call print_info,E2E preseeded debug tests complete.)
+
+# Run specific E2E test with preseeded database
+test-e2e-preseeded-specific:
+	@if [ -z "$(test)" ]; then \
+		$(call print_warn,Error: No test specified. Usage: make test-e2e-preseeded-specific test=test-name); \
+		exit 1; \
+	fi
+	$(call print_info,Running E2E test with preseeded database: $(test)...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/$(test).spec.ts
+	$(call print_info,E2E preseeded test complete.)
+
+# Reset the test database to initial seeded state
+reset-test-db:
+	$(call print_info,Resetting test database to initial seeded state...)
+	@cd $(BACKEND_DIR) && POWERIT_ENV=test ./venv/bin/python reset_test_db.py
+	$(call print_info,Test database reset complete.)
 
 # ==========================================
 # Combined Testing

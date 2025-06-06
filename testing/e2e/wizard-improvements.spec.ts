@@ -183,8 +183,11 @@ test.describe('Enhanced Wizard Functionality', () => {
     await wizardInput.fill('Add bullet points about key benefits');
     await sendButton.click();
     
+    // Wait for wizard response first
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
+    
     // Wait for new suggestion
-    const newSuggestionBox = page.locator('text=Suggested Changes');
+    const newSuggestionBox = page.locator('[data-testid="wizard-suggestion"]');
     await expect(newSuggestionBox).toBeVisible({ timeout: 15000 });
     
     // Click dismiss button
@@ -219,16 +222,13 @@ test.describe('Enhanced Wizard Functionality', () => {
     await wizardInput.fill(longMessage);
     await sendButton.click();
     
-    // Wait for response or error
-    await page.waitForSelector('[data-testid="wizard-message-assistant"], [data-testid*="error"], .text-red-500', { timeout: 10000 });
+    // Wait for response - wizard should handle long messages gracefully
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 15000 });
     
-    // Check if error handling works (error message or graceful degradation)
-    const errorIndicator = page.locator('text=error, text=Error, [data-testid*="error"], .text-red-500');
-    if (await errorIndicator.count() > 0) {
-      console.log('✅ Error handling working');
-    } else {
-      console.log('✅ Long message handled gracefully');
-    }
+    // Check if the wizard responded appropriately
+    const lastAssistantMessage = page.locator('[data-testid="wizard-message-assistant"]').last();
+    await expect(lastAssistantMessage).toBeVisible();
+    console.log('✅ Long message handled gracefully');
 
     // 9. Test auto-scroll functionality
     console.log('📜 Testing auto-scroll...');

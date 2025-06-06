@@ -1,4 +1,5 @@
 import { Page, expect } from '@playwright/test';
+import { getApiUrl as getConfigApiUrl, TEST_CONFIG, getTestPresentation, TestPresentation } from '../test-config';
 
 /**
  * Get timeout value based on offline mode - keep minimal for safety
@@ -24,7 +25,9 @@ export async function waitForNetworkIdle(page: Page, timeout = 3000) {
  * Navigate to the presentations page
  */
 export async function goToPresentationsPage(page: Page) {
-  await page.goto('http://localhost:3000');
+  // Use the base URL from environment or default to test port
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+  await page.goto(baseUrl);
   
   // Wait for the presentations container to be visible
   await expect(page.getByTestId('presentations-container')).toBeVisible();
@@ -38,14 +41,38 @@ export async function createPresentation(page: Page, name: string, topic: string
   const uniqueName = `${name} ${Date.now()}`;
   console.log(`Creating presentation: ${uniqueName} with topic: ${topic}`);
   
-  // Navigate directly to the create page
-  await page.goto('http://localhost:3000/create');
+  // Navigate directly to the create page using baseURL
+  await page.goto('/create');
   
-  // Wait for page to load completely
+  // Wait for page to load completely with multiple strategies
+  await page.waitForLoadState('domcontentloaded');
   await page.waitForLoadState('networkidle');
   
-  // Wait for the create form to be visible with a longer timeout
-  await expect(page.getByTestId('create-presentation-form')).toBeVisible({ timeout: 10000 });
+  // Try multiple selectors to ensure page has loaded
+  try {
+    // First try to wait for the page wrapper
+    await page.waitForSelector('[data-testid="create-page"]', { state: 'visible', timeout: 5000 });
+  } catch (e) {
+    // If that fails, try waiting for any visible element
+    await page.waitForSelector('body', { state: 'visible', timeout: 5000 });
+  }
+  
+  // Add a small delay to ensure React has hydrated
+  await page.waitForTimeout(1000);
+  
+  // Now wait for the form to be visible
+  const formLocator = page.getByTestId('create-presentation-form');
+  const formCount = await formLocator.count();
+  
+  if (formCount === 0) {
+    // If form not found, log current page content for debugging
+    const pageContent = await page.content();
+    console.error('Form not found. Page URL:', page.url());
+    console.error('Page title:', await page.title());
+    throw new Error('Create form not found on page');
+  }
+  
+  await expect(formLocator).toBeVisible({ timeout: 10000 });
   
   // Fill out the basic form (only name and author required)
   await page.getByTestId('presentation-title-input').fill(uniqueName);
@@ -557,8 +584,15 @@ export async function verifyStepDependencies(page: Page): Promise<boolean> {
  * Get the base API URL based on environment
  */
 export function getApiUrl(): string {
-  // Default to localhost API endpoint
-  return 'http://localhost:8000';
+  // When running tests with the test runner, PLAYWRIGHT_BASE_URL will be set to the test frontend
+  // The test frontend will be configured to use the test backend
+  // This is just for direct API calls from tests (if any)
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
+  if (baseUrl && baseUrl.includes(':3001')) {
+    // We're using the test frontend, so use test backend
+    return TEST_CONFIG.TEST_API_BASE_URL;
+  }
+  return TEST_CONFIG.PROD_API_BASE_URL;
 }
 
 /**
@@ -567,7 +601,8 @@ export function getApiUrl(): string {
  */
 export async function login(page: Page): Promise<void> {
   // Navigate to the home page
-  await page.goto('http://localhost:3000');
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+  await page.goto(baseUrl);
   
   // No login needed for now
   return;
@@ -577,7 +612,8 @@ export async function login(page: Page): Promise<void> {
  * Navigate to the edit page for a specific presentation
  */
 export async function navigateToEditPage(page: Page, presentationId: number): Promise<void> {
-  await page.goto(`http://localhost:3000/edit/${presentationId}`);
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+  await page.goto(`${baseUrl}/edit/${presentationId}`);
   
   // Wait for the edit page to load by checking for the save button or workflow steps
   await expect(page.locator('[data-testid="save-button"]')).toBeVisible({ timeout: 15000 });
@@ -631,4 +667,75 @@ export async function waitForResearchCompletion(page: Page, timeout: number = 60
   
   // Also wait for the research step to be marked as completed
   await waitForStepCompletion(page, 'research', timeout);
+}
+
+/**
+ * Navigate to a pre-seeded test presentation by category
+ */
+export async function navigateToTestPresentation(page: Page, category: string, index: number = 0): Promise<TestPresentation> {
+  const presentation = getTestPresentation(category, index);
+  if (!presentation) {
+    throw new Error(`No test presentation found for category: ${category}, index: ${index}`);
+  }
+  
+  console.log(`🔗 Navigating to test presentation: ${presentation.name} (ID: ${presentation.id})`);
+  
+  // Get the base URL from environment or use default
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+  
+  // Navigate to the edit page for this presentation
+  await page.goto(`${baseUrl}/edit/${presentation.id}`);
+  
+  // Wait for the edit page to load by checking for workflow steps
+  await expect(page.locator('[data-testid="step-nav-research"]')).toBeVisible({ timeout: 15000 });
+  
+  return presentation;
+}
+
+/**
+ * Verify that a presentation has the expected step statuses
+ */
+export async function verifyPresentationSteps(page: Page, presentation: TestPresentation): Promise<void> {
+  console.log(`🔍 Verifying steps for presentation: ${presentation.name}`);
+  
+  // Check completed steps
+  for (const stepType of presentation.completedSteps) {
+    const status = await getStepStatus(page, stepType as StepType);
+    if (status !== 'completed') {
+      console.warn(`⚠️ Expected step ${stepType} to be completed, but status is: ${status}`);
+    }
+  }
+  
+  // Check that next step is available
+  if (presentation.pendingSteps.length > 0) {
+    const nextStep = presentation.pendingSteps[0];
+    const isEnabled = await isStepEnabled(page, nextStep as StepType);
+    if (!isEnabled) {
+      console.warn(`⚠️ Expected next step ${nextStep} to be enabled`);
+    }
+  }
+}
+
+/**
+ * Reset test database to initial state (call this before test suites)
+ */
+export async function resetTestDatabase(): Promise<void> {
+  console.log('🔄 Resetting test database...');
+  
+  try {
+    // Make a request to reset the database
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}/test/reset-database`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Reset failed: ${response.status} ${response.statusText}`);
+    }
+    
+    console.log('✅ Test database reset successfully');
+  } catch (error) {
+    console.error('❌ Failed to reset test database:', error);
+    throw error;
+  }
 }

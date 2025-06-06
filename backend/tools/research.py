@@ -40,13 +40,84 @@ RESEARCH_SCHEMA = {
     "required": ["content", "links"]
 }
 
-async def research_topic(query: str, mode: str = "ai") -> ResearchData:
+# Schema for clarification detection
+CLARIFICATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "needs_clarification": {
+            "type": "boolean",
+            "description": "Whether the topic needs clarification"
+        },
+        "initial_message": {
+            "type": "string",
+            "description": "The initial conversational message to ask the user for clarification"
+        }
+    },
+    "required": ["needs_clarification", "initial_message"]
+}
+
+async def check_clarifications(query: str) -> Optional[Dict[str, Any]]:
+    """
+    Check if a research topic needs clarification.
+    
+    Args:
+        query: Research topic to check
+        
+    Returns:
+        Dictionary with clarification questions if needed, None otherwise
+    """
+    if OFFLINE_MODE:
+        # In offline mode, simulate clarification for ambiguous topics to match online behavior
+        ambiguous_terms = {
+            "ADK": "I noticed you mentioned 'ADK' in your topic. Could you help me understand which ADK you're referring to? For example, are you interested in Android Development Kit, Agent Development Kit, or something else?",
+            "SDK": "You mentioned SDK in your topic. Which SDK are you interested in learning about? For instance, are you looking for mobile SDKs (iOS/Android), cloud service SDKs (AWS/Azure), or a specific programming language SDK?",
+            "API": "I see you're interested in APIs. To help me research better, could you tell me more about what specific aspect of APIs you'd like to explore? Are you looking for REST APIs, GraphQL, a specific service's API, or API design in general?",
+            "ML": "I notice 'ML' in your topic. Are you referring to Machine Learning, or perhaps something else? And if it's Machine Learning, what specific aspect interests you?",
+            "AI": "Great topic! When you say 'AI', are you interested in a specific area like generative AI, computer vision, natural language processing, or AI in a particular industry?",
+            "A2A": "I see 'A2A' in your topic. Could you clarify what this refers to? It could mean Application-to-Application integration, Account-to-Account transfers, or something else entirely."
+        }
+        
+        # Check if query contains ambiguous terms
+        for term, message in ambiguous_terms.items():
+            if term in query.upper():
+                return {
+                    "needs_clarification": True,
+                    "initial_message": message
+                }
+        return None
+    
+    # Configure model for clarification detection
+    clarification_config = RESEARCH_CONFIG.copy()
+    clarification_config["response_schema"] = CLARIFICATION_SCHEMA
+    
+    model = genai.GenerativeModel(
+        model_name=RESEARCH_MODEL,
+        generation_config=clarification_config
+    )
+    
+    # Load clarification prompt
+    prompt_template = await get_prompt("research_clarification")
+    prompt = prompt_template.format(query=query)
+    
+    try:
+        response = model.generate_content(prompt)
+        parsed_data = json.loads(response.text)
+        
+        if parsed_data.get("needs_clarification", False) and parsed_data.get("initial_message"):
+            return parsed_data
+        return None
+    except Exception as e:
+        logging.error(f"Error checking clarifications: {e}")
+        return None
+
+async def research_topic(query: str, mode: str = "ai", clarified_query: Optional[str] = None) -> ResearchData:
     """
     Research a topic for a presentation.
     
     Args:
         query: Research topic or presentation title
         mode: Research mode ('ai' or 'manual')
+        clarified_query: Optional clarified version of the query after disambiguation
         
     Returns:
         ResearchData object containing research results
@@ -80,7 +151,9 @@ async def research_topic(query: str, mode: str = "ai") -> ResearchData:
     
     # Load the prompt template from the database
     prompt_template = await get_prompt("research")
-    prompt = prompt_template.format(query=query)
+    # Use clarified query if provided, otherwise use original query
+    research_query = clarified_query if clarified_query else query
+    prompt = prompt_template.format(query=research_query)
     
     # Get response from Gemini with structured output
     try:

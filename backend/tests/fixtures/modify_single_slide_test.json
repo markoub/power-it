@@ -1,0 +1,20 @@
+{
+  "prompt": "Make the content more engaging and add statistics",
+  "slide_index": 1,
+  "response": {
+    "modified_slide": {
+      "type": "content",
+      "fields": {
+        "title": "Modified: Introduction",
+        "content": [
+          "AI is revolutionizing healthcare",
+          "Machine learning enables early diagnosis",
+          "Deep learning analyzes medical images",
+          "Additional offline content"
+        ],
+        "notes": "Introduction to AI in healthcare"
+      }
+    },
+    "slide_index": 1
+  }
+}

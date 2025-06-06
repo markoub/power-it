@@ -8,6 +8,7 @@ from .base_wizard import BaseWizard, OFFLINE_MODE
 from utils.gemini import extract_json_from_text
 from models import ResearchData
 from prompts import get_prompt
+from tools.research import check_clarifications
 
 
 class ResearchWizard(BaseWizard):
@@ -23,12 +24,14 @@ class ResearchWizard(BaseWizard):
             "can_add_content": True,
             "can_answer_questions": True,
             "can_suggest_improvements": True,
+            "can_clarify": True,
             "supported_actions": [
                 "refine_research",
                 "add_information", 
                 "answer_questions",
                 "suggest_topics",
-                "improve_quality"
+                "improve_quality",
+                "clarify_ambiguities"
             ]
         }
     
@@ -174,6 +177,19 @@ class ResearchWizard(BaseWizard):
                 "suggestions": None,
                 "capabilities": self.get_capabilities()
             }
+    
+    async def check_topic_clarifications(self, topic: str) -> Optional[Dict[str, Any]]:
+        """Check if a topic needs clarification before research."""
+        
+        # Use the research tool's clarification check (works in both online and offline modes)
+        result = await check_clarifications(topic)
+        
+        # If we got a result with needs_clarification=True, return it
+        if result and result.get("needs_clarification"):
+            return result
+        
+        # Otherwise return None (no clarification needed)
+        return None
     
     def _create_offline_response(self, prompt: str, presentation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create realistic offline responses for testing."""

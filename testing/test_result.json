@@ -1,0 +1,262 @@
+
+> testing@1.0.0 test
+> playwright test --grep should show clarification dialog for ambiguous topics --timeout 60000 --reporter json
+
+🔧 E2E Global Setup
+⚙️  Environment Configuration:
+   • POWERIT_OFFLINE: not set
+   • POWERIT_OFFLINE_E2E: not set (defaults to true)
+   • Effective test mode: OFFLINE
+⚡ Tests configured for OFFLINE mode
+   • Faster execution using mock responses
+   • No external API calls
+✅ Global setup completed
+
+{
+  "config": {
+    "configFile": "/Users/m.milosevic/projects/powerit/testing/playwright.config.ts",
+    "rootDir": "/Users/m.milosevic/projects/powerit/testing/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/m.milosevic/projects/powerit/testing/e2e/global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 600000,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/m.milosevic/projects/powerit/testing/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/m.milosevic/projects/powerit/testing/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.52.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "research-clarification.spec.ts",
+      "file": "research-clarification.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Research Clarification",
+          "file": "research-clarification.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should show clarification dialog for ambiguous topics",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 12700,
+                      "error": {
+                        "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n",
+                        "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n\n    at /Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts:20:46",
+                        "location": {
+                          "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                          "column": 46,
+                          "line": 20
+                        },
+                        "snippet": "  18 |     \n  19 |     // Verify chat shows clarification message\n> 20 |     await expect(page.locator('text=\"ADK\"')).toBeVisible();\n     |                                              ^\n  21 |     \n  22 |     // Type clarification in the chat\n  23 |     await page.fill('input[placeholder=\"Type your clarification...\"]', 'I mean Android Development Kit for hardware accessories');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                            "column": 46,
+                            "line": 20
+                          },
+                          "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n\n\n  18 |     \n  19 |     // Verify chat shows clarification message\n> 20 |     await expect(page.locator('text=\"ADK\"')).toBeVisible();\n     |                                              ^\n  21 |     \n  22 |     // Type clarification in the chat\n  23 |     await page.fill('input[placeholder=\"Type your clarification...\"]', 'I mean Android Development Kit for hardware accessories');\n    at /Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts:20:46"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Creating presentation: Test ADK 1749145921955 1749145921955 with topic: Google ADK\n"
+                        },
+                        {
+                          "text": "Method selection is visible, proceeding with AI research selection...\n"
+                        },
+                        {
+                          "text": "✅ Successfully set up AI research interface\n"
+                        },
+                        {
+                          "text": "✅ Created presentation with ID: 212\n"
+                        },
+                        {
+                          "text": "✅ Created presentation with ID: 212\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-05T17:52:01.815Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium/video.webm"
+                        },
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                        "column": 46,
+                        "line": 20
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10875,
+                      "error": {
+                        "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n",
+                        "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n\n    at /Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts:20:46",
+                        "location": {
+                          "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                          "column": 46,
+                          "line": 20
+                        },
+                        "snippet": "  18 |     \n  19 |     // Verify chat shows clarification message\n> 20 |     await expect(page.locator('text=\"ADK\"')).toBeVisible();\n     |                                              ^\n  21 |     \n  22 |     // Type clarification in the chat\n  23 |     await page.fill('input[placeholder=\"Type your clarification...\"]', 'I mean Android Development Kit for hardware accessories');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                            "column": 46,
+                            "line": 20
+                          },
+                          "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: locator('text=\"ADK\"')\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - expect.toBeVisible with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=\"ADK\"')\u001b[22m\n\n\n  18 |     \n  19 |     // Verify chat shows clarification message\n> 20 |     await expect(page.locator('text=\"ADK\"')).toBeVisible();\n     |                                              ^\n  21 |     \n  22 |     // Type clarification in the chat\n  23 |     await page.fill('input[placeholder=\"Type your clarification...\"]', 'I mean Android Development Kit for hardware accessories');\n    at /Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts:20:46"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "Creating presentation: Test ADK 1749145935168 1749145935168 with topic: Google ADK\n"
+                        },
+                        {
+                          "text": "Method selection is visible, proceeding with AI research selection...\n"
+                        },
+                        {
+                          "text": "✅ Successfully set up AI research interface\n"
+                        },
+                        {
+                          "text": "✅ Created presentation with ID: 213\n"
+                        },
+                        {
+                          "text": "✅ Created presentation with ID: 213\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-06-05T17:52:15.019Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/m.milosevic/projects/powerit/testing/test-results/research-clarification-Res-deab7-dialog-for-ambiguous-topics-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/m.milosevic/projects/powerit/testing/e2e/research-clarification.spec.ts",
+                        "column": 46,
+                        "line": 20
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "545d51dde06d07c136b2-4f9e435bd04345546770",
+              "file": "research-clarification.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "message": "\u001b[31mTesting stopped early after 1 maximum allowed failures.\u001b[39m"
+    }
+  ],
+  "stats": {
+    "startTime": "2025-06-05T17:52:01.356Z",
+    "duration": 24789.139,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

@@ -16,7 +16,7 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 1,
+  retries: 0, // No retries - fail fast
   /* Opt out of parallel tests on CI. */
   workers: 1,
   maxFailures: 1,
@@ -29,7 +29,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -40,11 +40,11 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
     
-    /* Navigation timeout - longer for both modes to handle slow responses */
-    navigationTimeout: process.env.POWERIT_OFFLINE_E2E !== 'false' ? 15000 : 30000,
+    /* Navigation timeout - FAIL FAST */
+    navigationTimeout: 5000, // 5 seconds max
     
-    /* Action timeout - reasonable for both modes */
-    actionTimeout: process.env.POWERIT_OFFLINE_E2E !== 'false' ? 10000 : 20000,
+    /* Action timeout - FAIL FAST */
+    actionTimeout: 3000, // 3 seconds max
   },
 
   /* Configure projects for major browsers */

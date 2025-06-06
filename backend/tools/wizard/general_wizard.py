@@ -54,6 +54,7 @@ class GeneralWizard(BaseWizard):
                 slides_status=presentation_state['slides_status'],
                 images_status=presentation_state['images_status'],
                 pptx_status=presentation_state['pptx_status'],
+                is_new_presentation=presentation_state['is_new_presentation'],
                 prompt=prompt
             )
             
@@ -109,9 +110,16 @@ class GeneralWizard(BaseWizard):
                 return "not_started"
             return step.get("status", "unknown")
         
-        return {
+        state = {
             "research_status": get_step_status("research"),
             "slides_status": get_step_status("slides"),
             "images_status": get_step_status("images"),
             "pptx_status": get_step_status("pptx")
-        } 
+        }
+        
+        # Add a flag to indicate if this is a new presentation
+        research_completed = get_step_status("research") == "completed"
+        manual_research_completed = get_step_status("manual_research") == "completed"
+        state["is_new_presentation"] = "true" if not research_completed and not manual_research_completed else "false"
+        
+        return state 

@@ -1,0 +1,7 @@
+{
+  "topic": "Google SDK",
+  "result": {
+    "needs_clarification": true,
+    "initial_message": "You mentioned SDK in your topic. Which SDK are you interested in learning about? For instance, are you looking for mobile SDKs (iOS/Android), cloud service SDKs (AWS/Azure), or a specific programming language SDK?"
+  }
+}

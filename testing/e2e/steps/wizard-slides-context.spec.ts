@@ -1,18 +1,40 @@
 import { test, expect } from '@playwright/test';
+import { createPresentation } from '../utils';
 
 test.describe('Wizard Slides Context and Keyboard Navigation', () => {
   
   test('wizard context should update based on slide selection', async ({ page }) => {
-    // Navigate to existing presentation with slides
-    await page.goto('/edit/1?step=slides');
+    // Create a new presentation instead of relying on existing one
+    const name = `Wizard Context Test ${Date.now()}`;
+    const topic = 'Test Topic for Wizard';
+    const id = await createPresentation(page, name, topic);
+    
+    // Complete research
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
+    
+    // Wait for research to complete
+    await page.waitForSelector('[data-testid="ai-research-content"]', { state: 'visible', timeout: 30000 });
+    
+    // Navigate to slides
+    await page.getByTestId('step-nav-slides').click();
+    await page.waitForLoadState('networkidle');
+    
+    // Generate slides if needed
+    const runSlidesButton = page.getByTestId('run-slides-button');
+    if (await runSlidesButton.count() > 0) {
+      await runSlidesButton.click();
+    }
     
     // Wait for slides to load
-    await page.waitForSelector('[data-testid="slide-thumbnail-0"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="slide-thumbnail-0"]', { timeout: 30000 });
     
     // Check wizard shows overview context initially
     const wizardHeader = page.locator('[data-testid="wizard-header"]');
     await expect(wizardHeader).toBeVisible();
-    await expect(wizardHeader).toContain('Context: All Slides');
+    await expect(wizardHeader).toContainText('All Slides');
     
     // Click on first slide
     await page.click('[data-testid="slide-thumbnail-0"]');
@@ -21,7 +43,7 @@ test.describe('Wizard Slides Context and Keyboard Navigation', () => {
     await page.waitForSelector('[data-testid="back-to-overview-button"]');
     
     // Verify wizard updated context
-    await expect(wizardHeader).toContain('Context: Single Slide');
+    await expect(wizardHeader).toContainText('Single Slide');
     await expect(page.locator('h2.gradient-text')).toBeVisible();
     
     // Verify navigation info is shown
@@ -34,11 +56,27 @@ test.describe('Wizard Slides Context and Keyboard Navigation', () => {
   });
 
   test('keyboard navigation should work in single slide view', async ({ page }) => {
-    // Navigate to existing presentation
-    await page.goto('/edit/1?step=slides');
+    // Create a new presentation
+    const name = `Keyboard Nav Test ${Date.now()}`;
+    const topic = 'Test Topic for Navigation';
+    const id = await createPresentation(page, name, topic);
+    
+    // Complete research and generate slides
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
+    await page.waitForSelector('[data-testid="ai-research-content"]', { state: 'visible', timeout: 30000 });
+    await page.getByTestId('step-nav-slides').click();
+    await page.waitForLoadState('networkidle');
+    
+    const runSlidesButton = page.getByTestId('run-slides-button');
+    if (await runSlidesButton.count() > 0) {
+      await runSlidesButton.click();
+    }
     
     // Wait for slides and click first one
-    await page.waitForSelector('[data-testid="slide-thumbnail-0"]');
+    await page.waitForSelector('[data-testid="slide-thumbnail-0"]', { timeout: 30000 });
     await page.click('[data-testid="slide-thumbnail-0"]');
     
     // Wait for single slide view
@@ -72,11 +110,27 @@ test.describe('Wizard Slides Context and Keyboard Navigation', () => {
   });
 
   test('wizard should maintain context across slide navigation', async ({ page }) => {
-    // Navigate to existing presentation
-    await page.goto('/edit/1?step=slides');
+    // Create a new presentation
+    const name = `Context Maintain Test ${Date.now()}`;
+    const topic = 'Test Topic for Context';
+    const id = await createPresentation(page, name, topic);
+    
+    // Complete research and generate slides
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
+    await page.waitForSelector('[data-testid="ai-research-content"]', { state: 'visible', timeout: 30000 });
+    await page.getByTestId('step-nav-slides').click();
+    await page.waitForLoadState('networkidle');
+    
+    const runSlidesButton = page.getByTestId('run-slides-button');
+    if (await runSlidesButton.count() > 0) {
+      await runSlidesButton.click();
+    }
     
     // Wait for slides
-    await page.waitForSelector('[data-testid="slide-thumbnail-0"]');
+    await page.waitForSelector('[data-testid="slide-thumbnail-0"]', { timeout: 30000 });
     
     // Click on second slide
     await page.click('[data-testid="slide-thumbnail-1"]');

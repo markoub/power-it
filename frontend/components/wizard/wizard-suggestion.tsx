@@ -30,26 +30,6 @@ export default function WizardSuggestion({
     if (isSingleSlide && currentSlide) {
       const suggestedSlide = suggestion.slide
       
-      // Debug logging to understand the issue
-      console.log('[DEBUG] hasChanges check:', {
-        currentSlide: {
-          title: currentSlide.title,
-          content: typeof currentSlide.content === 'string' 
-            ? currentSlide.content.substring(0, 100) + '...'
-            : Array.isArray(currentSlide.content) 
-              ? currentSlide.content.join(' ').substring(0, 100) + '...'
-              : 'No content'
-        },
-        suggestedSlide: {
-          title: suggestedSlide.title,
-          content: typeof suggestedSlide.content === 'string'
-            ? suggestedSlide.content.substring(0, 100) + '...'
-            : Array.isArray(suggestedSlide.content)
-              ? suggestedSlide.content.join(' ').substring(0, 100) + '...'
-              : 'No content'
-        }
-      })
-      
       // More robust comparison that handles formatting differences
       const titleChanged = suggestedSlide.title && suggestedSlide.title.trim() !== (currentSlide.title || '').trim()
       
@@ -63,8 +43,6 @@ export default function WizardSuggestion({
       
       const contentChanged = suggestedSlide.content && 
         normalizeContent(suggestedSlide.content) !== normalizeContent(currentSlide.content)
-      
-      console.log('[DEBUG] hasChanges result:', { titleChanged, contentChanged, hasChanges: titleChanged || contentChanged })
       
       return titleChanged || contentChanged
     }
@@ -104,15 +82,18 @@ export default function WizardSuggestion({
   }
 
   return (
-    <div className="border border-primary/20 rounded-lg p-4 bg-primary/10 dark:bg-primary/20 dark:border-primary/30" data-testid="wizard-suggestion">
+    <div className="border border-primary/30 rounded-xl p-4 bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 dark:border-primary/40 shadow-sm" data-testid="wizard-suggestion">
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium text-primary">Suggested Changes</h4>
+          <h4 className="font-semibold text-primary flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            Suggested Changes
+          </h4>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className="text-primary hover:text-primary/80 h-auto p-1"
+            className="text-primary hover:text-primary/80 hover:bg-primary/10 h-auto px-2 py-1"
             data-testid="wizard-preview-toggle"
           >
             <Eye className="h-4 w-4 mr-1" />

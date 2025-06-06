@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { waitForNetworkIdle, createPresentation } from './utils';
+import { waitForNetworkIdle, createPresentation, navigateToTestPresentation } from './utils';
 
 test.describe('Presentation Creation', () => {
 
   test('should create a new presentation with minimal info', async ({ page }) => {
     // Navigate to the create page directly instead of clicking through
-    await page.goto('http://localhost:3000/create');
+    await page.goto('/create');
     
     // Verify we're on the create page
     await expect(page.getByTestId('page-title')).toContainText('Create New Presentation');
@@ -36,26 +36,16 @@ test.describe('Presentation Creation', () => {
   });
 
   test('should show validation errors for duplicate names', async ({ page }) => {
+    // Use one of the pre-seeded presentation names to test duplicate validation
+    const duplicateName = 'Fresh Test Presentation 1'; // This exists in pre-seeded data
+    
     // Navigate directly to the create page
-    await page.goto('http://localhost:3000/create');
+    await page.goto('/create');
     
     // Verify we're on the create page
     await expect(page.getByTestId('page-title')).toContainText('Create New Presentation');
     
-    // Create a presentation with a specific name first
-    const duplicateName = `Duplicate Test ${Date.now()}`;
-    await page.getByTestId('presentation-title-input').fill(duplicateName);
-    await page.getByTestId('presentation-author-input').fill('Test Author');
-    const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/presentations') && resp.status() === 200),
-      page.getByTestId('submit-presentation-button').click()
-    ]);
-    
-    // Should redirect to edit page
-    await expect(page).toHaveURL(/\/edit\/\d+/);
-    
-    // Now go back to create page and try to create another with the same name
-    await page.goto('http://localhost:3000/create');
+    // Try to create a presentation with a name that already exists in pre-seeded data
     await page.getByTestId('presentation-title-input').fill(duplicateName);
     await page.getByTestId('presentation-author-input').fill('Test Author 2');
     await page.getByTestId('submit-presentation-button').click();
@@ -66,7 +56,7 @@ test.describe('Presentation Creation', () => {
     await expect(page.getByTestId('error-message')).toContainText('already exists');
     
     // Fix the issue by using a different name
-    const uniqueName = `${duplicateName} - Fixed`;
+    const uniqueName = `${duplicateName} - Fixed ${Date.now()}`;
     await page.getByTestId('presentation-title-input').fill(uniqueName);
     await page.getByTestId('submit-presentation-button').click();
     
@@ -93,8 +83,8 @@ test.describe('Presentation Creation', () => {
   });
 
   test('should allow selecting manual research method and entering content', async ({ page }) => {
-    // Create a presentation first
-    await page.goto('http://localhost:3000/create');
+    // Create a new presentation for manual research test to ensure clean state
+    await page.goto('/create');
     await expect(page.getByTestId('create-presentation-form')).toBeVisible();
     
     const testTitle = `Test Manual Research ${Date.now()}-${Math.random()}`;
@@ -121,5 +111,27 @@ test.describe('Presentation Creation', () => {
     
     // Should see the save research button
     await expect(page.getByTestId('save-manual-research-button')).toBeVisible();
+  });
+  
+  test('should allow selecting AI research method from pre-seeded presentation', async ({ page }) => {
+    // Use a fresh presentation that already has AI Research selected
+    const freshPresentation = await navigateToTestPresentation(page, 'fresh', 0);
+    
+    // Since fresh presentations have a topic, AI Research is automatically selected
+    await expect(page.getByTestId('ai-research-interface')).toBeVisible();
+    
+    // Verify the topic is already filled
+    const topicInput = page.getByTestId('topic-input');
+    await expect(topicInput).toHaveValue('Artificial Intelligence in Healthcare');
+    
+    // Should see the start research button
+    await expect(page.getByTestId('start-ai-research-button')).toBeVisible();
+    
+    // Can change the topic if needed
+    await topicInput.clear();
+    await topicInput.fill('Modern Architecture Trends');
+    
+    // Start research button should still be visible
+    await expect(page.getByTestId('start-ai-research-button')).toBeVisible();
   });
 }); 

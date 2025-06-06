@@ -1,5 +1,6 @@
 import type React from "react"
 import { Sparkles } from "lucide-react"
+import MarkdownRenderer from "@/components/ui/markdown-renderer"
 
 interface WizardMessageProps {
   role: "user" | "assistant"
@@ -10,21 +11,28 @@ export default function WizardMessage({ role, content }: WizardMessageProps) {
   const isAssistant = role === "assistant"
 
   return (
-    <div className={`flex gap-2 ${isAssistant ? "flex-row" : "flex-row-reverse"}`}>
+    <div className={`flex gap-3 ${isAssistant ? "flex-row" : "flex-row-reverse"}`}>
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isAssistant ? "bg-primary/20 text-primary dark:bg-primary/30" : "bg-muted text-muted-foreground"
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
+          isAssistant 
+            ? "bg-gradient-to-br from-primary/20 to-primary/30 text-primary dark:from-primary/30 dark:to-primary/40" 
+            : "bg-gradient-to-br from-muted to-muted/80 text-muted-foreground"
         }`}
       >
-        {isAssistant ? <Sparkles size={16} /> : <UserIcon size={16} />}
+        {isAssistant ? <Sparkles size={16} className="animate-pulse" /> : <UserIcon size={16} />}
       </div>
       <div
-        className={`rounded-lg p-3 max-w-[85%] ${
-          isAssistant ? "bg-primary/10 text-foreground dark:bg-primary/20" : "bg-muted text-foreground ml-auto"
+        className={`rounded-xl px-4 py-3 max-w-[85%] shadow-sm transition-all hover:shadow-md ${
+          isAssistant 
+            ? "bg-gradient-to-br from-primary/10 to-primary/5 text-foreground dark:from-primary/20 dark:to-primary/10 border border-primary/10" 
+            : "bg-gradient-to-br from-muted to-muted/60 text-foreground ml-auto border border-muted-foreground/10"
         }`}
         data-testid={`wizard-message-${role}`}
       >
-        <div className="whitespace-pre-wrap">{content}</div>
+        <MarkdownRenderer 
+          content={content} 
+          className="text-sm leading-relaxed prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-p:text-foreground prose-li:text-foreground prose-headings:text-foreground"
+        />
       </div>
     </div>
   )

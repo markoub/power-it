@@ -21,7 +21,20 @@ function contentToMarkdown(content: string | string[]): string {
   }
   
   if (typeof content === 'string') {
-    // Check if content looks like it was originally an array joined with newlines
+    // First, check if content already contains markdown formatting
+    const hasMarkdownSyntax = content.includes('**') || 
+                            content.includes('*') && !content.match(/^\*\s/) ||
+                            content.includes('##') ||
+                            content.includes('- ') ||
+                            content.match(/^\d+\.\s/m) ||
+                            content.includes('`');
+    
+    // If it has markdown syntax, return as-is for proper rendering
+    if (hasMarkdownSyntax) {
+      return content;
+    }
+    
+    // Otherwise, check if content looks like it was originally an array joined with newlines
     // If it has multiple lines without markdown formatting, convert to bullet points
     const lines = content.split('\n').filter(line => line.trim());
     

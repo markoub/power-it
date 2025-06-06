@@ -43,6 +43,7 @@ async def save_modified_presentation(
         raise HTTPException(status_code=404, detail="Slides step not found")
 
     slides_step.set_result(modified_data)
+    slides_step.status = StepStatus.COMPLETED.value
 
     compiled_step_result = await db.execute(
         select(PresentationStepModel).filter(

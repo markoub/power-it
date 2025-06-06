@@ -1,23 +1,28 @@
 import { test, expect } from '@playwright/test';
+import { createPresentation } from './utils';
 
 test.describe('Test Research Apply Fix', () => {
   test('manually test research apply functionality', async ({ page }) => {
     // Set viewport to ensure wizard is visible
     await page.setViewportSize({ width: 1400, height: 900 });
     
-    // Navigate to an existing presentation that has research
-    await page.goto('http://localhost:3000/edit/52');
+    // Create a new presentation first
+    const name = `Research Apply Test ${Date.now()}`;
+    const topic = 'AI Ethics and Privacy';
+    const id = await createPresentation(page, name, topic);
+    console.log(`✅ Created presentation with ID: ${id}`);
     
-    // Wait for page to load
+    // Complete research step
+    console.log('🔍 Running research...');
+    const [researchResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
+      page.getByTestId('start-ai-research-button').click()
+    ]);
+    console.log('✅ Research completed');
+    
+    // Wait for page to load and ensure we're on research step
     await page.waitForSelector('[data-testid="wizard-input"]', { timeout: 10000 });
-    
-    // Click on research step to navigate to it
-    const researchStep = page.locator('[data-testid="step-nav-research"]');
-    await expect(researchStep).toBeVisible();
-    await researchStep.click();
-    
-    // Wait for research step to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     
     // Check that research content is loaded
     const researchContent = page.locator('[data-testid="ai-research-content"]');
@@ -32,8 +37,8 @@ test.describe('Test Research Apply Fix', () => {
     await wizardInput.fill('Add more information about AI ethics and privacy concerns');
     await wizardInput.press('Enter');
     
-    // Wait for wizard response
-    await page.waitForTimeout(3000);
+    // Wait for wizard response - use proper selector
+    await page.waitForSelector('[data-testid="wizard-message-assistant"]:last-child', { timeout: 10000 });
     
     // Check if suggestion appeared
     const wizardSuggestion = page.locator('[data-testid="wizard-suggestion"]');
@@ -58,7 +63,8 @@ test.describe('Test Research Apply Fix', () => {
       console.log('Content changed:', initialContent !== updatedContent);
       
       // Check for toast notification
-      const toast = page.locator('text="Changes applied"').or(page.locator('text="research has been updated"'));
+      // Look for any success toast notification
+      const toast = page.locator('[role="alert"]').filter({ hasText: /applied|updated|success/i });
       const toastVisible = await toast.isVisible({ timeout: 5000 }).catch(() => false);
       console.log('Toast visible:', toastVisible);
       

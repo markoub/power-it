@@ -79,12 +79,13 @@ async def run_step(
 
     if step == PresentationStep.RESEARCH:
         topic = params.get('topic') or presentation.topic
+        clarified_topic = params.get('clarified_topic')  # Optional clarified version
         if not topic:
             raise HTTPException(status_code=400, detail="Topic is required for AI research")
         if params.get('topic'):
             presentation.topic = topic
             await db.commit()
-        background_tasks.add_task(execute_research_task, presentation_id, topic, presentation.author)
+        background_tasks.add_task(execute_research_task, presentation_id, topic, presentation.author, clarified_topic)
     elif step == PresentationStep.MANUAL_RESEARCH:
         research_content = params.get('research_content')
         if not research_content:

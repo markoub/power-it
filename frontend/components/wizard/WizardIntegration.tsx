@@ -36,10 +36,13 @@ export function WizardIntegration({
   const applyWizardChanges = useCallback(async (changes: any) => {
     if (!presentation) return;
 
+    let slidesModified = false;
+    let updatedSlides = presentation.slides;
+
     if (changes.slide && wizardContext === "single" && currentSlide) {
       // Apply changes to current slide
       const updatedSlide = { ...currentSlide, ...changes.slide };
-      const updatedSlides = presentation.slides.map((slide) =>
+      updatedSlides = presentation.slides.map((slide) =>
         slide.id === updatedSlide.id ? updatedSlide : slide
       );
 
@@ -48,11 +51,13 @@ export function WizardIntegration({
         slides: updatedSlides,
       });
       setCurrentSlide(updatedSlide);
+      slidesModified = true;
     } else if (changes.slides && wizardContext === "all") {
       // Apply changes to all slides
+      updatedSlides = changes.slides;
       setPresentation({
         ...presentation,
-        slides: changes.slides,
+        slides: updatedSlides,
       });
       
       // Update current slide if it exists in the new slides
@@ -62,6 +67,7 @@ export function WizardIntegration({
           setCurrentSlide(updatedCurrentSlide);
         }
       }
+      slidesModified = true;
     } else if (changes.research) {
       // Apply research changes
       const updatedSteps = presentation.steps?.map(s =>
@@ -81,6 +87,11 @@ export function WizardIntegration({
       return;
     } else if (changes.presentation) {
       // Apply presentation-level changes (add/remove slides, etc.)
+      if (changes.presentation.slides) {
+        updatedSlides = changes.presentation.slides;
+        slidesModified = true;
+      }
+      
       setPresentation({
         ...presentation,
         ...changes.presentation,
@@ -100,7 +111,25 @@ export function WizardIntegration({
       }
     }
 
-    await savePresentation();
+    // Save the changes to the backend
+    if (slidesModified) {
+      // Use the save_modified endpoint for slides changes
+      const slidesData = { slides: updatedSlides };
+      const success = await api.saveModifiedPresentation(String(presentation.id), slidesData);
+      
+      if (!success) {
+        toast({
+          title: "Error",
+          description: "Failed to save changes to the backend. Please try again.",
+          variant: "destructive",
+          action: <ToastAction altText="Try again">Try again</ToastAction>,
+        });
+        return;
+      }
+    } else {
+      // For non-slide changes, use the regular save
+      await savePresentation();
+    }
 
     toast({
       title: "Changes applied",

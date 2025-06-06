@@ -1,29 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { navigateToTestPresentation, waitForStepCompletion } from './utils';
 
 test.describe('Step Navigation Debug', () => {
   test.setTimeout(60000);
 
   test('check what step navigation exists', async ({ page }) => {
-    const name = `Step Nav Debug ${Date.now()}`;
-    const topic = 'Debug topic';
-
-    // Create presentation
-    await createPresentation(page, name, topic);
-    
-    // Run research quickly
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/steps/research/run') && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    
-    // Run slides quickly
-    await page.getByTestId('step-nav-slides').click();
-    await page.waitForLoadState('networkidle');
-    const [slidesResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/steps/slides/run') && resp.status() === 200),
-      page.getByTestId('run-slides-button').click()
-    ]);
+    // Use a pre-seeded presentation with slides already completed
+    const presentation = await navigateToTestPresentation(page, 'slides_complete', 0);
+    console.log(`✅ Using presentation: ${presentation.name} (ID: ${presentation.id})`);
 
     // Now check what step nav elements exist
     console.log('🔍 Checking what step navigation elements exist...');

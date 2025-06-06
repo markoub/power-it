@@ -387,3 +387,87 @@ async def update_presentation_metadata(
             status_code=500,
             content={"detail": f"Error updating presentation metadata: {str(e)}"},
         )
+
+
+@router.post("/{presentation_id}/wizard",
+           summary="Process wizard request",
+           description="Process an AI wizard request for the presentation")
+async def process_wizard_request(
+    presentation_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Process a wizard request for AI assistance with the presentation.
+    """
+    try:
+        data = await request.json()
+        query = data.get("query", "")
+        step = data.get("step", "")
+        context = data.get("context", {})
+        
+        # Get the presentation
+        result = await db.execute(
+            select(Presentation).filter(
+                (Presentation.id == presentation_id) & (Presentation.is_deleted == False)
+            )
+        )
+        presentation = result.scalar_one_or_none()
+        
+        if not presentation:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Presentation not found"},
+            )
+        
+        # Import wizard processing function
+        from tools.modify import process_wizard_request
+        
+        # Prepare presentation data
+        presentation_data = {
+            "id": presentation.id,
+            "name": presentation.name,
+            "topic": presentation.topic,
+            "author": presentation.author,
+            "steps": []
+        }
+        
+        # Get presentation steps
+        steps_result = await db.execute(
+            select(PresentationStepModel).filter(PresentationStepModel.presentation_id == presentation_id)
+        )
+        steps = steps_result.scalars().all()
+        
+        # Add step results to presentation data
+        for step_model in steps:
+            step_data = {
+                "step": step_model.step,
+                "status": step_model.status,
+                "result": step_model.get_result() if step_model.status == StepStatus.COMPLETED.value else None
+            }
+            presentation_data["steps"].append(step_data)
+        
+        # Process the wizard request
+        response = await process_wizard_request(
+            prompt=query,
+            presentation_data=presentation_data,
+            current_step=step,
+            context=context
+        )
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "response": response.get("response", ""),
+                "suggestions": response.get("changes", response.get("suggestions", None))
+            }
+        )
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error processing wizard request: {error_details}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error processing wizard request: {str(e)}"},
+        )

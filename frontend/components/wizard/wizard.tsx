@@ -36,6 +36,60 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   const [suggestion, setSuggestion] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Check if research step is completed
+  const isResearchCompleted = useMemo(() => {
+    const researchStep = presentation.steps?.find(
+      (step) => step.step === "research" || step.step === "manual_research"
+    )
+    return researchStep?.status === "completed"
+  }, [presentation.steps])
+  
+  // Suggested prompts based on context and step
+  const suggestedPrompts = useMemo(() => {
+    // Show general application guidance if research isn't completed yet
+    if (!isResearchCompleted) {
+      return [
+        "How do I start creating a presentation?",
+        "What should I enter as my presentation topic?",
+        "Explain the steps in the presentation creation process",
+        "What happens in each step of the workflow?"
+      ]
+    }
+    
+    if (step === "Research") {
+      return [
+        "Add more details about the benefits",
+        "Include recent statistics and data",
+        "Expand on the challenges section",
+        "Add more real-world examples"
+      ]
+    } else if (step === "Slides") {
+      if (context === "single" && currentSlide) {
+        return [
+          "Make this slide more concise",
+          "Add bullet points for clarity",
+          "Improve the slide title",
+          "Make it more engaging"
+        ]
+      } else {
+        return [
+          "Add a new slide about implementation",
+          "Create a summary slide",
+          "Add more visual slides",
+          "Restructure the presentation flow"
+        ]
+      }
+    } else if (step === "Illustrations") {
+      return [
+        "Suggest better image ideas",
+        "Make images more professional",
+        "Add charts and diagrams",
+        "Improve visual consistency"
+      ]
+    }
+    return []
+  }, [step, context, currentSlide, isResearchCompleted])
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -54,6 +108,11 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   useEffect(() => {
     const getWelcomeMessage = () => {
       const baseMessage = "Welcome to the AI Presentation Wizard! I'm here to help you create an amazing presentation."
+      
+      // Show general guidance if research isn't completed yet
+      if (!isResearchCompleted) {
+        return `${baseMessage}\n\nI can help you understand how to use this application:\n• **Research Step**: Generate comprehensive content about your topic\n• **Slides Step**: Structure your content into presentation slides\n• **Illustrations Step**: Add images and visual elements\n• **PPTX Step**: Download your finished presentation\n\nTo get started, make sure you've entered your presentation topic and then run the Research step. Feel free to ask me any questions about the process!`
+      }
       
       if (step === "Research") {
         return `${baseMessage} You're currently on the Research step. I can help you understand research topics and methods, but slide modifications are available once you generate slides.`
@@ -81,7 +140,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     
     setMessages([welcomeMessage])
     setError(null)
-  }, [step, context, currentSlideId, currentSlideTitle])
+  }, [step, context, currentSlideId, currentSlideTitle, isResearchCompleted])
 
   const updateMessageStatus = (messageIndex: number, status: MessageStatus) => {
     setMessages(prev => prev.map((msg, idx) => 
@@ -89,12 +148,13 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
     ))
   }
 
-  const sendMessage = async () => {
-    if (!input.trim()) return
+  const sendMessage = async (messageText?: string) => {
+    const text = messageText || input
+    if (!text.trim()) return
 
     const userMessage: Message = { 
       role: "user", 
-      content: input,
+      content: text,
       status: "sending",
       timestamp: new Date()
     }
@@ -141,7 +201,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
         // Call the new wizard API
         const apiResp = await api.processWizardRequest(
           presentation.id,
-          input,
+          text,
           step,
           wizardContext
         );
@@ -236,19 +296,21 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
   }
 
   return (
-    <Card className="h-[calc(100vh-200px)] flex flex-col bg-card/95 backdrop-blur-sm border-border">
-      <CardHeader className="relative bg-gradient-to-r from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/10 border-b border-border rounded-t-xl overflow-hidden">
+    <Card className="sticky top-4 h-[calc(100vh-120px)] max-h-[800px] flex flex-col bg-card/95 backdrop-blur-sm border-border shadow-lg">
+      <CardHeader className="relative bg-gradient-to-r from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/10 border-b border-border rounded-t-xl overflow-hidden flex-shrink-0">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
-        <div className="absolute right-0 top-0 w-24 h-24 opacity-20 dark:opacity-10">
-          <img src="/wizard.png" alt="AI Wizard" className="object-contain w-full h-full" />
+        <div className="absolute right-0 top-0 w-20 h-20 opacity-20 dark:opacity-10">
+          <Sparkles className="w-full h-full text-primary" />
         </div>
         <div className="relative z-10">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-foreground text-lg">
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
             AI Presentation Wizard
           </CardTitle>
-          <CardDescription className="text-muted-foreground text-sm" data-testid="wizard-header">
-            Context: {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} | Step: {step}
+          <CardDescription className="text-muted-foreground text-sm mt-1" data-testid="wizard-header">
+            <span className="font-medium">Context:</span> {context === "single" && currentSlide ? `Single Slide - ${currentSlide.title}` : "All Slides"} 
+            <span className="mx-2">•</span>
+            <span className="font-medium">Step:</span> {step}
           </CardDescription>
         </div>
       </CardHeader>
@@ -262,9 +324,9 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
         </div>
       )}
       
-      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Show research context when on Research step */}
-        {step === "Research" && (
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
+        {/* Show research context when on Research step and research is completed */}
+        {step === "Research" && messages.length === 1 && isResearchCompleted && (
           <ResearchContext presentation={presentation} />
         )}
         
@@ -274,15 +336,18 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
               key={index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, delay: index * 0.05 }}
               className="flex items-start gap-2"
             >
               <div className="flex-1">
                 <WizardMessage role={message.role} content={message.content} />
               </div>
-              <div className="mt-2">
-                {getStatusIcon(message.status)}
-              </div>
+              {message.status && (
+                <div className="mt-2 flex-shrink-0">
+                  {getStatusIcon(message.status)}
+                </div>
+              )}
             </motion.div>
           ))}
 
@@ -290,7 +355,8 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
             >
               <WizardSuggestion
                 suggestion={suggestion}
@@ -302,27 +368,59 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             </motion.div>
           )}
         </AnimatePresence>
+        
+        {/* Suggested prompts when there's only the welcome message */}
+        {messages.length === 1 && suggestedPrompts.length > 0 && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="mt-4"
+          >
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Try asking:</p>
+            <div className="grid grid-cols-1 gap-2">
+              {suggestedPrompts.map((prompt, index) => (
+                <motion.button
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.3 + index * 0.05 }}
+                  onClick={() => sendMessage(prompt)}
+                  className="text-left text-sm p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-transparent hover:border-primary/20"
+                >
+                  <span className="text-primary">→</span> {prompt}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+        
         <div ref={messagesEndRef} />
       </CardContent>
       
-      <CardFooter className="border-t p-4">
+      <CardFooter className="border-t border-border/50 p-4 bg-muted/30 backdrop-blur-sm flex-shrink-0">
         <div className="flex w-full gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask the AI wizard for help..."
-            className="min-h-[60px] resize-none"
-            data-testid="wizard-input"
-            disabled={isLoading}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                sendMessage()
-              }
-            }}
-          />
+          <div className="relative flex-1">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask the AI wizard for help..."
+              className="min-h-[80px] max-h-[120px] resize-none pr-12 bg-background/60 border-border/50 focus:border-primary/50 transition-colors"
+              data-testid="wizard-input"
+              disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage()
+                }
+              }}
+            />
+            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+              Press Enter to send
+            </div>
+          </div>
           <Button
-            className="bg-primary hover:bg-primary-600 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all hover:shadow-md"
             size="icon"
             onClick={sendMessage}
             disabled={isLoading || !input.trim()}
@@ -331,7 +429,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
             {isLoading ? (
               <Clock className="h-4 w-4 animate-spin" />
             ) : (
-              <Send size={18} />
+              <Send className="h-4 w-4" />
             )}
           </Button>
         </div>

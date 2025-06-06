@@ -16,6 +16,7 @@ import ReactMarkdown from 'react-markdown'
 import type { Presentation, PresentationStep } from "@/lib/types"
 import { api } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
+import { ResearchClarificationChat } from "@/components/research-clarification-chat"
 
 interface ResearchStepProps {
   presentation: Presentation
@@ -37,6 +38,11 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
   const [topic, setTopic] = useState("")
   const [researchMethod, setResearchMethod] = useState<"ai" | "manual">("ai")
   const [hasSelectedMethod, setHasSelectedMethod] = useState(false)
+  
+  // Clarification chat state
+  const [showClarificationChat, setShowClarificationChat] = useState(false)
+  const [clarificationMessage, setClarificationMessage] = useState("")
+  const [clarifiedTopic, setClarifiedTopic] = useState<string | null>(null)
 
   // Check if any research has been completed
   const hasCompletedResearch = presentation.steps?.some(
@@ -92,6 +98,102 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
 
   const handleTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTopic(e.target.value)
+  }
+
+  const proceedWithResearch = async (originalTopic: string, clarifiedTopicParam: string | null) => {
+    try {
+      // Update presentation with topic first in frontend state
+      setPresentation({
+        ...presentation,
+        topic: originalTopic,
+        researchMethod: "ai",
+      })
+      
+      // Save presentation to ensure topic is stored in backend
+      await savePresentation()
+      
+      // Then call the API to run the research step and pass the topic directly
+      const presentationId = typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id
+      const result = await api.runPresentationStep(presentationId, 'research', {
+        topic: originalTopic,
+        clarified_topic: clarifiedTopicParam
+      })
+      
+      toast({
+        title: "Research started",
+        description: "Your research is being processed. This may take a minute...",
+      })
+      
+      // Poll until the research is ready
+      let researchReady = false
+      let attempts = 0
+      const maxAttempts = 20 // Limit polling attempts
+      
+      while (!researchReady && attempts < maxAttempts) {
+        attempts++
+        
+        // Wait 2 seconds between polls
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        
+        // Fetch the updated presentation
+        const updatedPresentation = await api.getPresentation(presentationId)
+        
+        if (updatedPresentation) {
+          // Check if research step is completed
+          const researchStep = updatedPresentation.steps?.find(
+            (step) => step.step === "research" && step.status === "completed"
+          )
+          
+          if (researchStep) {
+            researchReady = true
+            
+            // Update presentation with the new data
+            setPresentation(updatedPresentation)
+            
+            // Refresh main presentation data to update step status
+            if (refreshPresentation) {
+              await refreshPresentation()
+            }
+            
+            toast({
+              title: "Research completed",
+              description: "Research has been completed successfully.",
+            })
+          }
+        }
+      }
+      
+      if (!researchReady) {
+        toast({
+          title: "Taking longer than expected",
+          description: "Research is still in progress. Please wait or refresh the page in a minute.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error generating content:", error)
+      toast({
+        title: "Error",
+        description: "Failed to generate research content. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleClarify = (clarifiedTopicParam: string) => {
+    setClarifiedTopic(clarifiedTopicParam)
+    setShowClarificationChat(false)
+    // Proceed with research using the clarified topic
+    setIsGenerating(true)
+    proceedWithResearch(topic.trim(), clarifiedTopicParam)
+  }
+
+  const handleCancelClarification = () => {
+    setShowClarificationChat(false)
+    // Reset generation state
+    setIsGenerating(false)
   }
 
   const handleStartManualResearch = async () => {
@@ -205,73 +307,19 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
     setIsGenerating(true)
 
     try {
-      // Update presentation with topic first in frontend state
-      setPresentation({
-        ...presentation,
-        topic: topic.trim(),
-        researchMethod: "ai",
-      })
+      // Check if topic needs clarification first
+      const clarificationCheck = await api.checkTopicClarification(topic.trim())
       
-      // Save presentation to ensure topic is stored in backend
-      await savePresentation()
-      
-      // Then call the API to run the research step and pass the topic directly
-      const presentationId = typeof presentation.id === 'number' ? presentation.id.toString() : presentation.id
-      const result = await api.runPresentationStep(presentationId, 'research', {
-        topic: topic.trim()
-      })
-      
-      toast({
-        title: "Research started",
-        description: "Your research is being processed. This may take a minute...",
-      })
-      
-      // Poll until the research is ready
-      let researchReady = false
-      let attempts = 0
-      const maxAttempts = 20 // Limit polling attempts
-      
-      while (!researchReady && attempts < maxAttempts) {
-        attempts++
-        
-        // Wait 2 seconds between polls
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        
-        // Fetch the updated presentation
-        const updatedPresentation = await api.getPresentation(presentationId)
-        
-        if (updatedPresentation) {
-          // Check if research step is completed
-          const researchStep = updatedPresentation.steps?.find(
-            (step) => step.step === "research" && step.status === "completed"
-          )
-          
-          if (researchStep) {
-            researchReady = true
-            
-            // Update presentation with the new data
-            setPresentation(updatedPresentation)
-            
-            // Refresh main presentation data to update step status
-            if (refreshPresentation) {
-              await refreshPresentation()
-            }
-            
-            toast({
-              title: "Research completed",
-              description: "Research has been completed successfully.",
-            })
-          }
-        }
+      if (clarificationCheck.needs_clarification && clarificationCheck.initial_message) {
+        // Show clarification chat
+        setClarificationMessage(clarificationCheck.initial_message)
+        setShowClarificationChat(true)
+        setIsGenerating(false)
+        return
       }
       
-      if (!researchReady) {
-        toast({
-          title: "Taking longer than expected",
-          description: "Research is still in progress. Please wait or refresh the page in a minute.",
-          variant: "destructive",
-        })
-      }
+      // If no clarification needed, proceed with research
+      await proceedWithResearch(topic.trim(), null)
     } catch (error) {
       console.error("Error generating content:", error)
       toast({
@@ -736,6 +784,18 @@ export default function ResearchStep({ presentation, setPresentation, savePresen
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Clarification Chat Overlay */}
+      {showClarificationChat && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <ResearchClarificationChat
+            topic={topic}
+            initialQuestion={clarificationMessage}
+            onClarified={handleClarify}
+            onCancel={handleCancelClarification}
+          />
+        </div>
       )}
     </div>
   )

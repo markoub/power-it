@@ -44,6 +44,8 @@ For external API calls, we use pre-recorded responses to make tests:
 3. **Free**: No API usage charges when running tests
 4. **No credentials needed**: You don't need API keys to run tests
 
+For detailed VCR documentation, see [VCR_README.md](./VCR_README.md).
+
 ### Recording Mode
 
 To record new API responses:

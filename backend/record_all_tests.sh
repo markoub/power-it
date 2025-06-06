@@ -63,6 +63,15 @@ fi
 
 # Run all tests with recording mode
 echo "Running all tests in RECORDING mode..."
+echo ""
+echo "Recording VCR fixtures for API calls..."
+echo "1. Modify operations..."
+python -m pytest tests/unit/test_modify_vcr.py -v -k vcr_record || true
+echo ""
+echo "2. Wizard interactions..."
+python -m pytest tests/unit/test_wizard_vcr.py -v -k vcr_record || true
+echo ""
+echo "3. Running all other tests..."
 python -m pytest tests/ -v
 
 # Unset recording mode variables

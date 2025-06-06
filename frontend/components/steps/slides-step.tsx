@@ -12,8 +12,9 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText, Grid3X3, ArrowLeft, Settings } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Edit3, Eye, FileText, Grid3X3, ArrowLeft, Settings, BookOpen, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from 'react-markdown';
 import type { Presentation, Slide } from "@/lib/types";
 import SlideRenderer from "@/components/slides/SlideRenderer";
 import { api } from "@/lib/api";
@@ -181,6 +182,35 @@ export default function SlidesStep({
   }, [handleKeyDown]);
 
   // Function to generate slides with AI
+  // Get the research content to display
+  const getResearchContent = () => {
+    // First check for manual research
+    const manualStep = presentation.steps?.find(step => step.step === "manual_research");
+    if (manualStep?.result?.content) {
+      return {
+        content: manualStep.result.content as string,
+        links: manualStep.result.links || [],
+        isManual: true
+      };
+    }
+    
+    // Then check for AI research
+    const researchStep = presentation.steps?.find(step => step.step === "research");
+    if (researchStep?.result?.content) {
+      return {
+        content: researchStep.result.content as string,
+        links: researchStep.result.links || [],
+        isManual: false
+      };
+    }
+    
+    return {
+      content: "",
+      links: [],
+      isManual: false
+    };
+  };
+
   const handleGenerateSlides = async () => {
     try {
       setIsGenerating(true);
@@ -255,6 +285,13 @@ export default function SlidesStep({
   const slidesStep = presentation.steps?.find(step => step.step === 'slides');
   const isProcessing = slidesStep?.status === 'processing';
 
+  // Get research content for display
+  const researchData = getResearchContent();
+  const researchContent = researchData.content;
+  const researchLinks = researchData.links;
+  const hasResearch = researchContent.length > 0;
+
+
   // Show processing state if slides are being generated
   if (isProcessing) {
     return (
@@ -304,6 +341,44 @@ export default function SlidesStep({
             <p className="text-muted-foreground mb-8">
               Your presentation needs slides. You can generate them automatically using AI based on your research.
             </p>
+
+            {/* Display research content if available */}
+            {hasResearch && (
+              <div className="mb-8 text-left">
+                <Label className="text-sm font-medium mb-2 block" data-testid="ai-research-content-label">
+                  {researchData.isManual ? "Manual Research Content" : "Generated Research Content"}
+                </Label>
+                <div className="bg-muted/50 border rounded-lg p-4 max-h-96 overflow-y-auto" data-testid="ai-research-content">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown>{researchContent}</ReactMarkdown>
+                  </div>
+                </div>
+                
+                {/* Display research links if available */}
+                {researchLinks && researchLinks.length > 0 && (
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium mb-2 block">Research Sources</Label>
+                    <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3">
+                      <ul className="space-y-2">
+                        {researchLinks.map((link: any, index: number) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                            <a
+                              href={link.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                            >
+                              {link.title || link.href}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
               <Dialog open={showCustomization} onOpenChange={setShowCustomization}>
@@ -451,6 +526,48 @@ export default function SlidesStep({
             </Button>
           </div>
 
+          {/* Display research content if available */}
+          {hasResearch && (
+            <div className="mb-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <Label className="text-sm font-medium mb-2 block" data-testid="ai-research-content-label">
+                    {researchData.isManual ? "Manual Research Content" : "Generated Research Content"}
+                  </Label>
+                  <div className="bg-muted/50 border rounded-lg p-4 max-h-64 overflow-y-auto" data-testid="ai-research-content">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{researchContent}</ReactMarkdown>
+                    </div>
+                  </div>
+                  
+                  {/* Display research links if available */}
+                  {researchLinks && researchLinks.length > 0 && (
+                    <div className="mt-4">
+                      <Label className="text-sm font-medium mb-2 block">Research Sources</Label>
+                      <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3">
+                        <ul className="space-y-2">
+                          {researchLinks.map((link: any, index: number) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                              <a
+                                href={link.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                              >
+                                {link.title || link.href}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <AnimatePresence>
               {presentation.slides.map((slide, index) => {
@@ -562,6 +679,48 @@ export default function SlidesStep({
             </span>
           </div>
         </div>
+
+        {/* Display research content if available */}
+        {hasResearch && (
+          <div className="mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <Label className="text-sm font-medium mb-2 block" data-testid="ai-research-content-label">
+                  {researchData.isManual ? "Manual Research Content" : "Generated Research Content"}
+                </Label>
+                <div className="bg-muted/50 border rounded-lg p-4 max-h-64 overflow-y-auto" data-testid="ai-research-content">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown>{researchContent}</ReactMarkdown>
+                  </div>
+                </div>
+                
+                {/* Display research links if available */}
+                {researchLinks && researchLinks.length > 0 && (
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium mb-2 block">Research Sources</Label>
+                    <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3">
+                      <ul className="space-y-2">
+                        {researchLinks.map((link: any, index: number) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <ExternalLink className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                            <a
+                              href={link.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                            >
+                              {link.title || link.href}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Main slide content */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">

@@ -34,6 +34,12 @@ from routers.images import router as images_router
 from routers.logos import router as logos_router
 from routers.pptx import router as pptx_router
 from routers.tts import router as tts_router
+from routers.research_clarification import router as research_clarification_router
+
+# Import test router (only available in test environment)
+import os
+if os.getenv("POWERIT_ENV") == "test":
+    from routers.test import router as test_router
 
 # Lifespan context manager
 @asynccontextmanager
@@ -76,9 +82,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Configure CORS
+allowed_origins = ["http://localhost:3000"]
+# Add test frontend origin when in test mode
+if os.getenv("POWERIT_ENV") == "test":
+    allowed_origins.append("http://localhost:3001")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Specify the exact frontend origin
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -94,6 +105,11 @@ app.include_router(images_router)
 app.include_router(logos_router)
 app.include_router(pptx_router)
 app.include_router(tts_router)
+app.include_router(research_clarification_router)
+
+# Include test router only in test environment
+if os.getenv("POWERIT_ENV") == "test":
+    app.include_router(test_router)
 
 # Custom OpenAPI schema and documentation
 @app.get("/docs", include_in_schema=False)

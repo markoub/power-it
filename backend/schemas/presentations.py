@@ -204,3 +204,61 @@ class PaginatedPresentationsResponse(BaseModel):
     """Paginated response for presentations list"""
     items: List[PresentationResponse] = Field(description="Presentations on the current page")
     total: int = Field(description="Total number of presentations matching the query")
+
+class ClarificationCheckRequest(BaseModel):
+    """Request to check if a topic needs clarification"""
+    topic: str = Field(description="The topic to check for ambiguities")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "topic": "Google ADK"
+            }
+        }
+    )
+
+class ClarificationCheckResponse(BaseModel):
+    """Response from clarification check"""
+    needs_clarification: bool = Field(description="Whether the topic needs clarification")
+    initial_message: str = Field(default="", description="Initial conversational message for clarification")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "needs_clarification": True,
+                "initial_message": "I noticed you mentioned 'ADK' in your topic. Could you help me understand which ADK you're referring to? For example, are you interested in Android Development Kit, Agent Development Kit, or something else?"
+            }
+        }
+    )
+
+class ClarificationConversationRequest(BaseModel):
+    """Request for clarification conversation"""
+    topic: str = Field(description="The original topic")
+    user_response: str = Field(description="User's response to the clarification question")
+    conversation_history: Optional[List[Dict[str, str]]] = Field(default=[], description="Previous conversation messages")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "topic": "Google ADK",
+                "user_response": "I mean Android Development Kit, specifically for hardware accessories",
+                "conversation_history": []
+            }
+        }
+    )
+
+class ClarificationConversationResponse(BaseModel):
+    """Response from clarification conversation"""
+    clarified: bool = Field(description="Whether the topic has been sufficiently clarified")
+    clarified_topic: Optional[str] = Field(None, description="The clarified version of the topic")
+    follow_up_message: Optional[str] = Field(None, description="Follow-up message if more clarification is needed")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "clarified": True,
+                "clarified_topic": "Google Android Development Kit (ADK) for hardware accessory development",
+                "follow_up_message": None
+            }
+        }
+    )

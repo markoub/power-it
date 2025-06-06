@@ -1,54 +1,24 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, waitForStepCompletion } from './utils';
+import { navigateToTestPresentation, waitForStepCompletion } from './utils';
 
 // Standard timeout for offline mode
 test.setTimeout(60000);
 
-test('images appear while generation is in progress', async ({ page }) => {
-  const name = `Stream Test ${Date.now()}`;
-  const topic = 'stream topic';
-  
-  // Create presentation and run research first
-  const presentationId = await createPresentation(page, name, topic);
-  console.log(`✅ Created presentation with ID: ${presentationId}`);
+test('illustration generation completes successfully', async ({ page }) => {
+  // Use a pre-seeded presentation with slides already completed
+  const presentation = await navigateToTestPresentation(page, 'slides_complete', 0);
+  console.log(`✅ Using presentation: ${presentation.name} (ID: ${presentation.id})`);
 
-  // 1. Run research using the working pattern
-  console.log('🔍 Running research...');
-  await page.getByTestId('start-ai-research-button').click();
+  // Navigate directly to illustration step
+  console.log('🔍 Navigating to illustration step...');
   
-  // Wait for research step to be properly completed
-  const researchCompleted = await waitForStepCompletion(page, 'research', 60000);
-  if (!researchCompleted) {
-    console.log('⚠️ Research step did not complete within timeout, continuing anyway');
-  } else {
-    console.log('✅ Research completed');
-  }
-
-  // 2. Navigate to slides and run
-  console.log('🔍 Running slides...');
-  await page.getByTestId('step-nav-slides').click();
+  // Click on the illustration step
+  const illustrationStepButton = page.getByTestId('step-nav-illustration');
+  await expect(illustrationStepButton).toBeVisible({ timeout: 5000 });
+  await illustrationStepButton.click();
   
-  const runSlidesButton = page.getByTestId('run-slides-button');
-  const slidesButtonExists = await runSlidesButton.count() > 0;
-  console.log(`Slides button exists: ${slidesButtonExists}`);
-  
-  if (slidesButtonExists) {
-    await runSlidesButton.click();
-    
-    // Wait for slides step to complete
-    const slidesCompleted = await waitForStepCompletion(page, 'slides', 60000);
-    if (!slidesCompleted) {
-      console.log('⚠️ Slides step did not complete within timeout, continuing anyway');
-    } else {
-      console.log('✅ Slides completed');
-    }
-  } else {
-    throw new Error("❌ Slides button not found");
-  }
-
-  // 3. Navigate to illustration and check
-  console.log('🔍 Checking illustration step...');
-  await page.getByTestId('step-nav-illustration').click({ force: true });
+  // Wait a moment for the page to load
+  await page.waitForTimeout(1000);
   
   const runIllustrationButton = page.getByTestId('run-images-button-center');
   const illustrationButtonExists = await runIllustrationButton.count() > 0;
@@ -62,15 +32,16 @@ test('images appear while generation is in progress', async ({ page }) => {
       await runIllustrationButton.click();
       console.log('✅ Illustration clicked');
       
-      // In offline mode, check if button disappeared (instant generation)
-      const buttonGone = await runIllustrationButton.count() === 0;
-      if (buttonGone) {
-        console.log('✅ Button disappeared - offline mode with instant generation');
-      } else {
-        // Wait for button to be re-enabled
-        await expect(runIllustrationButton).toBeEnabled({ timeout: 10000 });
-      }
-      console.log('✅ Images generation completed');
+      // In offline mode, images should be generated instantly
+      // Wait for the step to complete
+      const illustrationCompleted = await waitForStepCompletion(page, 'illustration', 10000);
+      expect(illustrationCompleted).toBe(true);
+      console.log('✅ Illustration step completed successfully');
+      
+      // Verify that the compiled step is now available (blue button)
+      const compiledStepButton = page.getByTestId('step-nav-compiled');
+      await expect(compiledStepButton).toBeEnabled();
+      console.log('✅ Compiled step is now available');
     } else {
       console.log('⚠️ Illustration button was disabled, skipping click');
     }

@@ -1,55 +1,72 @@
 import { test, expect } from "@playwright/test";
-import { createPresentation } from "./utils";
+import { navigateToTestPresentation, waitForStepCompletion, getApiUrl } from "./utils";
+import { TEST_CATEGORIES } from "../test-config";
 
-test.setTimeout(120000);
+test.setTimeout(15000); // 15s timeout for offline mode
 
 test.describe("Slides Display", () => {
-  test("generated slides are shown with content", async ({ page }) => {
-    const name = `Slides Display ${Date.now()}`;
-    const topic = "Offline slide topic";
-
-    // Create presentation and run research first
-    const presentationId = await createPresentation(page, name, topic);
-    console.log(`✅ Created presentation with ID: ${presentationId}`);
+  test("generated slides are shown with content using pre-seeded data", async ({ page }) => {
+    // Use a presentation that already has research completed
+    const presentation = await navigateToTestPresentation(page, TEST_CATEGORIES.RESEARCH_COMPLETE, 0);
     
-    // 1. Run research using the working pattern
-    console.log("🔍 Running research...");
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    console.log("✅ Research completed");
+    console.log(`📋 Testing with: ${presentation.name}`);
+    console.log(`📚 Topic: ${presentation.topic}`);
+    console.log(`🔗 Using API: ${getApiUrl()}`);
 
-    // 2. Navigate to slides and run using the exact working pattern
-    console.log("🔍 Running slides...");
+    // Navigate to slides step by clicking the step circle (not Continue button)
+    console.log("🔍 Navigating to slides step...");
     await page.getByTestId('step-nav-slides').click();
     await page.waitForLoadState('networkidle');
     
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    const slidesButtonExists = await runSlidesButton.count() > 0;
-    console.log(`Slides button exists: ${slidesButtonExists}`);
+    // Verify we're on the slides step page - check for either run or rerun button
+    const runButton = page.getByTestId('run-slides-button');
+    const rerunButton = page.getByTestId('rerun-slides-button');
     
-    if (slidesButtonExists) {
-      const [slidesResponse] = await Promise.all([
-        page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/slides/run`) && resp.status() === 200),
-        runSlidesButton.click()
-      ]);
-      console.log("✅ Slides generation started");
-      
-      // Wait for slides to be generated
-      console.log("⏳ Waiting for slides to be generated...");
-      await page.waitForSelector('[data-testid^="slide-thumbnail-"]', { timeout: 30000 });
-      
-      // Verify first slide thumbnail is visible
-      await expect(page.getByTestId("slide-thumbnail-0")).toBeVisible();
-      console.log("✅ First slide thumbnail is visible");
-      
-      // Verify we have multiple slides
-      const slideCount = await page.locator('[data-testid^="slide-thumbnail-"]').count();
-      expect(slideCount).toBeGreaterThan(0);
-      console.log(`✅ Generated ${slideCount} slides successfully`);
+    // Wait for either button to be visible
+    await Promise.race([
+      runButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
+      rerunButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
+    ]);
+    
+    console.log("✅ Slides step page loaded");
+    
+    // Run slides generation - click whichever button is visible
+    console.log("🔍 Running slides generation...");
+    let button;
+    if (await runButton.isVisible()) {
+      button = runButton;
+      console.log("  Using 'Run Slides' button");
+    } else if (await rerunButton.isVisible()) {
+      button = rerunButton;
+      console.log("  Using 'Rerun Slides' button");
     } else {
-      throw new Error("❌ Slides button not found - this should not happen after research completion");
+      throw new Error("Neither run nor rerun button found");
     }
+    
+    await expect(button).toBeEnabled();
+    await button.click();
+    console.log("✅ Slides generation started");
+    
+    // Wait for slides to be generated - in offline mode this should be fast
+    console.log("⏳ Waiting for slides to be generated...");
+    
+    // Wait for the slides API call to complete
+    await page.waitForLoadState('networkidle');
+    
+    // Now wait for slide thumbnails to appear
+    const slideThumbnails = page.locator('[data-testid^="slide-thumbnail-"]');
+    await expect(slideThumbnails.first()).toBeVisible({ timeout: 10000 });
+    
+    console.log("✅ Slides generated successfully");
+    
+    // Verify we have multiple slides
+    const slideCount = await page.locator('[data-testid^="slide-thumbnail-"]').count();
+    expect(slideCount).toBeGreaterThan(0);
+    console.log(`✅ Generated ${slideCount} slides successfully`);
+    
+    // Verify slides step is now marked as completed
+    const slidesCompleted = await waitForStepCompletion(page, 'slides', 30000);
+    expect(slidesCompleted).toBe(true);
+    console.log("✅ Slides step marked as completed");
   });
 });

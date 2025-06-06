@@ -44,10 +44,15 @@ test.describe('Research Wizard Context', () => {
     await wizardInput.fill('What are the main challenges in AI healthcare implementation?');
     await sendButton.click();
     
+    // Wait for the next wizard response more reliably
+    const initialCount = await page.locator('[data-testid="wizard-message-assistant"]').count();
     await page.waitForFunction(
-      (prevCount) => document.querySelectorAll('[data-testid="wizard-message-assistant"]').length > prevCount,
-      await page.locator('[data-testid="wizard-message-assistant"]').count(),
-      { timeout: 10000 }
+      (prevCount) => {
+        const elements = document.querySelectorAll('[data-testid="wizard-message-assistant"]');
+        return elements.length > prevCount;
+      },
+      initialCount,
+      { timeout: 15000 }
     );
     
     // Should get a conversational response

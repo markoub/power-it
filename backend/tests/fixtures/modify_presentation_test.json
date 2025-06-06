@@ -1,0 +1,40 @@
+{
+  "prompt": "Add more details about machine learning applications in the introduction slide",
+  "response": {
+    "title": "AI in Healthcare",
+    "slides": [
+      {
+        "type": "welcome",
+        "fields": {
+          "title": "Modified: AI in Healthcare",
+          "subtitle": "Transforming Patient Care",
+          "author": "Test Author",
+          "notes": "Welcome slide"
+        },
+        "image_url": null
+      },
+      {
+        "type": "content",
+        "fields": {
+          "title": "Modified: Introduction",
+          "content": [
+            "AI is revolutionizing healthcare",
+            "Machine learning enables early diagnosis",
+            "Deep learning analyzes medical images"
+          ],
+          "notes": "Introduction to AI in healthcare"
+        },
+        "image_url": null
+      },
+      {
+        "type": "section",
+        "fields": {
+          "title": "Modified: Current Applications",
+          "notes": "Section divider"
+        },
+        "image_url": null
+      }
+    ],
+    "author": "Test Author"
+  }
+}

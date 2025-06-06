@@ -27,7 +27,7 @@ export const TEST_PRESENTATIONS: TestPresentation[] = [
     topic: "Artificial Intelligence in Healthcare",
     author: "Test Author",
     category: "fresh",
-    description: "For create/delete tests",
+    description: "For delete tests - single deletion",
     completedSteps: [],
     pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
   },

@@ -5,12 +5,7 @@ Test Database Initialization Script
 This script creates a test database with pre-seeded presentations in different states
 to support E2E testing without having to recreate data for each test.
 
-Test Data Categories:
-1. Fresh presentations (for create/delete tests)
-2. Presentations with completed research (for slides tests)
-3. Presentations with completed slides (for illustration tests)
-4. Presentations with completed illustrations (for compiled/pptx tests)
-5. Full presentations with all steps completed (for wizard/editing tests)
+The test data is organized in modular files under test_data/ for better maintainability.
 """
 
 import asyncio
@@ -25,8 +20,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from database import Presentation, PresentationStepModel, init_db, SessionLocal, StepStatus
 from sqlalchemy import text
 
-# Test data for different presentation states
-TEST_PRESENTATIONS = [
+# Import test data from modular structure
+from test_data import ALL_TEST_PRESENTATIONS
+
+# For backward compatibility, keep TEST_PRESENTATIONS name
+TEST_PRESENTATIONS = ALL_TEST_PRESENTATIONS
+
+# Original inline test data (kept for reference, but now using modular approach)
+OLD_TEST_PRESENTATIONS = [
     # Category 1: Fresh presentations (just created, no steps completed)
     {
         "name": "Fresh Test Presentation 1",

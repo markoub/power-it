@@ -30,7 +30,6 @@ endef
 .PHONY: help setup run clean
 .PHONY: test-backend test-backend-online test-backend-offline test-backend-unit test-backend-integration
 .PHONY: test-frontend test-e2e test-e2e-headed test-e2e-debug test-e2e-api test-e2e-specific test-e2e-list
-.PHONY: test-e2e-preseeded test-e2e-preseeded-headed test-e2e-preseeded-debug test-e2e-preseeded-specific
 .PHONY: test-all test-all-online test-all-offline test-all-failures
 .PHONY: install-deps install-browsers dev reset-test-db
 
@@ -53,19 +52,13 @@ help:
 	@printf "\033[1;32mTesting - Frontend:\033[0m\n"
 	@printf "  \033[1;33mmake test-frontend\033[0m        - Run frontend tests (E2E tests)\n"
 	@printf "\n"
-	@printf "\033[1;32mTesting - E2E:\033[0m\n"
-	@printf "  \033[1;33mmake test-e2e\033[0m            - Run all E2E tests\n"
+	@printf "\033[1;32mTesting - E2E:\033[0m (Uses test servers on ports 3001/8001)\n"
+	@printf "  \033[1;33mmake test-e2e\033[0m            - Run all E2E tests with test database\n"
 	@printf "  \033[1;33mmake test-e2e-headed\033[0m     - Run E2E tests with browser visible\n"
 	@printf "  \033[1;33mmake test-e2e-debug\033[0m      - Run E2E tests with debugging enabled\n"
 	@printf "  \033[1;33mmake test-e2e-api\033[0m        - Run API documentation tests\n"
 	@printf "  \033[1;33mmake test-e2e-specific\033[0m test=file-name - Run specific E2E test\n"
 	@printf "  \033[1;33mmake test-e2e-list\033[0m       - List all available E2E tests\n"
-	@printf "\n"
-	@printf "\033[1;32mTesting - E2E with Preseeded Database:\033[0m\n"
-	@printf "  \033[1;33mmake test-e2e-preseeded\033[0m   - Run E2E tests with preseeded test database (ports 3001/8001)\n"
-	@printf "  \033[1;33mmake test-e2e-preseeded-headed\033[0m - Run with visible browser\n"
-	@printf "  \033[1;33mmake test-e2e-preseeded-debug\033[0m  - Run with debugging enabled\n"
-	@printf "  \033[1;33mmake test-e2e-preseeded-specific\033[0m test=file - Run specific test with preseeded db\n"
 	@printf "  \033[1;33mmake reset-test-db\033[0m        - Reset the test database to initial seeded state\n"
 	@printf "\n"
 	@printf "\033[1;32mTesting - All:\033[0m\n"
@@ -158,25 +151,25 @@ test-frontend:
 	$(call print_info,Frontend tests complete.)
 
 # ==========================================
-# E2E Testing
+# E2E Testing (Using Test Servers on 3001/8001)
 # ==========================================
 
-# Run all E2E tests
+# Run all E2E tests (now defaults to using test servers)
 test-e2e:
-	$(call print_info,Running all E2E tests...)
-	@cd $(TESTING_DIR) && npx playwright test
+	$(call print_info,Running all E2E tests on test servers $(TEST_FRONTEND_PORT)/$(TEST_BACKEND_PORT)...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh
 	$(call print_info,E2E tests complete.)
 
 # Run all E2E tests with browser visible
 test-e2e-headed:
 	$(call print_info,Running all E2E tests with browser visible...)
-	@cd $(TESTING_DIR) && npx playwright test --headed
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed
 	$(call print_info,E2E headed tests complete.)
 
 # Run E2E tests with debugging enabled
 test-e2e-debug:
 	$(call print_info,Running E2E tests with debugging enabled...)
-	@cd $(TESTING_DIR) && npx playwright test --headed --debug --timeout 60000
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed --debug --timeout 60000
 	$(call print_info,E2E debug tests complete.)
 
 # Run API documentation tests
@@ -192,7 +185,7 @@ test-e2e-specific:
 		exit 1; \
 	fi
 	$(call print_info,Running E2E test: $(test)...)
-	@cd $(TESTING_DIR) && npx playwright test e2e/$(test).spec.ts
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/$(test).spec.ts
 	$(call print_info,E2E test complete.)
 
 # List all available E2E tests
@@ -200,43 +193,71 @@ test-e2e-list:
 	$(call print_info,Available E2E tests:)
 	@find $(E2E_DIR) -name "*.spec.ts" | sed 's|$(E2E_DIR)/||g' | sed 's|\.spec\.ts$$||g' | sort
 
-# ==========================================
-# E2E Testing with Preseeded Database
-# ==========================================
+# Run E2E tests in batches to avoid timeouts
+test-e2e-batch1:
+	$(call print_info,Running E2E Batch 1: Core functionality tests...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/api-docs.spec.ts e2e/create-presentation.spec.ts e2e/delete-presentation.spec.ts e2e/presentations-list.spec.ts e2e/pagination.spec.ts
+	$(call print_info,Batch 1 complete.)
 
-# Run E2E tests with preseeded test database
-test-e2e-preseeded:
-	$(call print_info,Running E2E tests with preseeded database on ports $(TEST_FRONTEND_PORT)/$(TEST_BACKEND_PORT)...)
-	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh
-	$(call print_info,E2E preseeded tests complete.)
+test-e2e-batch2:
+	$(call print_info,Running E2E Batch 2: Step and display tests...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/presentation-steps.spec.ts e2e/slides-display.spec.ts e2e/pptx-preview.spec.ts e2e/slides-customization.spec.ts e2e/illustration-stream.spec.ts
+	$(call print_info,Batch 2 complete.)
 
-# Run E2E tests with preseeded database and visible browser
-test-e2e-preseeded-headed:
-	$(call print_info,Running E2E tests with preseeded database (headed)...)
-	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed
-	$(call print_info,E2E preseeded headed tests complete.)
+test-e2e-batch3:
+	$(call print_info,Running E2E Batch 3: Wizard tests...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/wizard.spec.ts e2e/wizard-general-context.spec.ts e2e/wizard-research-context.spec.ts e2e/wizard-slides-context.spec.ts e2e/wizard-improvements*.spec.ts
+	$(call print_info,Batch 3 complete.)
 
-# Run E2E tests with preseeded database and debugging enabled
-test-e2e-preseeded-debug:
-	$(call print_info,Running E2E tests with preseeded database (debug mode)...)
-	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh --headed --debug
-	$(call print_info,E2E preseeded debug tests complete.)
+test-e2e-batch4:
+	$(call print_info,Running E2E Batch 4: Remaining tests...)
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/research-clarification.spec.ts e2e/research-content-display.spec.ts e2e/markdown-rendering.spec.ts e2e/markdown-slides.spec.ts
+	$(call print_info,Batch 4 complete.)
 
-# Run specific E2E test with preseeded database
-test-e2e-preseeded-specific:
-	@if [ -z "$(test)" ]; then \
-		$(call print_warn,Error: No test specified. Usage: make test-e2e-preseeded-specific test=test-name); \
-		exit 1; \
-	fi
-	$(call print_info,Running E2E test with preseeded database: $(test)...)
-	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh e2e/$(test).spec.ts
-	$(call print_info,E2E preseeded test complete.)
+# Run all E2E tests in batches
+test-e2e-all-batches: test-e2e-batch1 test-e2e-batch2 test-e2e-batch3 test-e2e-batch4
+	$(call print_info,All E2E test batches complete!)
+
 
 # Reset the test database to initial seeded state
 reset-test-db:
 	$(call print_info,Resetting test database to initial seeded state...)
 	@cd $(BACKEND_DIR) && POWERIT_ENV=test ./venv/bin/python reset_test_db.py
 	$(call print_info,Test database reset complete.)
+
+# Restart test servers (backend and frontend)
+test-servers-restart:
+	$(call print_info,Restarting test servers...)
+	@$(MAKE) test-servers-stop
+	@sleep 2
+	@$(MAKE) test-servers-start
+	$(call print_info,Test servers restarted.)
+
+# Stop test servers
+test-servers-stop:
+	$(call print_info,Stopping test servers...)
+	@pkill -f "run_api.py --test" || true
+	@pkill -f "PORT=$(TEST_FRONTEND_PORT)" || true
+	@sleep 1
+	$(call print_info,Test servers stopped.)
+
+# Start test servers
+test-servers-start:
+	$(call print_info,Starting test servers...)
+	@cd $(BACKEND_DIR) && POWERIT_ENV=test POWERIT_OFFLINE=1 ./venv/bin/python run_api.py --test > /tmp/test_backend.log 2>&1 &
+	@cd $(FRONTEND_DIR) && NEXT_PUBLIC_API_URL="http://localhost:$(TEST_BACKEND_PORT)" PORT=$(TEST_FRONTEND_PORT) npm run dev > /tmp/test_frontend.log 2>&1 &
+	@sleep 5
+	@if lsof -i:$(TEST_BACKEND_PORT) | grep LISTEN >/dev/null 2>&1; then \
+		echo "✅ Backend started on port $(TEST_BACKEND_PORT)"; \
+	else \
+		echo "⚠️  Backend failed to start - check /tmp/test_backend.log"; \
+	fi
+	@if lsof -i:$(TEST_FRONTEND_PORT) | grep LISTEN >/dev/null 2>&1; then \
+		echo "✅ Frontend started on port $(TEST_FRONTEND_PORT)"; \
+	else \
+		echo "⚠️  Frontend failed to start - check /tmp/test_frontend.log"; \
+	fi
+	$(call print_info,Test servers started.)
 
 # ==========================================
 # Combined Testing

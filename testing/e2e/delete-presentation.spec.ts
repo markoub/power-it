@@ -43,16 +43,28 @@ test.describe('Delete Presentation', () => {
 
     await goToPresentationsPage(page);
 
-    // Navigate to page 2 where presentations 1-2 are located (since there are 12 presentations and they're shown newest first)
-    const nextPageButton = page.getByLabel('Go to next page');
-    await nextPageButton.click();
+    // With 32 presentations (10 per page), Fresh Test Presentation 1 (ID: 1) is on page 4
+    // Navigate to the page where the presentation is located
+    let card = page.getByTestId(`presentation-card-${testPresentation.id}`);
+    let attempts = 0;
     
-    // Wait for the page to update
-    await page.waitForLoadState('networkidle');
-
-    // Find the presentation card using data-testid
-    const card = page.getByTestId(`presentation-card-${testPresentation.id}`);
-    await expect(card).toBeVisible();
+    // Try to find the presentation, navigating through pages if needed
+    while (attempts < 5) {
+      try {
+        await expect(card).toBeVisible({ timeout: 2000 });
+        break; // Found it!
+      } catch {
+        // Not on this page, try next page
+        const nextButton = page.getByLabel('Go to next page');
+        if (await nextButton.isEnabled()) {
+          await nextButton.click();
+          await page.waitForLoadState('networkidle');
+          attempts++;
+        } else {
+          throw new Error(`Presentation ${testPresentation.id} not found after checking all pages`);
+        }
+      }
+    }
 
     // Click delete button using data-testid
     await card.getByTestId('delete-presentation-button').click();
@@ -86,16 +98,35 @@ test.describe('Delete Presentation', () => {
 
     await goToPresentationsPage(page);
 
-    // After first test deleted presentation 1, presentations 3-4 are now on page 1
-    // So no need to navigate to page 2
-
     // Switch to list view to enable multiple selection
     await expect(page.getByTestId('view-list-button')).toBeVisible();
     await page.getByTestId('view-list-button').click();
 
-    // Find presentation rows using data-testid
-    const row1 = page.getByTestId(`presentation-row-${testPresentation1.id}`);
-    const row2 = page.getByTestId(`presentation-row-${testPresentation2.id}`);
+    // Find presentation rows, navigating through pages if needed
+    let row1 = page.getByTestId(`presentation-row-${testPresentation1.id}`);
+    let row2 = page.getByTestId(`presentation-row-${testPresentation2.id}`);
+    let attempts = 0;
+    
+    // Try to find both presentations, navigating through pages if needed
+    while (attempts < 5) {
+      const row1Visible = await row1.isVisible().catch(() => false);
+      const row2Visible = await row2.isVisible().catch(() => false);
+      
+      if (row1Visible && row2Visible) {
+        break; // Found both!
+      } else {
+        // Not on this page, try next page
+        const nextButton = page.getByLabel('Go to next page');
+        if (await nextButton.isEnabled()) {
+          await nextButton.click();
+          await page.waitForLoadState('networkidle');
+          attempts++;
+        } else {
+          throw new Error(`Presentations ${testPresentation1.id} and ${testPresentation2.id} not found after checking all pages`);
+        }
+      }
+    }
+    
     await expect(row1).toBeVisible();
     await expect(row2).toBeVisible();
 

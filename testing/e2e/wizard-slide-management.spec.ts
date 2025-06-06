@@ -1,39 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { navigateToTestPresentationById } from './utils';
 
 test.setTimeout(120000); // 2 minutes
 
 test.describe('Wizard Slide Management', () => {
-  let presentationId: string;
-
   test.beforeEach(async ({ page }) => {
-    // Create a presentation with slides for testing
-    const name = `Wizard Slide Test ${Date.now()}`;
-    const topic = 'Kubernetes Best Practices';
-    presentationId = await createPresentation(page, name, topic);
+    // Use preseeded presentation ID 16 (Wizard Slides Ready - has slides generated)
+    const presentation = await navigateToTestPresentationById(page, 16);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
-    // Complete research step
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    
-    // Navigate to slides and generate slides
+    // Navigate to slides step to see the slides
     await page.getByTestId('step-nav-slides').click();
     await page.waitForLoadState('networkidle');
     
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    if (await runSlidesButton.count() > 0) {
-      const [slidesResponse] = await Promise.all([
-        page.waitForResponse(resp => resp.url().includes(`/presentations/${presentationId}/steps/slides/run`) && resp.status() === 200),
-        runSlidesButton.click()
-      ]);
-      // Wait for slides to be generated
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
-    }
+    // Ensure slides are visible
+    await expect(page.locator('[data-testid^="slide-thumbnail-"]').first()).toBeVisible();
   });
 
   test('should add a new slide via wizard', async ({ page }) => {

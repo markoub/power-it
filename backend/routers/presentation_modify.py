@@ -254,6 +254,12 @@ async def process_wizard_request_endpoint(
         prompt = data.get("prompt")
         current_step = data.get("current_step", "unknown")
         context = data.get("context", {})
+        
+        # Debug logging
+        print(f"[WIZARD DEBUG] Received data: {data}")
+        print(f"[WIZARD DEBUG] Prompt: {prompt}")
+        print(f"[WIZARD DEBUG] Current step: {current_step}")
+        print(f"[WIZARD DEBUG] Context: {context}")
 
         if not prompt:
             return JSONResponse(

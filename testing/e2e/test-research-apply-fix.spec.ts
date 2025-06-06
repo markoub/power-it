@@ -1,24 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { navigateToTestPresentationById } from './utils';
 
-test.describe('Test Research Apply Fix', () => {
-  test('manually test research apply functionality', async ({ page }) => {
+test.describe('Research Apply Fix', () => {
+  test('should apply wizard research modifications correctly', async ({ page }) => {
     // Set viewport to ensure wizard is visible
     await page.setViewportSize({ width: 1400, height: 900 });
     
-    // Create a new presentation first
-    const name = `Research Apply Test ${Date.now()}`;
-    const topic = 'AI Ethics and Privacy';
-    const id = await createPresentation(page, name, topic);
-    console.log(`✅ Created presentation with ID: ${id}`);
-    
-    // Complete research step
-    console.log('🔍 Running research...');
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    console.log('✅ Research completed');
+    // Use preseeded presentation ID 15 (Wizard Research Ready - has research completed)
+    const presentation = await navigateToTestPresentationById(page, 15);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     // Wait for page to load and ensure we're on research step
     await page.waitForSelector('[data-testid="wizard-input"]', { timeout: 10000 });

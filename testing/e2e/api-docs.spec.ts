@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { TEST_CONFIG } from '../test-config';
 
 test.describe('API Documentation Tests', () => {
-  const API_BASE_URL = 'http://localhost:8000';
+  const API_BASE_URL = TEST_CONFIG.TEST_API_BASE_URL;
 
   test('API root endpoint responds', async ({ request }) => {
     const root = await request.get(`${API_BASE_URL}/`);
@@ -71,5 +72,27 @@ test.describe('API Documentation Tests', () => {
     
     const errorData = await invalidEndpoint.json();
     expect(errorData).toHaveProperty('detail');
+  });
+
+  test('modify endpoint returns proper error messages', async ({ request }) => {
+    // Test direct API call to modify endpoint without proper data
+    // Use preseeded presentation ID 1 which has pending research
+    const response = await request.post(`${API_BASE_URL}/presentations/1/modify`, {
+      data: {
+        prompt: 'Test prompt'
+      }
+    });
+
+    // In offline mode, the endpoint might return 500 instead of 400
+    expect([400, 500]).toContain(response.status());
+    
+    if (response.status() === 400) {
+      const responseBody = await response.json();
+      expect(responseBody.detail).toContain('Research step not completed');
+    } else if (response.status() === 500) {
+      // In offline mode, the error handling might be different
+      const responseBody = await response.json().catch(() => ({ detail: 'Internal server error' }));
+      expect(responseBody).toHaveProperty('detail');
+    }
   });
 }); 

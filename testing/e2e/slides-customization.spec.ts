@@ -1,32 +1,14 @@
-import { test, expect, Page } from '@playwright/test';
-import { createPresentation } from './utils';
+import { test, expect } from '@playwright/test';
+import { navigateToTestPresentationById } from './utils';
 
 test.describe.skip('Slides Customization', () => {
-  let page: Page;
-  let presentationId: string;
-
-  test.beforeEach(async ({ browser }) => {
-    // Create a new browser context for each test
-    const context = await browser.newContext();
-    page = await context.newPage();
-    
-    // Set generous timeout for research operations
-    test.setTimeout(120000);
-
-    // Create presentation with AI research using utility function
-    const name = `Test Slides Customization ${Date.now()}`;
-    const topic = 'Artificial Intelligence in Healthcare';
-    
-    presentationId = await createPresentation(page, name, topic);
-    
-    // Wait for research content to appear
-    await expect(page.getByTestId('ai-research-content')).toBeVisible({ timeout: 60000 });
-    
-    // Wait specifically for research step to be marked completed
-    await page.waitForSelector('[data-testid="research-completed"]', { timeout: 60000 });
+  test.beforeEach(async ({ page }) => {
+    // Use preseeded presentation ID 26 (Slides Customization Test - research completed)
+    const presentation = await navigateToTestPresentationById(page, 26);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
   });
 
-  test('should show customization dialog when clicking customize button', async () => {
+  test('should show customization dialog when clicking customize button', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -48,7 +30,7 @@ test.describe.skip('Slides Customization', () => {
     await expect(page.locator('#custom_prompt')).toBeVisible();
   });
 
-  test('should allow customizing slides generation parameters', async () => {
+  test('should allow customizing slides generation parameters', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -79,7 +61,7 @@ test.describe.skip('Slides Customization', () => {
     await expect(page.locator('#custom_prompt')).toHaveValue('Focus on implementation challenges and technical architecture');
   });
 
-  test('should generate slides with custom parameters', async () => {
+  test('should generate slides with custom parameters', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -114,7 +96,7 @@ test.describe.skip('Slides Customization', () => {
     expect(slideCount).toBeLessThanOrEqual(10);
   });
 
-  test('should show slides generation in progress with custom parameters', async () => {
+  test('should show slides generation in progress with custom parameters', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -134,7 +116,7 @@ test.describe.skip('Slides Customization', () => {
     await page.waitForSelector('[data-testid="slides-completed"]', { timeout: 60000 });
   });
 
-  test('should validate input ranges for numeric fields', async () => {
+  test('should validate input ranges for numeric fields', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -152,7 +134,7 @@ test.describe.skip('Slides Customization', () => {
     await expect(durationInput).toHaveAttribute('max', '120');
   });
 
-  test('should have proper default values in customization dialog', async () => {
+  test('should have proper default values in customization dialog', async ({ page }) => {
     // Navigate to slides step
     await page.click('[data-testid="step-nav-slides"]');
     
@@ -169,12 +151,4 @@ test.describe.skip('Slides Customization', () => {
     await expect(page.locator('button:has-text("Medium (Balanced content)")')).toBeVisible();
   });
 
-  test.afterEach(async () => {
-    // Clean up: delete the test presentation if it was created
-    if (presentationId) {
-      // We could add a cleanup API call here if needed
-      // For now, just ensure the page is closed
-      await page.close();
-    }
-  });
 });

@@ -35,8 +35,10 @@ export async function goToPresentationsPage(page: Page) {
 
 /**
  * Create a new presentation with better error handling
+ * @deprecated Use navigateToTestPresentation() instead for tests that don't specifically test creation flow
  */
 export async function createPresentation(page: Page, name: string, topic: string) {
+  console.warn('⚠️ DEPRECATED: createPresentation() should only be used for tests that specifically test the creation flow. Use navigateToTestPresentation() for other tests.');
   // Make the name unique by adding a timestamp
   const uniqueName = `${name} ${Date.now()}`;
   console.log(`Creating presentation: ${uniqueName} with topic: ${topic}`);
@@ -738,4 +740,45 @@ export async function resetTestDatabase(): Promise<void> {
     console.error('❌ Failed to reset test database:', error);
     throw error;
   }
+}
+
+/**
+ * Get a test presentation by its ID
+ * @param id The presentation ID from the preseeded database
+ * @returns The test presentation data
+ */
+export async function getTestPresentationById(id: number): Promise<TestPresentation | null> {
+  // Import TEST_PRESENTATIONS from test-config
+  const { TEST_PRESENTATIONS } = await import('../test-config');
+  
+  // Find presentation by ID
+  const presentation = TEST_PRESENTATIONS.find(p => p.id === id);
+  return presentation || null;
+}
+
+/**
+ * Navigate directly to a test presentation by ID
+ * @param page The Playwright page object
+ * @param id The presentation ID to navigate to
+ * @returns The test presentation data if found
+ */
+export async function navigateToTestPresentationById(page: Page, id: number): Promise<TestPresentation | null> {
+  console.log(`🔗 Navigating to test presentation with ID: ${id}`);
+  
+  // Get the presentation data
+  const presentation = await getTestPresentationById(id);
+  if (!presentation) {
+    console.warn(`⚠️ No test presentation found with ID: ${id}`);
+  }
+  
+  // Get the base URL from environment or use default
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+  
+  // Navigate to the edit page for this presentation
+  await page.goto(`${baseUrl}/edit/${id}`);
+  
+  // Wait for the edit page to load by checking for workflow steps
+  await expect(page.locator('[data-testid="step-nav-research"]')).toBeVisible({ timeout: 15000 });
+  
+  return presentation;
 }

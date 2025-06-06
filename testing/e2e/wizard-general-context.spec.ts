@@ -1,36 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { navigateToTestPresentationById, runStepAndWaitForCompletion, waitForStepCompletion } from './utils';
 
 test.setTimeout(120000);
 
 test.describe('General Wizard Context', () => {
   test('should provide guidance on illustrations step', async ({ page }) => {
-    const name = `General Wizard Illustrations Test ${Date.now()}`;
-    const topic = 'Machine Learning Basics';
+    // Use preseeded presentation ID 16 (Wizard Slides Ready)
+    const presentation = await navigateToTestPresentationById(page, 16);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
 
-    const id = await createPresentation(page, name, topic);
-    console.log(`✅ Created presentation with ID: ${id}`);
-
-    // Complete research and slides steps
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    
-    await page.getByTestId('step-nav-slides').click();
-    await page.waitForLoadState('networkidle');
-    
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      
-      // Wait for slides to be generated
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
-      console.log('✅ Slides generated');
-    }
+    // This presentation already has research and slides completed
 
     // Navigate to illustrations step
     await page.getByTestId('step-nav-illustration').click();
@@ -68,45 +47,11 @@ test.describe('General Wizard Context', () => {
   });
 
   test('should provide guidance on PPTX step', async ({ page }) => {
-    const name = `General Wizard PPTX Test ${Date.now()}`;
-    const topic = 'Business Strategy Planning';
+    // Use preseeded presentation ID 17 (Wizard Complete Test - fully complete)
+    const presentation = await navigateToTestPresentationById(page, 17);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
 
-    const id = await createPresentation(page, name, topic);
-    
-    // Complete all previous steps
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    
-    await page.getByTestId('step-nav-slides').click();
-    await page.waitForLoadState('networkidle');
-    
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      
-      // Wait for slides to be generated
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
-      console.log('✅ Slides generated for PPTX test');
-    }
-
-    // Complete illustration step first
-    await page.getByTestId('step-nav-illustration').click();
-    await page.waitForLoadState('networkidle');
-    
-    // Complete the illustration step by running it
-    const runIllustrationButton = page.getByTestId('run-illustration-button');
-    if (await runIllustrationButton.count() > 0) {
-      const [illustrationResponse] = await Promise.all([
-        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/images/run`) && resp.status() === 200),
-        runIllustrationButton.click()
-      ]);
-      console.log('✅ Illustration step completed');
-    }
+    // This presentation already has all steps completed
 
     // Navigate to PPTX step (force click since it might be disabled in offline mode)
     await page.getByTestId('step-nav-pptx').click({ force: true });
@@ -128,10 +73,9 @@ test.describe('General Wizard Context', () => {
   });
 
   test('should explain presentation creation process', async ({ page }) => {
-    const name = `Process Explanation Test ${Date.now()}`;
-    const topic = 'Software Development Lifecycle';
-
-    const id = await createPresentation(page, name, topic);
+    // Use preseeded presentation ID 14 (Wizard Fresh Test)
+    const presentation = await navigateToTestPresentationById(page, 14);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     // Test process explanation from research step
     const wizardInput = page.getByTestId('wizard-input');
@@ -164,10 +108,9 @@ test.describe('General Wizard Context', () => {
   });
 
   test('should handle feature questions', async ({ page }) => {
-    const name = `Feature Questions Test ${Date.now()}`;
-    const topic = 'User Experience Design';
-
-    const id = await createPresentation(page, name, topic);
+    // Use preseeded presentation ID 15 (Wizard Research Ready)
+    const presentation = await navigateToTestPresentationById(page, 15);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     // Test feature explanation
     const wizardInput = page.getByTestId('wizard-input');
@@ -200,14 +143,13 @@ test.describe('General Wizard Context', () => {
   });
 
   test('should maintain helpful tone across different steps', async ({ page }) => {
-    const name = `Tone Consistency Test ${Date.now()}`;
-    const topic = 'Environmental Conservation';
-
-    const id = await createPresentation(page, name, topic);
+    // Use preseeded presentation ID 16 (Wizard Slides Ready - research and slides complete)
+    const presentation = await navigateToTestPresentationById(page, 16);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     const wizardInput = page.getByTestId('wizard-input');
     
-    // Test on research step
+    // Test on research step (already completed)
     await wizardInput.fill('Hello, can you help me?');
     await wizardInput.press('Enter');
     await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-of-type(2)', { timeout: 10000 });
@@ -216,28 +158,9 @@ test.describe('General Wizard Context', () => {
     expect(responseCount).toBeGreaterThan(1);
     console.log('✅ Helpful response on research step');
 
-    // Complete research step first
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-
     // Navigate to slides step and test
     await page.getByTestId('step-nav-slides').click();
     await page.waitForLoadState('networkidle');
-    
-    // Generate slides first
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    if (await runSlidesButton.count() > 0) {
-      await runSlidesButton.click();
-      
-      // Wait for slides to be generated
-      await page.waitForFunction(() => {
-        const thumbnails = document.querySelectorAll('[data-testid^="slide-thumbnail-"]');
-        return thumbnails.length > 0;
-      }, {}, { timeout: 30000 });
-      console.log('✅ Slides generated for tone test');
-    }
     
     await wizardInput.fill('I need general help');
     

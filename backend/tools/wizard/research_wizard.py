@@ -315,13 +315,15 @@ The integration of artificial intelligence in healthcare represents one of the m
             return {
                 "type": "research_modification",
                 "response": "I've updated the research content based on your request. The changes include the specific information you asked for.",
-                "changes": {
+                "suggestions": {
                     "research": {
                         "content": modified_content,
                         "links": new_links
                     }
                 },
-                "capabilities": self.get_capabilities()
+                "capabilities": self.get_capabilities(),
+                "wizard_type": "research",
+                "step": "research"
             }
         
         else:
@@ -375,5 +377,7 @@ What specific aspect would you like to focus on?"""
                 "type": "explanation",
                 "response": response,
                 "suggestions": None,
-                "capabilities": self.get_capabilities()
+                "capabilities": self.get_capabilities(),
+                "wizard_type": "research",
+                "step": "research"
             } 

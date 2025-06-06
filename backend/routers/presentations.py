@@ -448,19 +448,17 @@ async def process_wizard_request(
             presentation_data["steps"].append(step_data)
         
         # Process the wizard request
-        response = await process_wizard_request(
+        wizard_response = await process_wizard_request(
             prompt=query,
             presentation_data=presentation_data,
             current_step=step,
             context=context
         )
         
+        # The wizard response already contains properly formatted fields
         return JSONResponse(
             status_code=200,
-            content={
-                "response": response.get("response", ""),
-                "suggestions": response.get("changes", response.get("suggestions", None))
-            }
+            content=wizard_response
         )
         
     except Exception as e:

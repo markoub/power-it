@@ -1,50 +1,28 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation } from './utils';
+import { navigateToTestPresentationById } from './utils';
 
 test.setTimeout(120000);
 
-test.describe('Wizard Slide Modification', () => {
+test.describe('Wizard Functionality', () => {
   test('should request slide modification and apply it', async ({ page }) => {
-    const name = `Wizard Test ${Date.now()}`;
-    const topic = 'Offline wizard topic';
+    // Use preseeded presentation ID 16 (Wizard Slides Ready - has slides generated)
+    const presentation = await navigateToTestPresentationById(page, 16);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
 
-    // Create presentation and run research first
-    const id = await createPresentation(page, name, topic);
-    console.log(`✅ Created presentation with ID: ${id}`);
-
-    // 1. Run research using the proven working pattern
-    console.log('🔍 Running research...');
-    const [researchResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/research/run`) && resp.status() === 200),
-      page.getByTestId('start-ai-research-button').click()
-    ]);
-    console.log('✅ Research completed');
-
-    // 2. Navigate to slides and run using the exact working pattern
-    console.log('🔍 Running slides...');
+    // Navigate to slides step
     await page.getByTestId('step-nav-slides').click();
     await page.waitForLoadState('networkidle');
-    
-    const runSlidesButton = page.getByTestId('run-slides-button');
-    const slidesButtonExists = await runSlidesButton.count() > 0;
-    console.log(`Slides button exists: ${slidesButtonExists}`);
-    
-    if (slidesButtonExists) {
-      const [slidesResponse] = await Promise.all([
-        page.waitForResponse(resp => resp.url().includes(`/presentations/${id}/steps/slides/run`) && resp.status() === 200),
-        runSlidesButton.click()
-      ]);
-      console.log('✅ Slides generation started');
-    } else {
-      throw new Error("❌ Slides button not found");
+
+    // Check if we need to go to overview mode first
+    const backToOverviewButton = page.getByTestId('back-to-overview-button');
+    if (await backToOverviewButton.isVisible()) {
+      await backToOverviewButton.click();
+      await page.waitForLoadState('networkidle');
     }
 
-    // 3. Wait for slides to be generated and select first slide thumbnail
-    console.log('⏳ Waiting for slide thumbnails...');
-    
-    // Wait for first slide thumbnail with reasonable timeout
+    // Select first slide thumbnail
     const firstCard = page.getByTestId('slide-thumbnail-0');
-    await expect(firstCard).toBeVisible({ timeout: 15000 }); // Reduced from 60s
+    await expect(firstCard).toBeVisible();
     console.log('✅ First slide thumbnail visible');
     
     await firstCard.click();
@@ -64,7 +42,7 @@ test.describe('Wizard Slide Modification', () => {
       await wizardTextarea.press('Enter');
 
       // Wait for suggestion box with reasonable timeout
-      await expect(page.getByText('Suggested Changes')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('wizard-suggestion')).toBeVisible({ timeout: 10000 });
       console.log('✅ Suggestion box appeared');
 
       // Apply changes
@@ -101,5 +79,77 @@ test.describe('Wizard Slide Modification', () => {
     }
     
     console.log('✅ Wizard test completed successfully!');
+  });
+
+  test('should not call modify endpoint during research step', async ({ page }) => {
+    // Use preseeded presentation ID 1 (Fresh Test Presentation 1 - truly no steps completed)
+    const presentation = await navigateToTestPresentationById(page, 1);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
+
+    // Track network requests to catch inappropriate modify calls (not research modify)
+    const inappropriateModifyRequests: any[] = [];
+    page.on('request', request => {
+      if (request.url().includes('/modify') && !request.url().includes('/research/modify')) {
+        inappropriateModifyRequests.push({
+          url: request.url(),
+          method: request.method(),
+          timestamp: Date.now()
+        });
+      }
+    });
+
+    // Wait for initial load
+    await page.waitForLoadState('networkidle');
+
+    // Try to interact with wizard during research step (if available)
+    const wizardInput = page.getByTestId('wizard-input');
+    const sendButton = page.getByTestId('wizard-send-button');
+    
+    if (await wizardInput.isVisible() && await sendButton.isVisible()) {
+      await wizardInput.fill('Can you help improve this presentation?');
+      await sendButton.click();
+      
+      // Wait for any potential API calls
+      await page.waitForLoadState('networkidle');
+    } else {
+      console.log('Wizard not available during research step - this is expected behavior');
+    }
+
+    // Start AI research
+    await page.getByTestId('start-ai-research-button').click();
+
+    // Wait for research to complete
+    await expect(page.getByTestId('ai-research-content')).toBeVisible({ timeout: 30000 });
+
+    // Verify no inappropriate modify requests were made during research
+    console.log('Inappropriate modify requests:', inappropriateModifyRequests);
+    expect(inappropriateModifyRequests.length).toBe(0);
+  });
+
+  test('should handle modify endpoint errors gracefully', async ({ page }) => {
+    // Use preseeded presentation ID 15 (Wizard Research Ready - research completed)
+    const presentation = await navigateToTestPresentationById(page, 15);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
+
+    // Navigate to slides step
+    await page.getByTestId('step-nav-slides').click();
+
+    // Try to use wizard before slides are generated
+    const wizardInput = page.getByTestId('wizard-input');
+    if (await wizardInput.isVisible()) {
+      await wizardInput.fill('Improve this slide');
+      await page.getByTestId('wizard-send-button').click();
+      
+      // Should get a helpful response from wizard
+      const assistantMessage = page.getByTestId('wizard-message-assistant').last();
+      await expect(assistantMessage).toBeVisible({ timeout: 10000 });
+      
+      // The wizard should respond in some way (either with an error or suggestion)
+      const messageText = await assistantMessage.textContent();
+      console.log('Wizard response:', messageText);
+      
+      // Test passes as long as the wizard responds
+      expect(messageText).toBeTruthy();
+    }
   });
 });

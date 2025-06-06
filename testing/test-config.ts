@@ -131,6 +131,18 @@ export const TEST_PRESENTATIONS: TestPresentation[] = [
   // Complete presentation
   {
     id: 11,
+    name: "Illustrations Complete Test 1",
+    topic: "Cybersecurity Fundamentals",
+    author: "Test Author",
+    category: "illustrations_complete",
+    description: "For compiled/PPTX tests",
+    completedSteps: ["research", "slides", "illustration"],
+    pendingSteps: ["compiled", "pptx"]
+  },
+  
+  // Fully complete presentation
+  {
+    id: 12,
     name: "Complete Test Presentation 1",
     topic: "Project Management Best Practices",
     author: "Test Author",
@@ -142,7 +154,7 @@ export const TEST_PRESENTATIONS: TestPresentation[] = [
   
   // Manual research presentation
   {
-    id: 12,
+    id: 13,
     name: "Manual Research Test 1", 
     topic: "User Provided Content",
     author: "Test Author",
@@ -150,6 +162,206 @@ export const TEST_PRESENTATIONS: TestPresentation[] = [
     description: "For manual research workflow tests",
     completedSteps: ["manual_research"],
     pendingSteps: ["slides", "illustration", "compiled", "pptx"]
+  },
+  
+  // Wizard testing presentations
+  {
+    id: 14,
+    name: "Wizard Fresh Test",
+    topic: "Space Exploration",
+    author: "Test Author",
+    category: "wizard_testing",
+    description: "For wizard general context tests",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 15,
+    name: "Wizard Research Ready",
+    topic: "Renewable Energy",
+    author: "Test Author",
+    category: "wizard_testing",
+    description: "For wizard research context tests",
+    completedSteps: ["research"],
+    pendingSteps: ["slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 16,
+    name: "Wizard Slides Ready",
+    topic: "Mobile App Development",
+    author: "Test Author",
+    category: "wizard_testing",
+    description: "For wizard slides context tests",
+    completedSteps: ["research", "slides"],
+    pendingSteps: ["illustration", "compiled", "pptx"]
+  },
+  {
+    id: 17,
+    name: "Wizard Complete Test",
+    topic: "Digital Transformation",
+    author: "Test Author",
+    category: "wizard_testing",
+    description: "For wizard improvements tests",
+    completedSteps: ["research", "slides", "illustration", "compiled", "pptx"],
+    pendingSteps: []
+  },
+  {
+    id: 18,
+    name: "Wizard Context Test",
+    topic: "5G Technology",
+    author: "Test Author",
+    category: "wizard_testing",
+    description: "For basic wizard tests",
+    completedSteps: ["research"],
+    pendingSteps: ["slides", "illustration", "compiled", "pptx"]
+  },
+  
+  // Clarification testing presentations
+  {
+    id: 19,
+    name: "Clarification Ready Test",
+    topic: "Artificial Intelligence Ethics",
+    author: "Test Author",
+    category: "clarification_testing",
+    description: "For research clarification tests - no method selected",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 20,
+    name: "Clarification AI Selected",
+    topic: "Smart Cities",
+    author: "Test Author",
+    category: "clarification_testing",
+    description: "For AI research clarification tests",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 21,
+    name: "Clarification Manual Selected",
+    topic: "Custom Research Topic",
+    author: "Test Author",
+    category: "clarification_testing",
+    description: "For manual research clarification tests",
+    completedSteps: [],
+    pendingSteps: ["manual_research", "slides", "illustration", "compiled", "pptx"]
+  },
+  
+  // Step status testing presentations
+  {
+    id: 22,
+    name: "Step Pending Test",
+    topic: "Robotics",
+    author: "Test Author",
+    category: "step_status_testing",
+    description: "For step pending tests - all steps pending",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 23,
+    name: "Step Running Test",
+    topic: "Nanotechnology",
+    author: "Test Author",
+    category: "step_status_testing",
+    description: "For step running tests - research in progress",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 24,
+    name: "Step Error Test",
+    topic: "Virtual Reality",
+    author: "Test Author",
+    category: "step_status_testing",
+    description: "For step error tests - research failed",
+    completedSteps: [],
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 25,
+    name: "Step Mixed Status Test",
+    topic: "Augmented Reality",
+    author: "Test Author",
+    category: "step_status_testing",
+    description: "For mixed step status tests",
+    completedSteps: ["research"],
+    pendingSteps: ["slides", "illustration", "compiled", "pptx"]
+  },
+  
+  // Customization testing presentations
+  {
+    id: 26,
+    name: "Slide Customization Test",
+    topic: "Business Strategy",
+    author: "Test Author",
+    category: "customization_testing",
+    description: "For testing slide customization features",
+    completedSteps: ["research", "slides"],
+    pendingSteps: ["illustration", "compiled", "pptx"]
+  },
+  {
+    id: 27,
+    name: "PPTX Generation Test",
+    topic: "Education Technology",
+    author: "Test Author",
+    category: "customization_testing",
+    description: "For testing PPTX export features",
+    completedSteps: ["research", "slides", "illustration", "compiled"],
+    pendingSteps: ["pptx"]
+  },
+  {
+    id: 28,
+    name: "Template Styles Test",
+    topic: "Design Systems",
+    author: "Test Author",
+    category: "customization_testing",
+    description: "For testing different template styles",
+    completedSteps: ["research", "slides"],
+    pendingSteps: ["illustration", "compiled", "pptx"]
+  },
+  
+  // Bug fix testing presentations
+  {
+    id: 29,
+    name: "Empty Images Bug Test",
+    topic: "Healthcare Innovation",
+    author: "Test Author",
+    category: "bug_fix_testing",
+    description: "For testing empty images handling",
+    completedSteps: ["research", "slides", "illustration"],
+    pendingSteps: ["compiled", "pptx"]
+  },
+  {
+    id: 30,
+    name: "Special Characters Test",
+    topic: "Fintech & Banking",
+    author: "Test Author",
+    category: "bug_fix_testing",
+    description: "For testing special characters in content",
+    completedSteps: ["research", "slides"],
+    pendingSteps: ["illustration", "compiled", "pptx"]
+  },
+  {
+    id: 31,
+    name: "Long Content Test",
+    topic: "Environmental Sustainability",
+    author: "Test Author",
+    category: "bug_fix_testing",
+    description: "For testing long content handling",
+    completedSteps: ["research"],
+    pendingSteps: ["slides", "illustration", "compiled", "pptx"]
+  },
+  {
+    id: 32,
+    name: "Unicode Content Test",
+    topic: "Global Languages",
+    author: "Test Author",
+    category: "bug_fix_testing",
+    description: "For testing Unicode and multilingual content",
+    completedSteps: ["research", "slides"],
+    pendingSteps: ["illustration", "compiled", "pptx"]
   }
 ];
 
@@ -162,7 +374,7 @@ export const TEST_CONFIG = {
   PROD_API_BASE_URL: "http://localhost:8000",
   
   // Frontend URLs  
-  TEST_FRONTEND_URL: "http://localhost:3000",
+  TEST_FRONTEND_URL: "http://localhost:3001",
   
   // Database info
   TEST_DATABASE_FILE: "presentations_test.db",
@@ -234,5 +446,10 @@ export const TEST_CATEGORIES = {
   SLIDES_COMPLETE: 'slides_complete',       // Research + slides completed  
   ILLUSTRATIONS_COMPLETE: 'illustrations_complete', // Research + slides + illustrations completed
   COMPLETE: 'complete',                     // All steps completed
-  MANUAL_RESEARCH: 'manual_research'        // Manual research completed
+  MANUAL_RESEARCH: 'manual_research',       // Manual research completed
+  WIZARD_TESTING: 'wizard_testing',         // For wizard functionality tests
+  CLARIFICATION_TESTING: 'clarification_testing', // For research clarification tests
+  STEP_STATUS_TESTING: 'step_status_testing', // For testing different step statuses
+  CUSTOMIZATION_TESTING: 'customization_testing', // For slide customization and PPTX tests
+  BUG_FIX_TESTING: 'bug_fix_testing'        // For regression tests and edge cases
 } as const;

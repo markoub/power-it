@@ -150,7 +150,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
 
   const sendMessage = async (messageText?: string) => {
     const text = messageText || input
-    if (!text.trim()) return
+    if (!text || typeof text !== 'string' || !text.trim()) return
 
     const userMessage: Message = { 
       role: "user", 
@@ -209,9 +209,12 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
         if (apiResp) {
           response = apiResp.response || "I've processed your request.";
           
-          // Handle suggestions from the wizard
+          // Handle suggestions from the wizard - check both 'suggestions' and 'changes' keys
           if (apiResp.suggestions) {
             suggestedChanges = apiResp.suggestions;
+          } else if (apiResp.changes) {
+            // Convert 'changes' format to 'suggestions' format for consistency
+            suggestedChanges = apiResp.changes;
           }
         } else {
           response = "I've processed your request, but no specific response was generated.";
@@ -422,7 +425,7 @@ export default function Wizard({ presentation, currentSlide, context, step, onAp
           <Button
             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all hover:shadow-md"
             size="icon"
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={isLoading || !input.trim()}
             data-testid="wizard-send-button"
           >

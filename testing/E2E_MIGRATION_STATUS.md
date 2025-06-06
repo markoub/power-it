@@ -61,32 +61,33 @@ These tests still create presentations from scratch:
 - [x] Fresh Presentations (IDs 1-4) - `test_data/fresh_presentations.py`
 - [x] Research Complete (IDs 5-8) - `test_data/research_complete.py`
 - [x] Slides Complete (IDs 9-10) - `test_data/slides_complete.py`
-- [x] Illustrations Complete (ID 10) - `test_data/illustrations_complete.py`
-- [x] Fully Complete (ID 11) - `test_data/fully_complete.py`
-- [x] Manual Research (ID 12) - `test_data/manual_research.py`
-- [ ] Wizard Testing (IDs 16-20) - `test_data/wizard_testing.py` (placeholder)
-- [ ] Clarification Testing (IDs 21-23) - `test_data/clarification_testing.py` (placeholder)
-- [ ] Step Status Testing (IDs 24-27) - `test_data/step_status_testing.py` (placeholder)
-- [ ] Customization Testing (IDs 28-30) - `test_data/customization_testing.py` (placeholder)
-- [ ] Bug Fix Testing (IDs 31-35) - `test_data/bug_fix_testing.py` (placeholder)
+- [x] Illustrations Complete (ID 11) - `test_data/illustrations_complete.py`
+- [x] Fully Complete (ID 12) - `test_data/fully_complete.py`
+- [x] Manual Research (ID 13) - `test_data/manual_research.py`
+- [x] Wizard Testing (IDs 14-18) - `test_data/wizard_testing.py`
+- [x] Clarification Testing (IDs 19-21) - `test_data/clarification_testing.py`
+- [x] Step Status Testing (IDs 22-25) - `test_data/step_status_testing.py`
+- [x] Customization Testing (IDs 26-28) - `test_data/customization_testing.py`
+- [x] Bug Fix Testing (IDs 29-32) - `test_data/bug_fix_testing.py`
 
 ### 🔄 Database Structure Updates
 - [x] Created modular test_data directory structure
 - [x] Updated init_test_db.py to use modular imports
-- [ ] Need to implement remaining test data categories
+- [x] Implemented all test data categories (32 presentations total)
 - [ ] Need to test database initialization with new structure
 
 ## Next Steps
 
-1. Continue implementing remaining test data categories
-2. Update `init_test_db.py` to use the modular test data
+1. Test database initialization with new modular structure
+2. Update test configuration to remove version numbers (v1, v2, etc.)
 3. Migrate high-priority tests first (those creating 3+ presentations)
 4. Run migrated tests to verify they work correctly
 5. Update this status file as tests are migrated
 
 ## Notes
 
-- Total presentations needed: 35+ to cover all test scenarios
+- Total presentations in database: 32 (covering all test scenarios)
 - Tests should use `navigateToTestPresentation` or direct navigation to `/edit/{id}`
 - Only tests that specifically test creation flow should use `createPresentation`
 - Database is reset before test runs using `reset_test_db.py`
+- All test data is organized in modular files under `backend/test_data/`

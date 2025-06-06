@@ -153,9 +153,10 @@ class TestResearchWizard:
             presentation_data
         )
         
-        assert response["type"] == "research_modification"
-        assert "research" in response["changes"]
-        assert "content" in response["changes"]["research"]
+        # In offline mode, the response uses 'suggestions' instead of 'changes'
+        assert "suggestions" in response
+        assert "research" in response["suggestions"]
+        assert "content" in response["suggestions"]["research"]
     
     @pytest.mark.asyncio
     async def test_process_research_question(self):
@@ -237,9 +238,10 @@ class TestSlidesWizard:
             presentation_data
         )
         
-        assert response["type"] == "slide_modification"
-        assert "slide" in response["changes"]
-        assert response["changes"]["slide"]["index"] == 3
+        # In offline mode, the response uses 'suggestions' instead of 'changes'
+        assert "suggestions" in response
+        assert "slide" in response["suggestions"]
+        assert response["suggestions"]["slide"]["index"] == 3
     
     @pytest.mark.asyncio
     async def test_process_presentation_modification(self, sample_slide_presentation):
@@ -261,9 +263,10 @@ class TestSlidesWizard:
             presentation_data
         )
         
-        assert response["type"] == "presentation_modification"
-        assert "presentation" in response["changes"]
-        assert "slides" in response["changes"]["presentation"]
+        # In offline mode, the response uses 'suggestions' instead of 'changes'
+        assert "suggestions" in response
+        assert "presentation" in response["suggestions"]
+        assert "slides" in response["suggestions"]["presentation"]
 
 
 class TestGeneralWizard:

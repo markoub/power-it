@@ -387,31 +387,6 @@ export const api = {
     return await response.json();
   },
 
-  async processWizardRequest(
-    id: string | number,
-    prompt: string,
-    currentStep: string,
-    context?: any
-  ): Promise<any> {
-    const payload = {
-      prompt,
-      current_step: currentStep,
-      context: context || {}
-    };
-
-    const response = await fetch(`${API_URL}/presentations/${id}/wizard`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      mode: "cors",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to process wizard request: ${response.status}`);
-    }
-
-    return await response.json();
-  },
 
   async modifyResearch(id: string | number, prompt: string): Promise<any> {
     const response = await fetch(
@@ -467,7 +442,7 @@ export const api = {
 
   async processWizardRequest(
     presentationId: number | string,
-    query: string,
+    prompt: string,
     step: string,
     context: any
   ): Promise<any> {
@@ -478,8 +453,8 @@ export const api = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            query,
-            step: step.toLowerCase(),
+            query: prompt,  // Changed from 'prompt' to 'query'
+            step: step.toLowerCase(),  // Changed from 'current_step' to 'step'
             context
           }),
           mode: "cors",

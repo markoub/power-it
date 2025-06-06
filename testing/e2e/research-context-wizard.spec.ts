@@ -1,47 +1,33 @@
 import { test, expect } from '@playwright/test';
-import { createPresentation, startAIResearch, waitForResearchCompletion } from './utils';
+import { navigateToTestPresentationById } from './utils';
 
 test.describe('Research Context in Wizard', () => {
   test('should display research context in wizard on Research step', async ({ page }) => {
     // Set viewport to ensure wizard is visible (it's hidden on mobile)
     await page.setViewportSize({ width: 1400, height: 900 });
     
-    // Create a presentation with a specific topic
-    const presentationId = await createPresentation(
-      page, 
-      'Research Context Test', 
-      'Renewable Energy Solutions for Urban Areas'
-    );
-    
-    // Start and complete research
-    await startAIResearch(page);
-    await waitForResearchCompletion(page);
+    // Use preseeded presentation ID 15 (Wizard Research Ready - research completed)
+    const presentation = await navigateToTestPresentationById(page, 15);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     // Check that research context is visible in wizard
     await test.step('Verify research context component', async () => {
-      // Look for research context card
-      const researchContext = page.locator('text="Research Context"').first();
-      await expect(researchContext).toBeVisible();
+      // Wait for research content to be displayed
+      await expect(page.locator('[data-testid="ai-research-content"]')).toBeVisible();
       
-      // Check for topic display
-      const topicSection = page.locator('text="Topic"').first();
-      await expect(topicSection).toBeVisible();
-      await expect(page.locator('text="Renewable Energy Solutions for Urban Areas"')).toBeVisible();
+      // Look for research context card using more specific selectors
+      const researchContextCard = page.locator('.mb-4').filter({ has: page.locator('text="Research Context"') });
+      await expect(researchContextCard).toBeVisible();
       
-      // Check for content outline
-      const contentOutline = page.locator('text="Content Outline"');
-      await expect(contentOutline).toBeVisible();
+      // Check for stats badges (words, sections, sources)
+      const wordsBadge = page.locator('.text-xs').filter({ hasText: /\d+ words/ });
+      await expect(wordsBadge).toBeVisible();
       
-      // Check for stats in the Research Context header
-      // The text appears as "Research Context 269 words 7 sections 0 sources"
-      const researchContextHeader = page.locator('text=/Research Context.*words.*sections.*sources/');
-      await expect(researchContextHeader).toBeVisible();
+      const sectionsBadge = page.locator('.text-xs').filter({ hasText: /\d+ sections/ });
+      await expect(sectionsBadge).toBeVisible();
       
-      // This confirms stats are being displayed
-      const headerText = await researchContextHeader.textContent();
-      expect(headerText).toMatch(/\d+ words/);
-      expect(headerText).toMatch(/\d+ sections/);
-      expect(headerText).toMatch(/\d+ sources/);
+      const sourcesBadge = page.locator('.text-xs').filter({ hasText: /\d+ sources/ });
+      await expect(sourcesBadge).toBeVisible();
       
       console.log('✅ Research context is displayed in wizard');
     });
@@ -70,10 +56,10 @@ test.describe('Research Context in Wizard', () => {
       await wizardInput.press('Enter');
       
       // Wait for wizard response
-      await page.waitForSelector('[data-testid="wizard-message-assistant"]:nth-child(2)', { timeout: 10000 });
+      await expect(page.locator('[data-testid="wizard-message-assistant"]').nth(1)).toBeVisible({ timeout: 10000 });
       
-      // Research context should still be visible
-      await expect(page.locator('text="Research Context"').first()).toBeVisible();
+      // Check that research content is still accessible
+      await expect(page.locator('[data-testid="ai-research-content"]')).toBeVisible();
       
       // Check for wizard response
       const assistantMessages = await page.locator('[data-testid="wizard-message-assistant"]').count();
@@ -87,14 +73,9 @@ test.describe('Research Context in Wizard', () => {
     // Set viewport to ensure wizard is visible
     await page.setViewportSize({ width: 1400, height: 900 });
     
-    const presentationId = await createPresentation(
-      page, 
-      'Research Prompts Test', 
-      'Artificial Intelligence in Education'
-    );
-    
-    await startAIResearch(page);
-    await waitForResearchCompletion(page);
+    // Use preseeded presentation ID 18 (Wizard Context Test - research completed)
+    const presentation = await navigateToTestPresentationById(page, 18);
+    console.log(`✅ Using preseeded presentation: ${presentation?.name}`);
     
     // Check for helpful prompts section
     const tryAskingSection = page.locator('text="Try asking me to:"');

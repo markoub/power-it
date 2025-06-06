@@ -37,6 +37,9 @@ class GeneralWizard(BaseWizard):
     ) -> Dict[str, Any]:
         """Process general assistance requests."""
         
+        print(f"[GENERAL WIZARD] process_request called with prompt: '{prompt}'")
+        print(f"[GENERAL WIZARD] OFFLINE_MODE: {OFFLINE_MODE}")
+        
         if OFFLINE_MODE:
             return self._create_offline_response(prompt)
         
@@ -85,7 +88,9 @@ class GeneralWizard(BaseWizard):
     
     def _create_offline_response(self, prompt: str) -> Dict[str, Any]:
         """Create offline response for testing."""
+        print(f"[GENERAL WIZARD] _create_offline_response called with prompt: '{prompt}'")
         if not prompt or not prompt.strip():
+            print(f"[GENERAL WIZARD] Empty prompt detected")
             return {
                 "type": "error",
                 "error": "Empty request received. Please provide a question or instruction.",

@@ -38,9 +38,14 @@ class WizardFactory:
             Dictionary containing response and any suggested changes
         """
         
+        print(f"[WIZARD FACTORY] Received prompt: '{prompt}'")
+        print(f"[WIZARD FACTORY] Current step: '{current_step}'")
+        
         # Determine which wizard to use based on the current step
         wizard_type = self._determine_wizard_type(current_step, context)
         wizard = self._wizards.get(wizard_type, self._wizards["general"])
+        
+        print(f"[WIZARD FACTORY] Selected wizard: {wizard_type}")
         
         # Add step information to context
         if context is None:
@@ -59,16 +64,21 @@ class WizardFactory:
     def _determine_wizard_type(self, current_step: str, context: Optional[Dict[str, Any]]) -> str:
         """Determine which wizard type to use based on step and context."""
         
+        print(f"[WIZARD FACTORY] Determining wizard type for step: '{current_step}'")
+        
         # Research step uses research wizard
         if current_step.lower() == "research":
+            print(f"[WIZARD FACTORY] Selected research wizard")
             return "research"
         
         # Slides step uses slides wizard
         elif current_step.lower() == "slides":
+            print(f"[WIZARD FACTORY] Selected slides wizard")
             return "slides"
         
         # All other steps use general wizard
         else:
+            print(f"[WIZARD FACTORY] Selected general wizard for step: '{current_step}'")
             return "general"
     
     def get_wizard_capabilities(self, wizard_type: str) -> Dict[str, Any]:

@@ -354,7 +354,9 @@ class SlidesWizard(BaseWizard):
         base_response = {
             "type": "presentation_modification" if request_type == "presentation_level" else "slide_modification" if request_type == "single_slide" else "explanation",
             "response": f"Offline mode: I understand your request '{prompt}'. In full mode, I would provide detailed assistance.",
-            "capabilities": self.get_capabilities()
+            "capabilities": self.get_capabilities(),
+            "wizard_type": "slides",
+            "step": "slides"
         }
         
         # Add mock suggestions for modification requests
@@ -397,7 +399,7 @@ Additional engaging elements:
                 else:
                     suggested_content = f"IMPROVED CONTENT: {current_content}\n\nAdditional enhancements:\n- Better structure\n- More engaging language\n- Clearer messaging"
                 
-                base_response["changes"] = {
+                base_response["suggestions"] = {
                     "slide": {
                         "title": suggested_title,
                         "content": suggested_content,
@@ -406,9 +408,10 @@ Additional engaging elements:
                         "index": slide_index
                     }
                 }
+                base_response["response"] = "I've enhanced your slide with better formatting and more engaging content. The suggested changes include bullet points for clarity and additional elements to make it more interactive."
             # Always provide a response for single_slide requests, even if no current slide found
-            if "changes" not in base_response:
-                base_response["changes"] = {
+            if "suggestions" not in base_response:
+                base_response["suggestions"] = {
                     "slide": {
                         "title": "Enhanced Slide Title",
                         "content": "• Improved bullet point 1\n• Enhanced bullet point 2\n• Engaging call-to-action",
@@ -417,9 +420,10 @@ Additional engaging elements:
                         "index": slide_index if slide_index is not None else 0
                     }
                 }
+                base_response["response"] = "I've created an enhanced version of your slide with improved structure and engaging content."
         elif request_type == "presentation_level":
             # Mock presentation-level suggestion
-            base_response["changes"] = {
+            base_response["suggestions"] = {
                 "presentation": {
                     "slides": [
                         {
@@ -447,6 +451,7 @@ Additional engaging elements:
                     ]
                 }
             }
+            base_response["response"] = "I've added new slides to your presentation to better cover the topic. The suggested changes include additional content sections that will enhance your presentation's completeness."
         else:
             base_response["changes"] = None
             

@@ -2,6 +2,21 @@ import { Page, expect } from '@playwright/test';
 import { getApiUrl as getConfigApiUrl, TEST_CONFIG, getTestPresentation, TestPresentation } from '../test-config';
 
 /**
+ * Reset the test database to ensure clean state
+ */
+export async function resetTestDatabase(page: Page): Promise<void> {
+  const apiUrl = getConfigApiUrl();
+  try {
+    const response = await page.request.post(`${apiUrl}/test/reset-database`);
+    if (!response.ok()) {
+      console.warn('Failed to reset test database:', response.status());
+    }
+  } catch (error) {
+    console.warn('Error resetting test database:', error);
+  }
+}
+
+/**
  * Get timeout value based on offline mode - keep minimal for safety
  */
 export function getTimeout(defaultTimeout: number = 5000): number {
@@ -718,29 +733,6 @@ export async function verifyPresentationSteps(page: Page, presentation: TestPres
   }
 }
 
-/**
- * Reset test database to initial state (call this before test suites)
- */
-export async function resetTestDatabase(): Promise<void> {
-  console.log('🔄 Resetting test database...');
-  
-  try {
-    // Make a request to reset the database
-    const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/test/reset-database`, {
-      method: 'POST',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Reset failed: ${response.status} ${response.statusText}`);
-    }
-    
-    console.log('✅ Test database reset successfully');
-  } catch (error) {
-    console.error('❌ Failed to reset test database:', error);
-    throw error;
-  }
-}
 
 /**
  * Get a test presentation by its ID

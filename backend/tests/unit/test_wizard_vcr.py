@@ -61,18 +61,12 @@ class TestWizardVCR:
     @pytest.mark.vcr_record
     async def test_general_wizard_vcr(self, wizard_factory, sample_presentation_data):
         """Test and record VCR fixture for general wizard."""
-        wizard = wizard_factory.get_wizard("general")
         prompt = "How can I make my presentation more engaging?"
         
-        context = {
-            "presentation_id": 1,
-            "current_step": "pptx"
-        }
-        
-        result = await wizard.process_request(
+        result = await wizard_factory.process_wizard_request(
             prompt=prompt,
             presentation_data=sample_presentation_data,
-            context=context
+            current_step="pptx"
         )
         
         assert "response" in result
@@ -85,7 +79,7 @@ class TestWizardVCR:
         with open(fixture_path, "w") as f:
             json.dump({
                 "prompt": prompt,
-                "context": context,
+                "current_step": "pptx",
                 "response": result
             }, f, indent=2)
     
@@ -93,31 +87,25 @@ class TestWizardVCR:
     @pytest.mark.vcr_record
     async def test_research_wizard_vcr(self, wizard_factory, sample_presentation_data):
         """Test and record VCR fixture for research wizard."""
-        wizard = wizard_factory.get_wizard("research")
         prompt = "Add more information about machine learning applications"
         
-        context = {
-            "presentation_id": 1,
-            "current_step": "research"
-        }
-        
-        result = await wizard.process_request(
+        result = await wizard_factory.process_wizard_request(
             prompt=prompt,
             presentation_data=sample_presentation_data,
-            context=context
+            current_step="research"
         )
         
         assert "response" in result
-        # Research wizard may suggest changes
-        if "changes" in result:
-            assert "research" in result["changes"]
+        # Research wizard may suggest changes (in offline mode, uses 'suggestions')
+        if "suggestions" in result:
+            assert "research" in result["suggestions"]
         
         # Save fixture
         fixture_path = Path("tests/fixtures/wizard_research_test.json")
         with open(fixture_path, "w") as f:
             json.dump({
                 "prompt": prompt,
-                "context": context,
+                "current_step": "research",
                 "response": result
             }, f, indent=2)
     
@@ -125,32 +113,30 @@ class TestWizardVCR:
     @pytest.mark.vcr_record
     async def test_slides_wizard_vcr(self, wizard_factory, sample_presentation_data):
         """Test and record VCR fixture for slides wizard."""
-        wizard = wizard_factory.get_wizard("slides")
         prompt = "Add a new slide about AI ethics"
         
-        context = {
-            "presentation_id": 1,
-            "current_step": "slides",
-            "current_slide": 0
-        }
-        
-        result = await wizard.process_request(
+        result = await wizard_factory.process_wizard_request(
             prompt=prompt,
             presentation_data=sample_presentation_data,
-            context=context
+            current_step="slides",
+            context={"current_slide": 0}
         )
         
         assert "response" in result
-        # Slides wizard may suggest slide changes
-        if "changes" in result:
-            assert "slides" in result["changes"] or "slide" in result["changes"]
+        # Slides wizard may suggest slide changes (in offline mode, uses 'suggestions')
+        if "suggestions" in result:
+            # Can be either single slide or presentation-level changes
+            assert ("slides" in result["suggestions"] or 
+                    "slide" in result["suggestions"] or 
+                    "presentation" in result["suggestions"])
         
         # Save fixture
         fixture_path = Path("tests/fixtures/wizard_slides_test.json")
         with open(fixture_path, "w") as f:
             json.dump({
                 "prompt": prompt,
-                "context": context,
+                "current_step": "slides",
+                "context": {"current_slide": 0},
                 "response": result
             }, f, indent=2)
     
@@ -158,33 +144,35 @@ class TestWizardVCR:
     @pytest.mark.vcr_record
     async def test_wizard_suggestions_vcr(self, wizard_factory, sample_presentation_data):
         """Test and record VCR fixture for wizard suggestions."""
-        wizard = wizard_factory.get_wizard("slides")
         prompt = "What improvements can you suggest for this slide?"
         
-        context = {
-            "presentation_id": 1,
-            "current_step": "slides",
-            "current_slide": 0,
-            "request_suggestions": True
-        }
-        
-        result = await wizard.process_request(
+        result = await wizard_factory.process_wizard_request(
             prompt=prompt,
             presentation_data=sample_presentation_data,
-            context=context
+            current_step="slides",
+            context={
+                "current_slide": 0,
+                "request_suggestions": True
+            }
         )
         
         assert "response" in result
         # Should include suggestions
         if "suggestions" in result:
-            assert isinstance(result["suggestions"], list)
-            assert len(result["suggestions"]) > 0
+            # In offline mode, suggestions is a dict, not a list
+            assert isinstance(result["suggestions"], (dict, list))
+            if isinstance(result["suggestions"], list):
+                assert len(result["suggestions"]) > 0
         
         # Save fixture
         fixture_path = Path("tests/fixtures/wizard_suggestions_test.json")
         with open(fixture_path, "w") as f:
             json.dump({
                 "prompt": prompt,
-                "context": context,
+                "current_step": "slides",
+                "context": {
+                    "current_slide": 0,
+                    "request_suggestions": True
+                },
                 "response": result
             }, f, indent=2)

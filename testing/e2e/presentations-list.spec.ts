@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { goToPresentationsPage, waitForNetworkIdle } from './utils';
+import { goToPresentationsPage, waitForNetworkIdle, resetTestDatabase } from './utils';
 
 test.setTimeout(15000); // 15s timeout for offline mode
 
 test.describe('Presentations List Page', () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    await resetTestDatabase(page);
+  });
   test('should display the presentations page correctly', async ({ page }) => {
     await goToPresentationsPage(page);
     

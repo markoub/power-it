@@ -1,10 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { navigateToTestPresentation, verifyPresentationSteps, waitForStepCompletion } from "./utils";
+import { navigateToTestPresentation, verifyPresentationSteps, waitForStepCompletion, resetTestDatabase } from "./utils";
 import { TEST_CATEGORIES } from "../test-config";
 
 test.setTimeout(60000);
 
 test.describe("Slides Generation with Pre-seeded Data", () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    await resetTestDatabase(page);
+  });
   test("should generate slides from pre-completed research", async ({ page }) => {
     // Navigate to a presentation that already has research completed
     const presentation = await navigateToTestPresentation(page, TEST_CATEGORIES.RESEARCH_COMPLETE, 0);

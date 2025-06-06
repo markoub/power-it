@@ -1,0 +1,36 @@
+{
+  "prompt": "Add more information about machine learning applications",
+  "current_step": "research",
+  "response": {
+    "type": "research_modification",
+    "response": "I've updated the research content based on your request. The changes include the specific information you asked for.",
+    "suggestions": {
+      "research": {
+        "content": "# AI in Healthcare\n\n## Introduction\nAI is transforming healthcare...\n\n## Additional Insights\n\n### Recent Developments\n- Breakthrough AI models achieving human-level performance in specific medical tasks\n- Successful clinical trials of AI-assisted surgical systems\n- Growing adoption of AI in rural and underserved healthcare settings\n\n### Best Practices\n- Ensuring diverse training data to reduce bias\n- Continuous monitoring and validation of AI systems\n- Maintaining strong physician-AI collaboration\n- Regular updates based on new medical research",
+        "links": [
+          "https://www.nature.com/articles/ai-healthcare-2024",
+          "https://www.who.int/health-topics/artificial-intelligence",
+          "https://jamanetwork.com/journals/jama/ai-medicine"
+        ]
+      }
+    },
+    "capabilities": {
+      "type": "research",
+      "can_modify": true,
+      "can_add_content": true,
+      "can_answer_questions": true,
+      "can_suggest_improvements": true,
+      "can_clarify": true,
+      "supported_actions": [
+        "refine_research",
+        "add_information",
+        "answer_questions",
+        "suggest_topics",
+        "improve_quality",
+        "clarify_ambiguities"
+      ]
+    },
+    "wizard_type": "research",
+    "step": "research"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "prompt": "How can I make my presentation more engaging?",
+  "current_step": "pptx",
+  "response": {
+    "type": "explanation",
+    "response": "Offline mode: I understand your request 'How can I make my presentation more engaging?'. In full mode, I would provide detailed assistance about the presentation creation process.",
+    "suggestions": null,
+    "capabilities": {
+      "type": "general",
+      "can_modify": false,
+      "can_provide_guidance": true,
+      "can_answer_questions": true,
+      "can_suggest_navigation": true,
+      "supported_actions": [
+        "answer_questions",
+        "provide_guidance",
+        "suggest_next_steps",
+        "explain_features",
+        "help_navigation"
+      ]
+    },
+    "wizard_type": "general",
+    "step": "pptx"
+  }
+}

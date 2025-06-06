@@ -279,22 +279,59 @@ test-all-offline: test-backend-offline test-frontend test-e2e
 test-all-failures:
 	$(call print_info,Running all tests and collecting failures...)
 	@printf "=== RUNNING ALL TESTS - FAILURES ONLY ===\n" > test-failures.log
+	@printf "Date: %s\n" "$$(date)" >> test-failures.log
 	@printf "\n" >> test-failures.log
+	
+	$(call print_section,Backend Tests)
 	@printf "🔧 Backend Tests:\n" >> test-failures.log
-	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh 2>&1 | grep -E "(FAILED|ERROR|AssertionError)" >> ../test-failures.log || true
+	@printf "Running backend tests...\n"
+	@cd $(BACKEND_DIR) && chmod +x run_tests.sh && PYTEST_ARGS="--tb=short -v -m 'not network'" ./run_tests.sh 2>&1 | tee backend-test-output.log | grep -E "(FAILED|ERROR|AssertionError)" >> ../test-failures.log || true
+	@if grep -q "failed" $(BACKEND_DIR)/backend-test-output.log 2>/dev/null; then \
+		printf "\n⚠️  Backend tests had failures\n" >> test-failures.log; \
+	else \
+		printf "\n✅ Backend tests all passed\n" >> test-failures.log; \
+	fi
+	@rm -f $(BACKEND_DIR)/backend-test-output.log
 	@printf "\n" >> test-failures.log
+	
+	$(call print_section,Starting Test Servers)
+	@printf "🚀 Starting test servers...\n" >> test-failures.log
+	@$(MAKE) test-servers-restart > /dev/null 2>&1
+	@sleep 3
+	@printf "✅ Test servers started\n" >> test-failures.log
+	@printf "\n" >> test-failures.log
+	
+	$(call print_section,Resetting Test Database)
+	@$(MAKE) reset-test-db > /dev/null 2>&1
+	@printf "🗄️  Test database reset\n" >> test-failures.log
+	@printf "\n" >> test-failures.log
+	
+	$(call print_section,E2E Tests)
 	@printf "🌐 E2E Tests:\n" >> test-failures.log
-	@cd $(TESTING_DIR) && npx playwright test --max-failures=0 --reporter=line 2>&1 | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
+	@printf "Running all E2E tests...\n"
+	
+	@# Run all E2E tests at once using test servers
+	@cd $(TESTING_DIR) && chmod +x test.sh && ./test.sh 2>&1 | tee e2e-test-output.log | grep -E "(✘|FAILED|failed|Error:|TimeoutError)" >> ../test-failures.log || true
+	
+	@# Check if E2E tests passed or failed
+	@if grep -q "failed" $(TESTING_DIR)/e2e-test-output.log 2>/dev/null; then \
+		printf "\n⚠️  E2E tests had failures\n" >> test-failures.log; \
+	else \
+		printf "\n✅ E2E tests all passed\n" >> test-failures.log; \
+	fi
+	@rm -f $(TESTING_DIR)/e2e-test-output.log
+	
 	@printf "\n" >> test-failures.log
-	@printf "=== SUMMARY ===\n" >> test-failures.log
+	@printf "=== FINAL SUMMARY ===\n" >> test-failures.log
 	@if [ -s test-failures.log ] && grep -q -E "(FAILED|ERROR|✘|failed|AssertionError|TimeoutError)" test-failures.log; then \
 		$(call print_warn,Tests completed with failures. See summary below:); \
 		printf "\n"; \
 		cat test-failures.log; \
 		printf "\n"; \
 		$(call print_warn,To run specific failing tests:); \
-		printf "  Backend: cd backend && ./run_tests.sh tests/specific_test.py::test_name\n"; \
-		printf "  E2E: cd testing && npx playwright test specific-test.spec.ts\n"; \
+		printf "  Backend: make test-backend\n"; \
+		printf "  E2E: make test-e2e\n"; \
+		printf "  E2E specific: make test-e2e-specific test=test-name\n"; \
 	else \
 		$(call print_info,All tests passed! No failures detected.); \
 		printf "All tests passed! No failures detected.\n" >> test-failures.log; \

@@ -23,16 +23,7 @@ import { getTestPresentation, TEST_CATEGORIES, getApiUrl } from '../test-config'
 test.describe('Delete Presentation', () => {
   // Reset database before each test to ensure clean state
   test.beforeEach(async ({ page }) => {
-    // Reset the test database to ensure all test presentations are available
-    const apiUrl = getApiUrl();
-    try {
-      const response = await page.request.post(`${apiUrl}/test/reset-database`);
-      if (!response.ok()) {
-        console.warn('Failed to reset test database:', response.status());
-      }
-    } catch (error) {
-      console.warn('Error resetting test database:', error);
-    }
+    await resetTestDatabase(page);
   });
   test('should delete a presentation from the list', async ({ page }) => {
     // Use Fresh Test Presentation 1 for single deletion

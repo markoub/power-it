@@ -1,0 +1,57 @@
+{
+  "prompt": "Add a new slide about AI ethics",
+  "current_step": "slides",
+  "context": {
+    "current_slide": 0
+  },
+  "response": {
+    "type": "presentation_modification",
+    "response": "I've added new slides to your presentation to better cover the topic. The suggested changes include additional content sections that will enhance your presentation's completeness.",
+    "capabilities": {
+      "type": "slides",
+      "can_modify_single": true,
+      "can_modify_presentation": true,
+      "can_add_slides": true,
+      "can_remove_slides": true,
+      "can_reorder_slides": true,
+      "supported_actions": [
+        "modify_slide_content",
+        "improve_slide_design",
+        "add_new_slide",
+        "remove_slide",
+        "reorder_slides",
+        "enhance_presentation_flow"
+      ]
+    },
+    "wizard_type": "slides",
+    "step": "slides",
+    "suggestions": {
+      "presentation": {
+        "slides": [
+          {
+            "id": "slide-0",
+            "type": "Content",
+            "title": "Mock Slide 1 (Offline)",
+            "content": "Mock content for slide 1",
+            "order": 0,
+            "fields": {
+              "title": "Mock Slide 1 (Offline)",
+              "content": "Mock content for slide 1"
+            }
+          },
+          {
+            "id": "slide-1",
+            "type": "Content",
+            "title": "Mock Slide 2 (Offline)",
+            "content": "Mock content for slide 2",
+            "order": 1,
+            "fields": {
+              "title": "Mock Slide 2 (Offline)",
+              "content": "Mock content for slide 2"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -34,6 +34,20 @@ STEP_STATUS_TESTING_PRESENTATIONS = [
         ]
     },
     {
+        "id": 33,
+        "name": "Dedicated Step Pending Test",
+        "topic": "Renewable Energy Fresh",
+        "author": "Test Author", 
+        "description": "Dedicated presentation for step pending test - all steps pending",
+        "steps": [
+            {"step": "research", "status": "pending"},
+            {"step": "slides", "status": "pending"},
+            {"step": "illustration", "status": "pending"},
+            {"step": "compiled", "status": "pending"},
+            {"step": "pptx", "status": "pending"},
+        ]
+    },
+    {
         "id": 24,
         "name": "Step Error Test",
         "topic": "Virtual Reality",

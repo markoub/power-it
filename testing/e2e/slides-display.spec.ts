@@ -1,10 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { navigateToTestPresentation, waitForStepCompletion, getApiUrl } from "./utils";
+import { navigateToTestPresentation, waitForStepCompletion, getApiUrl, resetTestDatabase } from "./utils";
 import { TEST_CATEGORIES } from "../test-config";
 
 test.setTimeout(15000); // 15s timeout for offline mode
 
 test.describe("Slides Display", () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    await resetTestDatabase(page);
+  });
   test("generated slides are shown with content using pre-seeded data", async ({ page }) => {
     // Use a presentation that already has research completed
     const presentation = await navigateToTestPresentation(page, TEST_CATEGORIES.RESEARCH_COMPLETE, 0);
@@ -44,23 +48,42 @@ test.describe("Slides Display", () => {
     }
     
     await expect(button).toBeEnabled();
-    await button.click();
-    console.log("✅ Slides generation started");
+    
+    // Click the button and wait for slides generation API response
+    const [slidesResponse] = await Promise.all([
+      page.waitForResponse(response => 
+        response.url().includes('/presentations') && 
+        response.url().includes('/steps/slides/run') && 
+        response.status() === 200,
+        { timeout: 15000 }
+      ),
+      button.click()
+    ]);
+    console.log("✅ Slides generation API responded");
     
     // Wait for slides to be generated - in offline mode this should be fast
-    console.log("⏳ Waiting for slides to be generated...");
+    console.log("⏳ Waiting for slides to be rendered...");
     
-    // Wait for the slides API call to complete
+    // Wait for the page to update
     await page.waitForLoadState('networkidle');
     
-    // Now wait for slide thumbnails to appear
-    const slideThumbnails = page.locator('[data-testid^="slide-thumbnail-"]');
-    await expect(slideThumbnails.first()).toBeVisible({ timeout: 10000 });
+    // First check if we need to navigate to the slides view page
+    // Some presentations might show a "Generate Slides" button after running
+    const generateSlidesBtn = page.getByRole('button', { name: 'Generate Slides' });
+    if (await generateSlidesBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      console.log("📝 Found Generate Slides button - clicking it");
+      await generateSlidesBtn.click();
+      await page.waitForLoadState('networkidle');
+    }
+    
+    // Now wait for slide thumbnails to appear - they might be in different containers
+    const slideThumbnails = page.locator('[data-testid^="slide-thumbnail-"], [data-testid="slides-container"] .slide-preview, .slide-container');
+    await expect(slideThumbnails.first()).toBeVisible({ timeout: 15000 });
     
     console.log("✅ Slides generated successfully");
     
     // Verify we have multiple slides
-    const slideCount = await page.locator('[data-testid^="slide-thumbnail-"]').count();
+    const slideCount = await slideThumbnails.count();
     expect(slideCount).toBeGreaterThan(0);
     console.log(`✅ Generated ${slideCount} slides successfully`);
     

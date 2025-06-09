@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { navigateToTestPresentationById } from './utils';
+import { navigateToTestPresentationById, resetTestDatabase } from './utils';
 
 test.describe('Wizard Improvements Demo', () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    await resetTestDatabase(page);
+  });
   test('should demonstrate enhanced wizard functionality', async ({ page }) => {
     test.setTimeout(60000); // 1 minute for offline mode
 
@@ -197,7 +201,7 @@ test.describe('Wizard Improvements Demo', () => {
     console.log('   ✅ Loading states and visual feedback');
   });
 
-  test.skip('should handle different step contexts', async ({ page }) => {
+  test('should handle different step contexts', async ({ page }) => {
     test.setTimeout(60000); // 1 minute for offline mode
 
     // Use preseeded presentation ID 14 (Wizard Fresh Test - fresh presentation)
@@ -230,7 +234,18 @@ test.describe('Wizard Improvements Demo', () => {
       page.getByTestId('start-ai-research-button').click()
     ]);
     
-    await page.getByTestId('step-nav-slides').click();
+    // Wait for research to complete and slides button to become enabled
+    const slidesButton = page.getByTestId('step-nav-slides');
+    
+    // In offline mode, research completes quickly but we need to wait for UI update
+    await page.waitForLoadState('networkidle');
+    
+    // Wait for the slides button to become enabled (not disabled)
+    await expect(slidesButton).not.toBeDisabled({ timeout: 10000 });
+    console.log('✅ Slides button is now enabled');
+    
+    // Now click the slides button
+    await slidesButton.click();
     await page.waitForLoadState('networkidle');
     
     await expect(wizardHeader).toContainText('Slides');

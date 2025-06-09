@@ -77,9 +77,12 @@ async def check_clarifications(query: str) -> Optional[Dict[str, Any]]:
             "A2A": "I see 'A2A' in your topic. Could you clarify what this refers to? It could mean Application-to-Application integration, Account-to-Account transfers, or something else entirely."
         }
         
-        # Check if query contains ambiguous terms
+        # Check if query contains ambiguous terms (as whole words)
+        import re
         for term, message in ambiguous_terms.items():
-            if term in query.upper():
+            # Use word boundary regex to match whole words only
+            pattern = r'\b' + re.escape(term) + r'\b'
+            if re.search(pattern, query.upper()):
                 return {
                     "needs_clarification": True,
                     "initial_message": message

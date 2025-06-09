@@ -11,7 +11,7 @@ CUSTOMIZATION_TESTING_PRESENTATIONS = [
         "name": "Slide Customization Test",
         "topic": "Business Strategy",
         "author": "Test Author",
-        "description": "For testing slide customization features",
+        "description": "For testing slide customization features - research ready",
         "steps": [
             {
                 "step": "research", 
@@ -42,24 +42,7 @@ Modern business strategy requires agility, innovation, and customer focus.
                     "links": []
                 }
             },
-            {
-                "step": "slides", 
-                "status": "completed",
-                "result": {
-                    "slides": [
-                        {"title": "Business Strategy", "content": "Driving Growth and Innovation", "type": "welcome"},
-                        {"title": "Agenda", "content": "• Strategic Overview\n• Market Analysis\n• Our Approach\n• Implementation Plan", "type": "table_of_contents"},
-                        {"title": "Strategic Planning", "content": "• Vision alignment\n• Market positioning\n• Resource optimization\n• Risk management", "type": "content"},
-                        {"title": "Market Dynamics", "content": "Understanding competitive landscape", "type": "section"},
-                        {"title": "Key Technologies", "content": "• Cloud platforms\n• Data analytics\n• AI/ML solutions\n• Automation tools", "type": "content_with_logos", "logos": ["AWS", "Google Cloud", "Azure", "Salesforce"]},
-                        {"title": "Customer Focus", "content": "• User experience\n• Personalization\n• Engagement metrics\n• Satisfaction scores", "type": "content_image"},
-                        {"title": "Growth Strategies", "content": "Market expansion opportunities", "type": "image_full"},
-                        {"title": "Innovation Lab", "content": "R&D initiatives driving future growth", "type": "three_images"},
-                        {"title": "Next Steps", "content": "• Q1: Foundation\n• Q2: Expansion\n• Q3: Optimization\n• Q4: Innovation", "type": "content"},
-                        {"title": "Thank You", "content": "Questions?", "type": "content"}
-                    ]
-                }
-            },
+            {"step": "slides", "status": "pending"},
             {"step": "illustration", "status": "pending"},
             {"step": "compiled", "status": "pending"},
             {"step": "pptx", "status": "pending"},

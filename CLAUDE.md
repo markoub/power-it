@@ -194,6 +194,7 @@ See `backend/.env.example` for a complete list of available environment variable
 ## Development Guidelines
 
 - **Server Management**: never run new server, backend or frontend, without checking if there is one already available. If needed, first kill all active ones, before running new
+- **Makefile Commands**: avoid using commands that are not defined in Makefile. If you need something, define it there. That works for running, stopping, restarting servers, for running tests, and similar
 
 ## Recent Fixes and Known Issues
 

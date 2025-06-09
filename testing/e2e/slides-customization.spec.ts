@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { navigateToTestPresentationById } from './utils';
 
 test.describe.skip('Slides Customization', () => {
+  // SKIP: Slides customization feature is not implemented in the frontend
+  // The customize-slides-button and customization dialog do not exist
   test.beforeEach(async ({ page }) => {
     // Use preseeded presentation ID 26 (Slides Customization Test - research completed)
     const presentation = await navigateToTestPresentationById(page, 26);

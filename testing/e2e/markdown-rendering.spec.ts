@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { navigateToTestPresentation, waitForStepCompletion } from './utils';
+import { navigateToTestPresentation, waitForStepCompletion, resetTestDatabase } from './utils';
 
 test.describe('Markdown Rendering in Slides', () => {
+  // Reset database before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    await resetTestDatabase(page);
+  });
 
   test('should properly render markdown content in slides', async ({ page }) => {
     // Standard timeout for offline mode

@@ -79,9 +79,9 @@ test.describe('Delete Presentation', () => {
   });
 
   test('should delete multiple presentations at once', async ({ page }) => {
-    // Use Fresh Test Presentation 3 and 4 for multiple deletion (not 1 which was deleted in previous test)
-    const testPresentation1 = getTestPresentation(TEST_CATEGORIES.FRESH, 2); // index 2 = Fresh Test Presentation 3
-    const testPresentation2 = getTestPresentation(TEST_CATEGORIES.FRESH, 3); // index 3 = Fresh Test Presentation 4
+    // Use Research Complete presentations for multiple deletion to avoid conflicts with previous test
+    const testPresentation1 = getTestPresentation(TEST_CATEGORIES.RESEARCH_COMPLETE, 0); // Research Complete Test 1 (ID: 5)
+    const testPresentation2 = getTestPresentation(TEST_CATEGORIES.RESEARCH_COMPLETE, 1); // Research Complete Test 2 (ID: 6)
     
     if (!testPresentation1 || !testPresentation2) {
       throw new Error('Test presentations not found');
@@ -97,25 +97,77 @@ test.describe('Delete Presentation', () => {
     let row1 = page.getByTestId(`presentation-row-${testPresentation1.id}`);
     let row2 = page.getByTestId(`presentation-row-${testPresentation2.id}`);
     let attempts = 0;
+    let foundBoth = false;
+    
+    // Navigate to the first page first
+    const firstPageButton = page.getByLabel('Go to page 1');
+    if (await firstPageButton.isVisible()) {
+      await firstPageButton.click();
+      await page.waitForLoadState('networkidle');
+    }
     
     // Try to find both presentations, navigating through pages if needed
-    while (attempts < 5) {
+    while (attempts < 5 && !foundBoth) {
       const row1Visible = await row1.isVisible().catch(() => false);
       const row2Visible = await row2.isVisible().catch(() => false);
       
       if (row1Visible && row2Visible) {
+        foundBoth = true;
         break; // Found both!
       } else {
         // Not on this page, try next page
         const nextButton = page.getByLabel('Go to next page');
-        if (await nextButton.isEnabled()) {
+        const nextEnabled = await nextButton.isEnabled().catch(() => false);
+        
+        if (nextEnabled) {
           await nextButton.click();
           await page.waitForLoadState('networkidle');
+          await page.waitForTimeout(500); // Small delay for stability
           attempts++;
         } else {
-          throw new Error(`Presentations ${testPresentation1.id} and ${testPresentation2.id} not found after checking all pages`);
+          // Can't go further, check if we can go to specific pages
+          const page3Button = page.getByLabel('Go to page 3');
+          const page4Button = page.getByLabel('Go to page 4');
+          
+          if (await page4Button.isVisible()) {
+            await page4Button.click();
+            await page.waitForLoadState('networkidle');
+            await page.waitForTimeout(500);
+            
+            // Check again
+            const row1VisibleNow = await row1.isVisible().catch(() => false);
+            const row2VisibleNow = await row2.isVisible().catch(() => false);
+            
+            if (row1VisibleNow && row2VisibleNow) {
+              foundBoth = true;
+              break;
+            }
+          }
+          
+          if (!foundBoth && await page3Button.isVisible()) {
+            await page3Button.click();
+            await page.waitForLoadState('networkidle');
+            await page.waitForTimeout(500);
+            
+            // Check again
+            const row1VisibleNow = await row1.isVisible().catch(() => false);
+            const row2VisibleNow = await row2.isVisible().catch(() => false);
+            
+            if (row1VisibleNow && row2VisibleNow) {
+              foundBoth = true;
+              break;
+            }
+          }
+          
+          if (!foundBoth) {
+            throw new Error(`Presentations ${testPresentation1.id} and ${testPresentation2.id} not found after checking all pages`);
+          }
         }
       }
+    }
+    
+    if (!foundBoth) {
+      throw new Error(`Could not find both presentations after ${attempts} attempts`);
     }
     
     await expect(row1).toBeVisible();

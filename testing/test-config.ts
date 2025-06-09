@@ -219,33 +219,33 @@ export const TEST_PRESENTATIONS: TestPresentation[] = [
   // Clarification testing presentations
   {
     id: 19,
-    name: "Clarification Ready Test",
-    topic: "Artificial Intelligence Ethics",
+    name: "Clarification Test ADK",
+    topic: "Google ADK",
     author: "Test Author",
     category: "clarification_testing",
-    description: "For research clarification tests - no method selected",
+    description: "For testing clarification when topic has ambiguous acronym (ADK)",
     completedSteps: [],
     pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
   },
   {
     id: 20,
-    name: "Clarification AI Selected",
-    topic: "Smart Cities",
+    name: "Clarification Test Clear Topic",
+    topic: "Machine Learning in Healthcare",
     author: "Test Author",
     category: "clarification_testing",
-    description: "For AI research clarification tests",
+    description: "For testing when topic is clear and no clarification needed",
     completedSteps: [],
     pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
   },
   {
     id: 21,
-    name: "Clarification Manual Selected",
-    topic: "Custom Research Topic",
+    name: "Clarification Test SDK",
+    topic: "Google SDK",
     author: "Test Author",
     category: "clarification_testing",
-    description: "For manual research clarification tests",
+    description: "For testing clarification when topic has ambiguous acronym (SDK)",
     completedSteps: [],
-    pendingSteps: ["manual_research", "slides", "illustration", "compiled", "pptx"]
+    pendingSteps: ["research", "slides", "illustration", "compiled", "pptx"]
   },
   
   // Step status testing presentations
